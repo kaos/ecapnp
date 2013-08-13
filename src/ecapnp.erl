@@ -44,7 +44,7 @@ get(Field, #object{ type=#struct{ fields=Fields }}=Object)
 %% internal functions
 %% ===================================================================
 
--record(ptr_ref, { offset, size, count, segment }).
+-record(list_ptr, { offset, size, count, segment }).
 
 %% Lookup type in schema
 get_type(Type, #schema{ types=Ts }) ->
@@ -86,6 +86,17 @@ get_field(#data{ type=uint32,
       Value:32/integer-little-unsigned,
       _/binary>> = Segment,
     Value;
+get_field(#data{ type=uint16,
+                 offset=DataOffset,
+                 bits=Bits },
+          #object{ offset=ObjOffset,
+                   segment=Segment }) ->
+    <<_:ObjOffset/binary-unit:64,
+      _:DataOffset/binary-unit:64,
+      _:Bits/bits,
+      Value:16/integer-little-unsigned,
+      _/binary>> = Segment,
+    Value;
 
 %% Enum field
 get_field(#data{ type={enum, Type},
@@ -121,7 +132,7 @@ get_field(#data{ type={union, Fields},
 %% List fields
 get_field(#ptr{ type={list, Type} }=Ptr, Object) ->
     case dereference_ptr(Ptr, Object) of
-        #ptr_ref{ 
+        #list_ptr{ 
            size=composite, 
            segment=S }=R ->
             {ok, T} = get_type(Type, Object),
@@ -129,9 +140,9 @@ get_field(#ptr{ type={list, Type} }=Ptr, Object) ->
 %%% TODO: implement for ordinary lists
     end;
 
-%% Text field (List(UInt8))
+%% Text field
 get_field(#ptr{ type=text }=Ptr, Object) ->
-    #ptr_ref{
+    #list_ptr{
        offset=Offset, 
        size=8,
        count=Count,
@@ -141,7 +152,15 @@ get_field(#ptr{ type=text }=Ptr, Object) ->
     <<_:Offset/binary-unit:64,
       Text:TextLen/binary,
       _/binary>> = Segment,
-    Text.
+    Text;
+
+%% Struct field
+get_field(#ptr{ type={struct, Type} }=Ptr, Object) ->
+    {ok, T} = get_type(Type, Object),
+    case dereference_ptr(Ptr, Object) of
+        O when is_record(O, object) ->
+            O#object{ type=T }
+    end.
 
 
 %% List field helpers
@@ -149,6 +168,7 @@ dereference_ptr(
   #ptr{ offset=PtrOffset },
   #object{ offset=ObjOffset,
            segment=Segment }=O) ->
+
     Pos = ObjOffset + PtrOffset,
 
     <<_:Pos/binary-unit:64,
@@ -157,9 +177,13 @@ dereference_ptr(
       _/binary>> = Segment,
 
     case ptr_type(Offset band 3) of
-        %% struct ??
+        struct ->
+            %% todo: check data and ptr sizes in case the
+            %% current schema disagrees with the message (version mismatch..)
+            O#object{ offset = Pos + (Offset bsr 2) + 1,
+                      type = undefined };
         list ->
-            #ptr_ref{
+            #list_ptr{
                offset = Pos + (Offset bsr 2) + 1,
                size = list_element_size(Size band 7),
                count = Size bsr 3,
@@ -173,7 +197,8 @@ dereference_ptr(
              )
     end.
 
-get_list(#ptr_ref{ 
+get_list(#list_ptr{ count=0 }) -> [];
+get_list(#list_ptr{ 
             offset=Offset, size=composite, 
             count=TotalWordCount, segment=Segment }) ->
     <<_:Offset/binary-unit:64,
