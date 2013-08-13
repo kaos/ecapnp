@@ -2,6 +2,6 @@
 -record(schema, { types = [] }).
 -record(struct, { types = [], fields = [] }).
 -record(enum, { values = [] }).
--record(ptr, { offset, type }).
--record(data, { type, offset, bits=0 }).
--record(object, { offset, type, schema, segment, segments }).
+-record(ptr, { offset=0, type }).
+-record(data, { type, offset=0, bits=0 }).
+-record(object, { offset=0, type, schema, segment, segments }).
