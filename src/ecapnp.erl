@@ -31,7 +31,8 @@ get_root(Type, Schema, [Segment|_]=Segments)
        is_binary(Segment) ->
     {ok, RootType} = get_type(Type, Schema),
     {ok, #object{ offset=1, type=RootType, schema=Schema,
-                  segment=Segment, segments=Segments}}.
+                  segment=Segment, segments=Segments,
+                  parent=Schema }}.
 
 get(Field, #object{ type=#struct{ fields=Fields }}=Object)
   when is_atom(Field) ->
@@ -47,6 +48,7 @@ get(Field, #object{ type=#struct{ fields=Fields }}=Object)
 -record(list_ptr, { offset, size, count, segment }).
 
 %% Lookup type in schema
+get_type({struct, Type}, Ts) -> get_type(Type, Ts);
 get_type(Type, #schema{ types=Ts }) ->
     case proplists:get_value(Type, Ts) of
         undefined -> {unknown_type, Type};
@@ -57,11 +59,13 @@ get_type(Type, #struct{ types=Ts }) ->
         undefined -> undefined;
         T -> {ok, T}
     end;
-get_type(Type, #object{ type=T, schema=S }) ->
+get_type(Type, #object{ type=T, parent=P }) ->
     case get_type(Type, T) of
-        undefined -> get_type(Type, S);
+        undefined -> get_type(Type, P);
         Ok -> Ok
-    end.
+    end;
+get_type(_, undefined) -> undefined.
+    
 
 get_field(Field, Object)
   when is_record(Field, data) ->
@@ -111,15 +115,22 @@ get_data(#data{ type=Type,
     get_value(Type, Offset, Bits, Segment).
 
 
-%% List fields
+%% List field
 get_ptr(#ptr{ type={list, Type} }=Ptr, Object) ->
     case dereference_ptr(Ptr, Object) of
         #list_ptr{ size=composite, 
                    segment=S }=L ->
             {ok, T} = get_type(Type, Object),
-            [Object#object{ offset=O, type=T, segment=S } || O <- get_offset_list(L)];
+            [Object#object{ offset=O,
+                            type=T,
+                            segment=S,
+                            parent=Object }
+             || O <- get_offset_list(L)];
         #list_ptr{ segment=S }=L -> 
-            [get_value(Type, O, B, S) || {O, B} <- get_offset_list(L)]
+            [get_value(Type, O, B, S) || {O, B} <- get_offset_list(L)];
+        O when is_record(O, object) ->
+            {ok, T} = get_type(Type, Object),
+            O#object{ type=T }
     end;
 
 %% Text field
@@ -177,7 +188,8 @@ dereference_ptr(
             %% todo: check data and ptr sizes in case the
             %% current schema disagrees with the message (version mismatch..)
             O#object{ offset = Pos + (Offset bsr 2) + 1,
-                      type = undefined };
+                      type = undefined,
+                      parent = O };
         list ->
             #list_ptr{
                offset = Pos + (Offset bsr 2) + 1,
@@ -213,9 +225,10 @@ get_offset_list(#list_ptr{ offset=Offset,
           BitOffset rem 64}
      end || Idx <- lists:seq(0, Count - 1)].
 
-get_segment_object(Id, #object{ segments=S }) ->
-    #object{ segment=lists:nth(Id + 1, S), 
-             segments=S }.
+get_segment_object(Id, #object{ segments=S, parent=P }) ->
+    #object{ segment=lists:nth(Id + 1, S),
+             segments=S,
+             parent=P }.
 
 %% size in bits, or atom for special treatment..
 list_element_size(0) -> 0;
