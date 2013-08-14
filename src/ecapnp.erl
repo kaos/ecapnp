@@ -63,46 +63,18 @@ get_type(Type, #object{ type=T, schema=S }) ->
         Ok -> Ok
     end.
 
-%% Value fields
-get_field(#data{ type=uint64,
-                 offset=DataOffset,
-                 bits=Bits },
-          #object{ offset=ObjOffset,
-                   segment=Segment }) ->
-    <<_:ObjOffset/binary-unit:64,
-      _:DataOffset/binary-unit:64,
-      _:Bits/bits,
-      Value:64/integer-little-unsigned,
-      _/binary>> = Segment,
-    Value;
-get_field(#data{ type=uint32,
-                 offset=DataOffset,
-                 bits=Bits },
-          #object{ offset=ObjOffset,
-                   segment=Segment }) ->
-    <<_:ObjOffset/binary-unit:64,
-      _:DataOffset/binary-unit:64,
-      _:Bits/bits,
-      Value:32/integer-little-unsigned,
-      _/binary>> = Segment,
-    Value;
-get_field(#data{ type=uint16,
-                 offset=DataOffset,
-                 bits=Bits },
-          #object{ offset=ObjOffset,
-                   segment=Segment }) ->
-    <<_:ObjOffset/binary-unit:64,
-      _:DataOffset/binary-unit:64,
-      _:Bits/bits,
-      Value:16/integer-little-unsigned,
-      _/binary>> = Segment,
-    Value;
+get_field(Field, Object)
+  when is_record(Field, data) ->
+    get_data(Field, Object);
+get_field(Field, Object)
+  when is_record(Field, ptr) ->
+    get_ptr(Field, Object).
 
 %% Enum field
-get_field(#data{ type={enum, Type},
-                 offset=DataOffset },
-          #object{ offset=ObjOffset,
-                   segment=Segment }=Object) ->
+get_data(#data{ type={enum, Type},
+                offset=DataOffset },
+         #object{ offset=ObjOffset,
+                  segment=Segment }=Object) ->
     <<_:ObjOffset/binary-unit:64,
       _:DataOffset/binary-unit:64,
       Value:16/integer-little,
@@ -111,9 +83,9 @@ get_field(#data{ type={enum, Type},
     proplists:get_value(Value, Values);
 
 %% Union field
-get_field(#data{ type={union, Fields},
-                 offset=DataOffset,
-                 bits=Bits },
+get_data(#data{ type={union, Fields},
+                offset=DataOffset,
+                bits=Bits },
           #object{ offset=ObjOffset,
                    segment=Segment}=Object) ->
     <<_:ObjOffset/binary-unit:64,
@@ -129,19 +101,29 @@ get_field(#data{ type={union, Fields},
             {FieldName, FieldValue}
     end;
 
+%% Value field
+get_data(#data{ type=Type,
+                offset=DataOffset,
+                bits=Bits },
+         #object{ offset=ObjOffset,
+                  segment=Segment }) ->
+    Offset = ObjOffset + DataOffset,
+    get_value(Type, Offset, Bits, Segment).
+
+
 %% List fields
-get_field(#ptr{ type={list, Type} }=Ptr, Object) ->
+get_ptr(#ptr{ type={list, Type} }=Ptr, Object) ->
     case dereference_ptr(Ptr, Object) of
-        #list_ptr{ 
-           size=composite, 
-           segment=S }=R ->
+        #list_ptr{ size=composite, 
+                   segment=S }=L ->
             {ok, T} = get_type(Type, Object),
-            [Object#object{ offset=O, type=T, segment=S } || O <- get_list(R)]
-%%% TODO: implement for ordinary lists
+            [Object#object{ offset=O, type=T, segment=S } || O <- get_offset_list(L)];
+        #list_ptr{ segment=S }=L -> 
+            [get_value(Type, O, B, S) || {O, B} <- get_offset_list(L)]
     end;
 
 %% Text field
-get_field(#ptr{ type=text }=Ptr, Object) ->
+get_ptr(#ptr{ type=text }=Ptr, Object) ->
     #list_ptr{
        offset=Offset, 
        size=8,
@@ -155,15 +137,29 @@ get_field(#ptr{ type=text }=Ptr, Object) ->
     Text;
 
 %% Struct field
-get_field(#ptr{ type={struct, Type} }=Ptr, Object) ->
+get_ptr(#ptr{ type={struct, Type} }=Ptr, Object) ->
     {ok, T} = get_type(Type, Object),
     case dereference_ptr(Ptr, Object) of
         O when is_record(O, object) ->
             O#object{ type=T }
     end.
 
+%% Data field helpers
+-define(GET_VALUE(ValueType, Size, TypeSpec),
+        get_value(ValueType, Offset, Bits, Segment) ->
+               <<_:Offset/binary-unit:64,
+                 _:Bits/bits,
+                 Value:Size/TypeSpec,
+                 _/binary>> = Segment,
+               Value
+).
 
-%% List field helpers
+?GET_VALUE(uint64, 64, integer-unsigned-little);
+?GET_VALUE(uint32, 32, integer-unsigned-little);
+?GET_VALUE(uint16, 16, integer-unsigned-little).
+
+
+%% Pointer field helpers
 dereference_ptr(
   #ptr{ offset=PtrOffset },
   #object{ offset=ObjOffset,
@@ -197,16 +193,25 @@ dereference_ptr(
              )
     end.
 
-get_list(#list_ptr{ count=0 }) -> [];
-get_list(#list_ptr{ 
-            offset=Offset, size=composite, 
-            count=TotalWordCount, segment=Segment }) ->
+get_offset_list(#list_ptr{ count=0 }) -> [];
+get_offset_list(#list_ptr{ offset=Offset,
+                           size=composite, 
+                           count=TotalWordCount,
+                           segment=Segment }) ->
     <<_:Offset/binary-unit:64,
       C:32/integer-little,
       _/binary>> = Segment,
     ElementCount = C bsr 2,
     ElementSize = TotalWordCount div ElementCount,
-    lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize).     
+    lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize);
+get_offset_list(#list_ptr{ offset=Offset,
+                           size=Size,
+                           count=Count }) ->
+    [begin
+         BitOffset = (Idx * Size),
+         {Offset + BitOffset div 64,
+          BitOffset rem 64}
+     end || Idx <- lists:seq(0, Count - 1)].
 
 get_segment_object(Id, #object{ segments=S }) ->
     #object{ segment=lists:nth(Id + 1, S), 
