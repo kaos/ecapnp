@@ -97,7 +97,7 @@ get_data(#data{ type={union, Fields},
       _:Bits/bits,
       Tag:16/integer-little,
       _/binary>> = Segment,
-    {FieldName, Field} = proplists:get_value(Tag, Fields),
+    {FieldName, Field} = lists:nth(Tag + 1, Fields),
     case Field of
         void -> FieldName;
         _ ->
@@ -183,7 +183,8 @@ dereference_ptr(
       Size:32/integer-little,
       _/binary>> = Segment,
 
-    case ptr_type(Offset band 3) of
+    case ptr_type(Offset band 3, Offset, Size) of
+        null -> null;
         struct ->
             %% todo: check data and ptr sizes in case the
             %% current schema disagrees with the message (version mismatch..)
@@ -240,6 +241,9 @@ list_element_size(5) -> 8*8;
 list_element_size(6) -> ptr;
 list_element_size(7) -> composite.
 
+ptr_type(_, 0, 0) -> null;
+ptr_type(T, _, _) -> ptr_type(T).
+    
 ptr_type(0) -> struct;
 ptr_type(1) -> list;
 ptr_type(2) -> far_ptr;
