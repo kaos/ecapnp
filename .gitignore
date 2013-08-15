@@ -3,3 +3,5 @@ deps
 *.o
 *.beam
 *.plt
+ebin/
+*.dump
