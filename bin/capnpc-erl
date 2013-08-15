@@ -16,5 +16,5 @@
 ##
 
 tmpfile=`mktemp capnpc-erl.XXXXXXXXXX`
-cat > $tmpfile && erl -noshell $dbg -eval 'ok = ecapnpc:file("'$tmpfile'")' -s init stop
+cat > $tmpfile && erl -noshell -eval 'ok = ecapnpc:compile_file("'$tmpfile'")' -s init stop
 rm $tmpfile

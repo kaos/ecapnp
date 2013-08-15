@@ -17,7 +17,9 @@
 -module(ecapnpc).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([file/1]).
+-export([compile_file/1,
+         compile_data/1,
+         compile_message/1]).
 
 -include("schema.capnp.hrl").
 
@@ -26,20 +28,24 @@
 %% API functions
 %% ===================================================================
 
-file(FileName) ->
+compile_file(FileName) ->
     {ok, Data} = file:read_file(FileName),
-    {ok, Message} = ecapnp_message:read(Data),
-    compile(Message).
+    compile_data(Data).
 
+compile_data(Data)
+  when is_binary(Data) ->
+    {ok, Message} = ecapnp_message:read(Data),
+    compile_message(Message).
+
+compile_message(Message)
+  when is_list(Message), is_binary(hd(Message)) ->
+    {ok, Root} = schema(root, 'CodeGeneratorRequest', Message),
+    Compiled = compile_root(Root),
+    export(Compiled).
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-
-compile(Msg) ->
-    {ok, Root} = schema(root, 'CodeGeneratorRequest', Msg),
-    Compiled = compile_root(Root),
-    export(Compiled).
 
 export([Schema|Ss]) ->
     case export_schema(Schema) of
