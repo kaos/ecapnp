@@ -1,8 +1,43 @@
 
--record(schema, { id, source, types=[] }).
--record(struct, { id, source, name, dsize, psize, fields=[], types=[] }).
--record(enum, { values=[] }).
--record(ptr, { offset=0, idx=0, type }).
--record(data, { type, offset=0, bits=0, align=0 }).
--record(object, { offset=0, type, schema, segment, segments, parent }).
+-record(schema, {
+          id :: atom(),
+          source = <<>> :: binary(),
+          types=[] :: schema_types()
+         }).
 
+-record(struct, {
+          id :: atom(),
+          source = <<>> :: binary(),
+          name :: atom(), 
+          dsize=0 :: integer(),
+          psize=0 :: integer(),
+          fields=[] :: list(),
+          types=[] :: schema_types()
+         }).
+
+-record(enum, {
+          values=[] :: list()
+         }).
+
+-record(ptr, {
+          type :: term(),
+          idx :: integer()
+         }).
+
+-record(data, {
+          type :: term(),
+          align :: integer()
+         }).
+
+-record(object, {
+          doffset=1 :: integer(),
+          poffset :: integer(),
+          type :: #struct{},
+          schema :: #schema{},
+          segment :: binary(),
+          segments :: list(binary()),
+          parent :: #object{} | #schema{}
+         }).
+
+-type schema_type() :: #struct{} | #enum{}.
+-type schema_types() :: list({atom(), schema_type()}).
