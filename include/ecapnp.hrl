@@ -4,6 +4,7 @@
 -record(schema, {
           id :: atom(),
           source = <<>> :: binary(),
+          name :: atom(),
           types=[] :: schema_types()
          }).
 

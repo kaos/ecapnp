@@ -1,8 +1,15 @@
 %%% DO NOT EDIT, this file was generated.
 -include_lib("ecapnp/include/ecapnp.hrl").
-schema() ->
+
+schema(root, Type, Message) ->
+    ecapnp:get_root(Type, schema(schema), Message);
+
+schema(get, Field, Object) ->
+    ecapnp:get(Field, Object).
+
+schema(schema) ->
   #schema{
-    id=16#b471df2f45ca32c7, source= <<"schema.capnp">>,
+    name=schema, id=16#b471df2f45ca32c7, source= <<"schema.capnp">>,
     types=
       [{'Node',
         #struct{

@@ -18,10 +18,9 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([file/1]).
--import(ecapnp, [get_root/3, get/2]).
 
 -include("schema.capnp.hrl").
-%%-include("ecapnpc_schema.hrl").
+
 
 %% ===================================================================
 %% API functions
@@ -29,7 +28,7 @@
 
 file(FileName) ->
     {ok, Data} = file:read_file(FileName),
-    {ok, Message} = read_message(Data),
+    {ok, Message} = ecapnp_message:read(Data),
     compile(Message).
 
 
@@ -37,24 +36,8 @@ file(FileName) ->
 %% internal functions
 %% ===================================================================
 
-read_message(<<SegCount:32/integer-little, Data/binary>>) ->
-    read_message(SegCount+1, SegCount rem 2, Data).
-
-read_message(SegCount, Pad, Data)
-  when is_integer(SegCount), SegCount > 0 ->
-    <<SegSizes:SegCount/binary-unit:32,
-      _Padding:Pad/binary-unit:32,
-      Rest/binary>> = Data,
-    read_message(SegSizes, Rest, []);
-read_message(<<SegSize:32/integer-little, SegSizes/binary>>, Data, Segments) ->
-    <<Segment:SegSize/binary-unit:64, Rest/binary>> = Data,
-    read_message(SegSizes, Rest, [Segment|Segments]);
-read_message(<<>>, <<>>, Segments) ->
-    {ok, lists:reverse(Segments)}.
-
-
 compile(Msg) ->
-    {ok, Root} = get_root('CodeGeneratorRequest', schema(), Msg),
+    {ok, Root} = schema(root, 'CodeGeneratorRequest', Msg),
     Compiled = compile_root(Root),
     export(Compiled).
 
@@ -69,24 +52,43 @@ export_schema(#schema{ source=Src }=Schema) ->
     FileName = get_output_filename(Src),
     {ok, File} = create_output_file(FileName),
     try 
-        export_schema(
-          fun ([Fmt|Args]) ->
-                  ok = io:format(File, Fmt, Args) end,
-          Schema),
+        Out = fun ([Fmt|Args]) ->
+                      ok = io:format(File, Fmt, Args) 
+              end,
+        [Write(Out, Schema) 
+         || Write <- [fun write_header/2,
+                      fun write_api/2,
+                      fun export_schema/2
+                     ]
+        ],
         io:format("compiled ~s~n", [FileName])
     after
         file:close(File)
     end.
 
-export_schema(Out, #schema{ id=Id, source=Src, types=Types }) ->
+write_header(Out, _) ->
     Out(["%%% DO NOT EDIT, this file was generated.~n"
-         "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"
-         "~p() ->~n"
+         "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"]).
+
+write_api(Out, #schema{ name=Name }) ->
+    {ok, Stubs} = file:read_file(
+                    filename:join(
+                      code:priv_dir(ecapnp), 
+                      "schema_api_stub.hrl")),
+    Api = lists:foldl(
+            fun ({Re, R}, Subject) ->
+                    re:replace(Subject, Re, R, [global])
+            end, Stubs, 
+            [{"_name_", atom_to_list(Name)}
+            ]),
+    Out(["~s~n", Api]).
+
+export_schema(Out, #schema{ id=Id, source=Src, name=Name, types=Types }) ->
+    Out(["~p(schema) ->~n"
          "  #schema{~n"
-         "    id=~.16+, source= ~p,~n"
+         "    name=~p, id=~.16+, source= ~p,~n"
          "    types=~n",
-         binary_to_atom(filename:basename(Src, ".capnp"), latin1),
-         Id, Src]),
+         Name, Name, Id, Src]),
     export_list(Types, Out, 6),
     Out(["}.~n"]).
 
@@ -169,50 +171,50 @@ create_output_file(FileName) ->
     file:open(FileName, [write]).
 
 compile_root(Root) ->
-    Nodes = [compile_node(N) || N <- get(nodes, Root)],
-    Files = get(requestedFiles, Root),
+    Nodes = [compile_node(N) || N <- schema(get, nodes, Root)],
+    Files = schema(get, requestedFiles, Root),
     Linked = [link_node(Id, root, Nodes) || Id <- Files],
     IdNames = lists:flatten([collect_names(Schema, []) || Schema <- Linked]),
     [resolve_names(Schema, IdNames) || Schema <- Linked].
 
 compile_node(Node) ->
-    Body = get(body, Node),
-    {get(id, Node), {Node, compile_body(Body, Node)}}.
+    Body = schema(get, body, Node),
+    {schema(get, id, Node), {Node, compile_body(Body, Node)}}.
 
 compile_body({fileNode, _}, Node) ->
-    #schema{ id = get(id, Node), source = get(displayName, Node) };
+    #schema{ id = schema(get, id, Node), source = schema(get, displayName, Node) };
 compile_body({structNode, Struct}, Node) ->
-    #struct{ id = get(id, Node),
-             source = get(displayName, Node),
-             dsize = get(dataSectionWordSize, Struct),
-             psize = get(pointerSectionSize, Struct),
+    #struct{ id = schema(get, id, Node),
+             source = schema(get, displayName, Node),
+             dsize = schema(get, dataSectionWordSize, Struct),
+             psize = schema(get, pointerSectionSize, Struct),
              fields=
                  [compile_struct_member(M)
-                  || M <- get(members, Struct)]};
+                  || M <- schema(get, members, Struct)]};
 compile_body({enumNode, Enum}, Node) ->
-    #enum{ id = get(id, Node),
-           source = get(displayName, Node),
+    #enum{ id = schema(get, id, Node),
+           source = schema(get, displayName, Node),
            values =
-               [binary_to_atom(get(name, E), latin1) 
-                || E <- get(enumerants, Enum)]
+               [binary_to_atom(schema(get, name, E), latin1) 
+                || E <- schema(get, enumerants, Enum)]
          };
 compile_body(_, _) ->
     skip.
 
 compile_struct_member(Member) ->    
-    {binary_to_atom(get(name, Member), latin1),
-     compile_struct_member_body(get(body, Member))}.
+    {binary_to_atom(schema(get, name, Member), latin1),
+     compile_struct_member_body(schema(get, body, Member))}.
 
 compile_struct_member_body({fieldMember, Field}) ->
-    Type = get(type, Field),
-    compile_field(get(body, Type), get(offset, Field));
+    Type = schema(get, type, Field),
+    compile_field(schema(get, body, Type), schema(get, offset, Field));
 compile_struct_member_body({unionMember, Union}) ->
-    data_field({compile_union(Union), 16}, get(discriminantOffset, Union));
+    data_field({compile_union(Union), 16}, schema(get, discriminantOffset, Union));
 compile_struct_member_body(_) ->
     this_struct_body_NYI.
 
 compile_union(Union) ->
-    {union, [compile_struct_member(M) || M <- get(members, Union)]}.
+    {union, [compile_struct_member(M) || M <- schema(get, members, Union)]}.
 
 compile_field({listType, Type}, Offset) -> ptr_field(list_field_type(Type), Offset);
 compile_field({enumType, Id}, Offset) -> data_field({{enum, id_to_typename(Id)}, 16}, Offset);
@@ -228,7 +230,7 @@ id_to_typename(Id) ->
     
 list_field_type(Type) ->
     {list, 
-     case get(body, Type) of
+     case schema(get, body, Type) of
          voidType -> void;
          CapnpType when is_atom(CapnpType) ->
              {DataType, _} = capnp_type_info(CapnpType),
@@ -271,14 +273,14 @@ ptr_field(Type, Index) ->
 link_node(Id, NodeName, Nodes) ->
     {Node, Schema} = proplists:get_value(Id, Nodes),
     NestedNodes = [begin
-                       Name = binary_to_atom(get(name, N), latin1),
-                       {Name, link_node(get(id, N), Name, Nodes)}
-                   end || N <- get(nestedNodes, Node)],
+                       Name = binary_to_atom(schema(get, name, N), latin1),
+                       {Name, link_node(schema(get, id, N), Name, Nodes)}
+                   end || N <- schema(get, nestedNodes, Node)],
     set_types(Schema, NodeName, NestedNodes).
 
-set_types(Node, _, Types)
+set_types(Node, root, Types)
   when is_record(Node, schema) ->
-    Node#schema{ types=Types };
+    Node#schema{ name=schema_name(Node), types=Types };
 set_types(Node, Name, Types)
   when is_record(Node, struct) ->
     Node#struct{ name=Name, types=Types };
@@ -287,6 +289,9 @@ set_types(Node, Name, Types)
     Node#enum{ name=Name, types=Types };
 set_types(skip, _, _) ->
     [].
+
+schema_name(#schema{ source=Src }) ->
+    binary_to_atom(filename:basename(Src, ".capnp"), latin1).
 
 collect_names(#schema{ types=Ts }, IdNames) ->
     IdNames ++ [collect_names(T, IdNames) || T <- Ts];
