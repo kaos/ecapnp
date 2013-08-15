@@ -120,7 +120,7 @@ get_data(#data{ type={enum, Type},
       Value:16/integer-little,
       _/binary>> = Segment,
     {ok, #enum{ values=Values }} = get_type(Type, Object),
-    proplists:get_value(Value, Values);
+    lists:nth(Value + 1, Values);
 
 %% Union field
 get_data(#data{ type={union, Fields},

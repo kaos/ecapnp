@@ -7,8 +7,7 @@ schema() ->
       [{'Node',
         #struct{
           name='Node', id=16#96ae9bbee664c195, source= <<"schema.capnp:Node">>,
-          dsize=3, psize=4,
-          fields=
+          dsize=3, psize=4, fields=
             [{id,
               #data{ type=uint64, align=0 }},
              {displayName,
@@ -42,8 +41,7 @@ schema() ->
             [{'NestedNode',
               #struct{
                 name='NestedNode', id=16#adfe8e889429ee28, source= <<"schema.capnp:Node.NestedNode">>,
-                dsize=1, psize=1,
-                fields=
+                dsize=1, psize=1, fields=
                   [{name,
                     #ptr{ type=text, idx=0 }},
                    {id,
@@ -53,8 +51,7 @@ schema() ->
        {'Type',
         #struct{
           name='Type', id=16#dddca9a9ee299e42, source= <<"schema.capnp:Type">>,
-          dsize=2, psize=1,
-          fields=
+          dsize=2, psize=1, fields=
             [{body,
               #data{ align=0, type=
                 {union,
@@ -86,8 +83,7 @@ schema() ->
        {'Value',
         #struct{
           name='Value', id=16#c2c768aee22269ee, source= <<"schema.capnp:Value">>,
-          dsize=2, psize=1,
-          fields=
+          dsize=2, psize=1, fields=
             [{body,
               #data{ align=0, type=
                 {union,
@@ -132,8 +128,7 @@ schema() ->
        {'Annotation',
         #struct{
           name='Annotation', id=16#db785131c0cfee73, source= <<"schema.capnp:Annotation">>,
-          dsize=1, psize=1,
-          fields=
+          dsize=1, psize=1, fields=
             [{id,
               #data{ type=uint64, align=0 }},
              {value,
@@ -142,8 +137,7 @@ schema() ->
        {'FileNode',
         #struct{
           name='FileNode', id=16#d59c380b31b76b1f, source= <<"schema.capnp:FileNode">>,
-          dsize=0, psize=1,
-          fields=
+          dsize=0, psize=1, fields=
             [{imports,
               #ptr{ type={list,{struct,'Import'}}, idx=0 }}
             ],
@@ -151,26 +145,36 @@ schema() ->
             [{'Import',
               #struct{
                 name='Import', id=16#d5d6a9044d63c158, source= <<"schema.capnp:FileNode.Import">>,
-                dsize=1, psize=1,
-                fields=
+                dsize=1, psize=1, fields=
                   [{id,
                     #data{ type=uint64, align=0 }},
                    {name,
                     #ptr{ type=text, idx=0 }}
                   ]}}
             ]}},
-       {'ElementSize',[]},
+       {'ElementSize',
+        #enum{
+          name='ElementSize', id=16#d7326bd22e1c298c, source= <<"schema.capnp:ElementSize">>,
+          values=
+            [empty,
+             bit,
+             byte,
+             twoBytes,
+             fourBytes,
+             eightBytes,
+             pointer,
+             inlineComposite
+            ]}},
        {'StructNode',
         #struct{
           name='StructNode', id=16#bf81d92a0b7e0c1f, source= <<"schema.capnp:StructNode">>,
-          dsize=1, psize=1,
-          fields=
+          dsize=1, psize=1, fields=
             [{dataSectionWordSize,
               #data{ type=uint16, align=0 }},
              {pointerSectionSize,
               #data{ type=uint16, align=16 }},
              {preferredListEncoding,
-              #data{ type={enum,{unknown_id,15506575017450940812}}, align=32 }},
+              #data{ type={enum,'ElementSize'}, align=32 }},
              {members,
               #ptr{ type={list,{struct,'Member'}}, idx=0 }}
             ],
@@ -178,8 +182,7 @@ schema() ->
             [{'Member',
               #struct{
                 name='Member', id=16#9a2db4bd6b74f8c1, source= <<"schema.capnp:StructNode.Member">>,
-                dsize=1, psize=3,
-                fields=
+                dsize=1, psize=3, fields=
                   [{name,
                     #ptr{ type=text, idx=0 }},
                    {ordinal,
@@ -202,8 +205,7 @@ schema() ->
              {'Field',
               #struct{
                 name='Field', id=16#c75846e17057a41f, source= <<"schema.capnp:StructNode.Field">>,
-                dsize=1, psize=2,
-                fields=
+                dsize=1, psize=2, fields=
                   [{offset,
                     #data{ type=uint32, align=0 }},
                    {type,
@@ -214,8 +216,7 @@ schema() ->
              {'Union',
               #struct{
                 name='Union', id=16#efff479ae161da06, source= <<"schema.capnp:StructNode.Union">>,
-                dsize=1, psize=1,
-                fields=
+                dsize=1, psize=1, fields=
                   [{discriminantOffset,
                     #data{ type=uint32, align=0 }},
                    {members,
@@ -224,8 +225,7 @@ schema() ->
              {'Group',
               #struct{
                 name='Group', id=16#ac91947f51b055ed, source= <<"schema.capnp:StructNode.Group">>,
-                dsize=0, psize=1,
-                fields=
+                dsize=0, psize=1, fields=
                   [{members,
                     #ptr{ type={list,{struct,'Member'}}, idx=0 }}
                   ]}}
@@ -233,8 +233,7 @@ schema() ->
        {'EnumNode',
         #struct{
           name='EnumNode', id=16#d612f44d78962abf, source= <<"schema.capnp:EnumNode">>,
-          dsize=0, psize=1,
-          fields=
+          dsize=0, psize=1, fields=
             [{enumerants,
               #ptr{ type={list,{struct,'Enumerant'}}, idx=0 }}
             ],
@@ -242,8 +241,7 @@ schema() ->
             [{'Enumerant',
               #struct{
                 name='Enumerant', id=16#c9ac441973b9f177, source= <<"schema.capnp:EnumNode.Enumerant">>,
-                dsize=1, psize=2,
-                fields=
+                dsize=1, psize=2, fields=
                   [{name,
                     #ptr{ type=text, idx=0 }},
                    {codeOrder,
@@ -255,8 +253,7 @@ schema() ->
        {'InterfaceNode',
         #struct{
           name='InterfaceNode', id=16#b8a6ecfa2d5121e6, source= <<"schema.capnp:InterfaceNode">>,
-          dsize=0, psize=1,
-          fields=
+          dsize=0, psize=1, fields=
             [{methods,
               #ptr{ type={list,{struct,'Method'}}, idx=0 }}
             ],
@@ -264,8 +261,7 @@ schema() ->
             [{'Method',
               #struct{
                 name='Method', id=16#bdd7f6f0832387ac, source= <<"schema.capnp:InterfaceNode.Method">>,
-                dsize=1, psize=4,
-                fields=
+                dsize=1, psize=4, fields=
                   [{name,
                     #ptr{ type=text, idx=0 }},
                    {codeOrder,
@@ -283,8 +279,7 @@ schema() ->
                   [{'Param',
                     #struct{
                       name='Param', id=16#d6d38cf4e366e91c, source= <<"schema.capnp:InterfaceNode.Method.Param">>,
-                      dsize=0, psize=4,
-                      fields=
+                      dsize=0, psize=4, fields=
                         [{name,
                           #ptr{ type=text, idx=0 }},
                          {type,
@@ -299,8 +294,7 @@ schema() ->
        {'ConstNode',
         #struct{
           name='ConstNode', id=16#8f0cf892b24a8062, source= <<"schema.capnp:ConstNode">>,
-          dsize=0, psize=2,
-          fields=
+          dsize=0, psize=2, fields=
             [{type,
               #ptr{ type={struct,'Type'}, idx=0 }},
              {value,
@@ -309,8 +303,7 @@ schema() ->
        {'AnnotationNode',
         #struct{
           name='AnnotationNode', id=16#f386f41ae9f5cbe5, source= <<"schema.capnp:AnnotationNode">>,
-          dsize=1, psize=1,
-          fields=
+          dsize=1, psize=1, fields=
             [{type,
               #ptr{ type={struct,'Type'}, idx=0 }},
              {targetsFile,
@@ -339,8 +332,7 @@ schema() ->
        {'CodeGeneratorRequest',
         #struct{
           name='CodeGeneratorRequest', id=16#d095654a26e15f1d, source= <<"schema.capnp:CodeGeneratorRequest">>,
-          dsize=0, psize=2,
-          fields=
+          dsize=0, psize=2, fields=
             [{nodes,
               #ptr{ type={list,{struct,'Node'}}, idx=0 }},
              {requestedFiles,

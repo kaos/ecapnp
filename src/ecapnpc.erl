@@ -117,12 +117,27 @@ export_item(#struct{ id=Id, source=Src, name=Name,
     I = Indent + 2,
     Out(["#struct{~n~*s"
          "name=~p, id=~.16+, source= ~p,~n~*s"
-         "dsize=~p, psize=~p,~n~*s"
-         "fields=~n",
-         I, "",
-         Name, Id, Src, I, "",
-         DSize, PSize, I, ""]),
+         "dsize=~p, psize=~p, fields=~n",
+         I, "", Name, Id, Src,
+         I, "", DSize, PSize]),
     export_list(Fields, Out, I + 2),
+    if Types /= [] ->
+            Out([",~n~*s"
+                 "types=~n",
+                 I, ""]),
+            export_list(Types, Out, I + 2);
+       true -> nop
+    end,
+    Out(["}"]);
+export_item(#enum{ id=Id, source=Src, name=Name,
+                   values=Values, types=Types },
+           Out, Indent) ->
+    I = Indent + 2,
+    Out(["#enum{~n~*s"
+         "name=~p, id=~.16+, source= ~p,~n~*s"
+         "values=~n",
+         I, "", Name, Id, Src, I, ""]),
+    export_list(Values, Out, I + 2),
     if Types /= [] ->
             Out([",~n~*s"
                  "types=~n",
@@ -174,6 +189,13 @@ compile_body({structNode, Struct}, Node) ->
              fields=
                  [compile_struct_member(M)
                   || M <- get(members, Struct)]};
+compile_body({enumNode, Enum}, Node) ->
+    #enum{ id = get(id, Node),
+           source = get(displayName, Node),
+           values =
+               [binary_to_atom(get(name, E), latin1) 
+                || E <- get(enumerants, Enum)]
+         };
 compile_body(_, _) ->
     skip.
 
@@ -260,12 +282,17 @@ set_types(Node, _, Types)
 set_types(Node, Name, Types)
   when is_record(Node, struct) ->
     Node#struct{ name=Name, types=Types };
+set_types(Node, Name, Types)
+  when is_record(Node, enum) ->
+    Node#enum{ name=Name, types=Types };
 set_types(skip, _, _) ->
     [].
 
 collect_names(#schema{ types=Ts }, IdNames) ->
     IdNames ++ [collect_names(T, IdNames) || T <- Ts];
 collect_names({_, #struct{ id=Id, name=Name, types=Ts }}, IdNames) ->
+    [{Id, Name}|IdNames] ++ [collect_names(T, IdNames) || T <- Ts];
+collect_names({_, #enum{ id=Id, name=Name, types=Ts }}, IdNames) ->
     [{Id, Name}|IdNames] ++ [collect_names(T, IdNames) || T <- Ts];
 collect_names(_, IdNames) -> IdNames.
 
@@ -274,6 +301,8 @@ resolve_names(#schema{ types=Ts }=S, IdNames) ->
 resolve_names({Tag, #struct{ fields=Fs, types=Ts }=S}, IdNames) ->
     {Tag, S#struct{ fields=[resolve_names(F, IdNames) || F <- Fs],
                     types=[resolve_names(T, IdNames) || T <- Ts]}};
+resolve_names({Tag, #enum{ types=Ts }=E}, IdNames) ->
+    {Tag, E#enum{ types=[resolve_names(T, IdNames) || T <- Ts]}};
 resolve_names({Tag, #data{ type=T }=D}, IdNames) ->
     {Tag, D#data{ type=resolve_names(T, IdNames) }};
 resolve_names({Tag, #ptr{ type=T }=P}, IdNames) ->

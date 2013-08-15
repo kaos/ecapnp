@@ -1,4 +1,6 @@
 
+%% Schema meta data types
+
 -record(schema, {
           id :: atom(),
           source = <<>> :: binary(),
@@ -16,7 +18,11 @@
          }).
 
 -record(enum, {
-          values=[] :: list()
+          id :: atom(),
+          source = <<>> :: binary(),
+          name :: atom(),
+          values=[] :: list(),
+          types=[] :: schema_types()
          }).
 
 -record(ptr, {
@@ -29,6 +35,10 @@
           align :: integer()
          }).
 
+-type schema_type() :: #struct{} | #enum{}.
+-type schema_types() :: list({atom(), schema_type()}).
+
+%% Runtime object meta data
 -record(object, {
           doffset=1 :: integer(),
           poffset :: integer(),
@@ -38,6 +48,3 @@
           segments :: list(binary()),
           parent :: #object{} | #schema{}
          }).
-
--type schema_type() :: #struct{} | #enum{}.
--type schema_types() :: list({atom(), schema_type()}).
