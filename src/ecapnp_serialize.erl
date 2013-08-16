@@ -33,6 +33,14 @@ unpack(Data)
 
 unpack_data(Data) -> unpack_data(Data, <<>>).
 
+unpack_data(<<0, Count:8/integer, Rest/binary>>, Acc) ->
+    Size = Count + 1,
+    unpack_data(Rest, <<Acc/binary, 0:Size/integer-unit:64>>);
+unpack_data(<<16#ff, Count:8/integer, UnpackedCount:8/integer, Rest0/binary>>, Acc) ->
+    Zeros = Count + 1,
+    Words = UnpackedCount + 1,
+    <<Unpacked:Words/binary-unit:64, Rest/binary>> = Rest0,
+    unpack_data(Rest, <<Acc/binary, 0:Zeros/integer-unit:64, Unpacked/binary>>);
 unpack_data(<<Tag:8/integer, Rest/binary>>, Acc) ->
     unpack_tag([(Tag bsr B) band 1 || B <- lists:seq(0, 7)], Rest, Acc);
 unpack_data(<<>>, Acc) -> Acc.
