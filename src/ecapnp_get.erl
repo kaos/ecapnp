@@ -17,56 +17,31 @@
 -module(ecapnp_get).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([type/2, object/2, field/2]).
+-export([root/3, field/2]).
 
+-import(ecapnp_schema, [lookup/2]).
+-import(ecapnp_data, [get_datasegment/1, get_ptrsegment/1]).
 -include("ecapnp.hrl").
 
-%% Internal defs used by object/2
--define(Init_field(F), F=proplists:get_value(F, Fields, D#object.F)).
--define(Init_field(F, Def), F=proplists:get_value(F, Fields, Def)).
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
-%% Lookup type in schema
-type({struct, Type}, Ts) -> type(Type, Ts);
-type(Type, #schema{ types=Ts }) ->
-    case proplists:get_value(Type, Ts) of
-        undefined -> {unknown_type, Type};
-        T -> {ok, T}
-    end;
-type(Type, #struct{ types=Ts }) ->
-    case proplists:get_value(Type, Ts) of
-        undefined -> undefined;
-        T -> {ok, T}
-    end;
-type(Type, #object{ type=T, parent=P }) ->
-    case type(Type, T) of
-        undefined -> type(Type, P);
-        Ok -> Ok
-    end;
-type(_, undefined) -> undefined.
-
-%% Create new object meta data
-object(Type, Fields) ->
-    DD = case proplists:get_value(parent, Fields) of
-             Obj when is_record(Obj, object) -> Obj;
-             _ -> #object{}
-         end,
-    D = proplists:get_value(default, Fields, DD),
-    Offset = proplists:get_value(offset, Fields, D#object.doffset),
-    T = object_type(Type, D),
-    #object{
-      doffset=Offset,
-      ?Init_field(poffset, Offset + T#struct.dsize),
-      type=T,
-      ?Init_field(schema),
-      ?Init_field(segment),
-      ?Init_field(segments),
-      ?Init_field(parent)
-     }.
-
+root(Type, Schema, Segments) ->
+    {ok, RootType} = lookup(Type, Schema),
+    {ok, ecapnp_obj:get(
+           RootType,
+           [{offset, 1},
+            {type, RootType},
+            {parent, Schema},
+            {msg, #msg{
+                     alloc=[size(S) || S <- Segments],
+                     data=Segments
+                    }}
+           ])
+    }.
+    
 %% Lookup field value in object
 field(Field, Object)
   when is_record(Field, data) ->
@@ -80,40 +55,19 @@ field(Field, Object)
 %% internal functions
 %% ===================================================================
 
--undef(Init_field).
--record(list_ptr, { offset, size, count, segment }).
-
-    
-object_type({struct, Type}, Object) ->
-    {ok, T} = type(Type, Object), T;
-object_type({list, Type}, Object) ->
-    object_type(Type, Object);
-object_type(Type, _)
-  when is_record(Type, struct) ->
-    Type.
-
-
 %% Enum field
-get_data(#data{ type={enum, Type},
-                align=Align },
-         #object{ doffset=Offset,
-                  segment=Segment }=Object) ->
-    <<_:Offset/binary-unit:64,
-      _:Align/bits,
+get_data(#data{ type={enum, Type}, align=Align }, Object) ->
+    <<_:Align/bits,
       Value:16/integer-little,
-      _/binary>> = Segment,
-    {ok, #enum{ values=Values }} = type(Type, Object),
+      _/binary>> = get_datasegment(Object),
+    {ok, #enum{ values=Values }} = lookup(Type, Object),
     lists:nth(Value + 1, Values);
 
 %% Union field
-get_data(#data{ type={union, Fields},
-                align=Align },
-          #object{ doffset=Offset,
-                   segment=Segment}=Object) ->
-    <<_:Offset/binary-unit:64,
-      _:Align/bits,
+get_data(#data{ type={union, Fields}, align=Align }, Object) ->
+    <<_:Align/bits,
       Tag:16/integer-little,
-      _/binary>> = Segment,
+      _/binary>> = get_datasegment(Object),
     {FieldName, Field} = lists:nth(Tag + 1, Fields),
     case Field of
         void -> FieldName;
@@ -123,24 +77,22 @@ get_data(#data{ type={union, Fields},
     end;
 
 %% Value field
-get_data(#data{ type=Type,
-                align=Align },
-         #object{ doffset=Offset,
-                  segment=Segment }) ->
-    get_value(Type, Offset, Align, Segment).
+get_data(#data{ type=Type, align=Align }, Obj) ->
+    get_value(Type, 0, Align, get_datasegment(Obj)).
 
 
 %% List field
 get_ptr(#ptr{ type={list, Type} }=Ptr, Object) ->
     case dereference_ptr(Ptr, Object) of
         #list_ptr{ size=composite, 
-                   segment=S }=L ->
-            [object(Type,
-                        [{offset, O},
-                         {segment, S},
-                         {parent, Object}])
+                   object=Obj }=L ->
+            [ecapnp_obj:get(
+               Type,
+               [{offset, ecapnp_obj:ptr_offset(O, Obj)},
+                {copy, Obj}])
              || O <- get_offset_list(L)];
-        #list_ptr{ segment=S }=L -> 
+        #list_ptr{ object=Obj }=L -> 
+            S = get_ptrsegment(Obj),
             [get_value(Type, O, A, S)
              || {O, A} <- get_offset_list(L)];
         Other ->
@@ -154,12 +106,12 @@ get_ptr(#ptr{ type=text }=Ptr, Object) ->
        offset=Offset, 
        size=8,
        count=Count,
-       segment=Segment }
+       object=Obj }
         = dereference_ptr(Ptr, Object),
     TextLen = Count - 1,
     <<_:Offset/binary-unit:64,
       Text:TextLen/binary,
-      _/binary>> = Segment,
+      _/binary>> = get_ptrsegment(Obj),
     Text;
 
 %% Struct field
@@ -183,17 +135,11 @@ get_ptr(Ptr, Object)
 
 
 %% Pointer field helpers
-dereference_ptr(
-  #ptr{ idx=Index }=Ptr,
-  #object{ poffset=ObjOffset,
-           segment=Segment }=Obj) ->
-
-    Pos = ObjOffset + Index,
-
-    <<_:Pos/binary-unit:64,
+dereference_ptr( #ptr{ idx=Index }=Ptr, Obj) ->
+    <<_:Index/binary-unit:64,
       Offset:32/integer-little-signed,
       Size:32/integer-little,
-      _/binary>> = Segment,
+      _/binary>> = get_ptrsegment(Obj),
 
     case ptr_type(Offset band 3, Offset, Size) of
         null -> null;
@@ -202,16 +148,16 @@ dereference_ptr(
                              Obj#object.parent;
                         true -> Obj
                      end,
-            object(Ptr#ptr.type, 
-                       [{offset, Pos + 1 + (Offset bsr 2)},
-                        {segment, Segment},
-                        {parent, Parent}]);
+            ecapnp_obj:get(
+              Ptr#ptr.type, 
+              [{offset, ecapnp_obj:ptr_offset(Index + 1 + (Offset bsr 2))},
+               {copy, Obj}, {parent, Parent}]);
         list ->
             #list_ptr{
-               offset = Pos + (Offset bsr 2) + 1,
+               offset = Index + (Offset bsr 2) + 1,
                size = list_element_size(Size band 7),
                count = Size bsr 3,
-               segment = Segment
+               object = Obj
               };
         far_ptr ->
             SegmentId = Size,
@@ -225,10 +171,10 @@ get_offset_list(#list_ptr{ count=0 }) -> [];
 get_offset_list(#list_ptr{ offset=Offset,
                            size=composite, 
                            count=TotalWordCount,
-                           segment=Segment }) ->
+                           object=Obj }) ->
     <<_:Offset/binary-unit:64,
       C:32/integer-little,
-      _/binary>> = Segment,
+      _/binary>> = get_ptrsegment(Obj),
     ElementCount = C bsr 2,
     ElementSize = TotalWordCount div ElementCount,
     lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize);
@@ -241,12 +187,12 @@ get_offset_list(#list_ptr{ offset=Offset,
           BitOffset rem 64}
      end || Idx <- lists:seq(0, Count - 1)].
 
-get_segment_object(Id, #object{ segments=S }=O) ->
+get_segment_object(Id, #object{ msg=Msg }=Obj) ->
     #object{ type=segment,
              poffset=0,
-             segment=lists:nth(Id + 1, S),
-             segments=S,
-             parent=O }.
+             segment_id=Id,
+             parent=Obj,
+             msg=Msg }.
 
 %% size in bits, or atom for special treatment..
 list_element_size(0) -> 0;
@@ -265,4 +211,3 @@ ptr_type(0) -> struct;
 ptr_type(1) -> list;
 ptr_type(2) -> far_ptr;
 ptr_type(3) -> reserved_ptr_type.
-

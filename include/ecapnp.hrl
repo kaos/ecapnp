@@ -14,6 +14,7 @@
           name :: atom(), 
           dsize=0 :: integer(),
           psize=0 :: integer(),
+          esize=inlineComposite :: element_size(),
           fields=[] :: list(),
           types=[] :: schema_types()
          }).
@@ -28,24 +29,32 @@
 
 -record(ptr, {
           type :: term(),
-          idx :: integer()
+          idx=0 :: integer()
          }).
 
 -record(data, {
           type :: term(),
-          align :: integer()
+          align=0 :: integer()
          }).
 
 -type schema_type() :: #struct{} | #enum{}.
 -type schema_types() :: list({atom(), schema_type()}).
+-type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
 
-%% Runtime object meta data
--record(object, {
-          doffset=1 :: integer(),
-          poffset :: integer(),
-          type :: #struct{},
-          schema :: #schema{},
-          segment :: binary(),
-          segments :: list(binary()),
-          parent :: #object{} | #schema{}
+%% Runtime data
+-record(msg, {
+          alloc = [] :: list(integer()),
+          data = [] :: list(binary())
          }).
+
+-record(object, {
+          segment_id=0 :: integer(),
+          doffset=0 :: integer(),
+          poffset=0 :: integer(),
+          type :: #struct{},
+          parent :: #object{} | #schema{},
+          msg :: #msg{}
+         }).
+
+%% For internal use
+-record(list_ptr, { offset, size, count, object }).

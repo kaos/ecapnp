@@ -14,48 +14,52 @@
 %%   limitations under the License.
 %%  
 
--module(ecapnp).
+-module(ecapnp_schema).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get_root/3, get/2]).
--export([set_root/2, set/3]).
+-export([lookup/2]).
 
 -include("ecapnp.hrl").
+
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
-get_root(Type, Schema, [Segment|_]=Segments) 
-  when is_atom(Type),
-       is_record(Schema, schema),
-       is_binary(Segment) ->
-    ecapnp_get:root(Type, Schema, Segments).
-
-set_root(Type, Schema)
-  when is_atom(Type),
-       is_record(Schema, schema) ->
-    ecapnp_set:root(Type, Schema).
-
-get(Field, #object{ type=#struct{
-                            fields=Fields
-                           }}=Object)
-  when is_atom(Field) ->
-    ecapnp_get:field(
-      proplists:get_value(Field, Fields),
-      Object
-     ).
-
-set(Field, Value, #object{ type=#struct{
-                                   fields=Fields
-                                  }}=Object)
-  when is_atom(Field) ->
-    ecapnp_set:field( 
-      proplists:get_value(Field, Fields),
-      Value, Object
-     ).
+%% Lookup type in schema
+lookup({struct, Type}, Ts) ->
+    lookup(Type, Ts);
+lookup({list, Type}, Ts) ->
+    lookup(Type, Ts);
+lookup(Type, _)
+  when is_record(Type, struct);
+       is_record(Type, enum) ->
+    {ok, Type};
+lookup(Type, #schema{ types=Ts }) ->
+    case proplists:get_value(Type, Ts) of
+        undefined -> lookup(Type, undefined);
+        T -> {ok, T}
+    end;
+lookup(Type, #struct{ types=Ts }) ->
+    case proplists:get_value(Type, Ts) of
+        undefined -> undefined;
+        T -> {ok, T}
+    end;
+lookup(Type, #enum{ types=Ts }) ->
+    case proplists:get_value(Type, Ts) of
+        undefined -> undefined;
+        T -> {ok, T}
+    end;
+lookup(Type, #object{ type=T }=Obj) ->
+    case lookup(Type, T) of
+        undefined -> lookup(Type, Obj#object.parent);
+        Ok -> Ok
+    end;
+lookup(Type, undefined) ->
+    {unknown_type, Type}.
 
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+

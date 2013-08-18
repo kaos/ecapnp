@@ -119,15 +119,15 @@ export_item({Tag, Type}, Out, Indent)
     export_item(Type, Out, I),
     Out(["}"]);
 export_item(#struct{ id=Id, source=Src, name=Name,
-                     dsize=DSize, psize=PSize,
+                     dsize=DSize, psize=PSize, esize=ESize,
                      fields=Fields, types=Types },
            Out, Indent) ->
     I = Indent + 2,
     Out(["#struct{~n~*s"
          "name=~p, id=~.16+, source= ~p,~n~*s"
-         "dsize=~p, psize=~p, fields=~n",
+         "dsize=~p, psize=~p, esize=~p, fields=~n",
          I, "", Name, Id, Src,
-         I, "", DSize, PSize]),
+         I, "", DSize, PSize, ESize]),
     export_list(Fields, Out, I + 2),
     if Types /= [] ->
             Out([",~n~*s"
@@ -194,6 +194,7 @@ compile_body({structNode, Struct}, Node) ->
              source = schema(get, displayName, Node),
              dsize = schema(get, dataSectionWordSize, Struct),
              psize = schema(get, pointerSectionSize, Struct),
+             esize = schema(get, preferredListEncoding, Struct),
              fields=
                  [compile_struct_member(M)
                   || M <- schema(get, members, Struct)]};
