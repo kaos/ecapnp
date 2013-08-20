@@ -17,12 +17,8 @@
 -module(ecapnp_data).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([alloc/2, update_segment/4, update_list_ptr/3]).
--export([get_segment/1, get_segment/2,
-         get_datasegment/1, get_ptrsegment/1]).
--export([list_size/2]).
+-export([new/1, alloc/3, update_segment/4, get_segment/4]).
 
--import(ecapnp_obj, [segment_id/1]).
 -include("ecapnp.hrl").
 
 
@@ -31,15 +27,22 @@
 %% ===================================================================
 
 
-alloc(Size, Object) ->
-    Id = segment_id(Object),
-    case alloc_data(Id, Size, Object) of
-        false ->
-            alloc_data(
-              lists:seq(0, segment_count(Object) - 1) -- [Id],
-              Size, Object);
-        Result -> Result
-    end.
+new(Init) ->
+    spawn_link(fun() -> data_state(Init) end).
+
+alloc(Id, Size, Pid) 
+  when is_integer(Id), is_integer(Size) ->
+    data_request(alloc, {Id, Size}, Pid).
+    
+update_segment(Id, Offset, Data, Pid)
+  when is_integer(Id), is_integer(Offset), is_binary(Data) ->
+    data_request(update_segment, {Id, Offset, Data}, Pid).
+
+get_segment(Id, Offset, Length, Pid)
+  when is_integer(Id), is_integer(Offset) andalso
+       is_integer(Length); Length == all ->
+    data_request(get_segment, {Id, Offset, Length}, Pid).
+
 
 %% update_data(Data, Offset, Obj) ->
 %%     update_segment(
@@ -53,110 +56,113 @@ alloc(Size, Object) ->
 %%       Obj#object.poffset + Offset,
 %%       Data, Obj).
 
-update_list_ptr(ListPtr, Offset, Obj) ->
-    update_segment(
-      (ListPtr#list_ptr.object)#object.segment_id, %% <-- fix.me
-      Obj#object.poffset + Offset,
-      create_ptr(ListPtr), Obj).
-
-update_segment(Id, Offset, Data, Object) ->
-    Size = size(Data),
-    <<Pre:Offset/binary-unit:64,
-      _:Size/binary,
-      Post/binary>> = get_segment(Id, Object),
-    set_segment(
-      Id, <<Pre/binary,
-            Data/binary, 
-            Post/binary>>,
-      Object).
-
-get_datasegment(#object{ doffset=Offset }=Obj) ->
-    get_segment(Offset, Obj).
-
-get_ptrsegment(#object{ poffset=Offset }=Obj) ->
-    get_segment(Offset, Obj).
-
-get_segment(Obj) ->
-    get_segment(0, Obj).
-
-get_segment(Offset, #object{ segment_id=Id, msg=Msg }) ->
-    <<_:Offset/binary-unit:64,
-      Segment/binary>> = get_segment(Id, Msg),
-    Segment;
-get_segment(Id, #msg{ data=Segments }) ->
-    lists:nth(Id + 1, Segments).
-
-create_ptr(Type) -> create_ptr(Type, 0).
-create_ptr(#struct{ dsize=DSize, psize=PSize }, Offset) ->
-    Off = (Offset band bnot 3) bsl 2,
-    <<Off:32/integer-little,
-      DSize:16/integer-little,
-      PSize:16/integer-little>>;
-create_ptr(#list_ptr{ offset=Offset,
-                      size=Size,
-                      count=Count }, 0) ->
-    Off = ((Offset band bnot 3) bsl 2) + 1,
-    Sz = ((Count band bnot 7) bsl 3) + element_size(Size),
-    <<Off:32/integer-little,
-      Sz:32/integer-little>>.
-
-list_size(Length, #struct{ esize=inlineComposite,
-                           dsize=DSize, psize=PSize }) ->
-    list_size(Length, (DSize + PSize) * 64) + 1;
-list_size(Length, #struct{ esize=pointer }) -> 
-    list_size(Length, 64);
-list_size(Length, #struct{ esize=ESize }) ->
-    list_size(Length, ecapnp_get:list_element_size(element_size(ESize)));
-list_size(Length, BitSize) ->
-    Bits = Length * BitSize,
-    Words = Bits div 64,
-    if Bits rem 64 == 0 -> Words;
-       true -> Words + 1
-    end.
 
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
 
-%% element size encoded value
-element_size(empty) -> 0;
-element_size(bit) -> 1;
-element_size(byte) -> 2;
-element_size(twoBytes) -> 3;
-element_size(fourBytes) -> 4;
-element_size(eightBytes) -> 5;
-element_size(pointer) -> 6;
-element_size(inlineComposite) -> 7.
+empty_message(Size) -> [empty_segment(Size)].
+empty_segment(Size) -> <<0:Size/integer-unit:64>>.
 
+data_request(Request, Args, Pid) 
+  when is_pid(Pid) ->
+    Pid ! {self(), Request, Args},
+    receive
+        {Request, Result} -> Result
+    end.
+
+%% ===================================================================
+%% Data state functions, should only be called from the data process
+%% ===================================================================
+
+data_state(Message0)
+  when is_record(Message0, msg) ->
+    receive
+        {From, Request, Args} ->
+            {Rsp, Message} = handle_request(Request, Args, Message0),
+            From ! {Request, Rsp},
+            data_state(Message)
+    end;
+
+data_state(Size) 
+  when is_integer(Size) ->
+    data_state(#msg{ alloc=[0], data=empty_message(Size)}).
+
+
+handle_request(alloc, {Id, Size}, Msg) ->
+    do_alloc(Id, Size, Msg);
+handle_request(update_segment, {Id, Offset, Data}, Msg) ->
+    do_update_segment(Id, Offset, Data, Msg);
+handle_request(get_segment, {Id, Offset, Length}, Msg) ->
+    do_get_segment(Id, Offset, Length, Msg);
+handle_request(Req, _Args, Msg) ->
+    {{bad_request, Req}, Msg}.
+
+                             
+do_alloc([Id|Ids], Size, Msg) ->
+    case do_alloc_data(Id, Size, Msg) of
+        {false, Msg} -> do_alloc(Ids, Size, Msg);
+        Result -> Result
+    end;
+do_alloc([], _Size, Msg) ->
+    {false, Msg}; %% TODO: add new segment
+                     
+do_alloc(Id, Size, Msg) ->
+    case do_alloc_data(Id, Size, Msg) of
+        {false, Msg} ->
+            do_alloc_data(
+              lists:seq(0, segment_count(Msg) - 1) -- [Id],
+              Size, Msg);
+        Result -> Result
+    end.
+    
+do_alloc_data(Id, Size, #msg{ alloc=Size }=Msg) ->
+    Segment = get_segment(Id, Msg),
+    SegSize = size(Segment),
+    {PreA, [Alloced|PostA]} = lists:split(Id, Size),
+    if Size =< (SegSize - Alloced) ->
+            {{Id, Alloced}, 
+             Msg#msg{ 
+               alloc = PreA ++ [Alloced + Size|PostA] 
+              }};
+       true -> {false, Msg}
+    end.
+
+do_update_segment(Id, Offset, Data, Msg) ->
+    Size = size(Data),
+    <<Pre:Offset/binary-unit:64,
+      _:Size/binary,
+      Post/binary>> = get_segment(Id, Msg),
+    set_segment(
+      Id,
+      <<Pre/binary,
+        Data/binary, 
+        Post/binary>>,
+      Msg).
+
+do_get_segment(Id, Offset, all, Msg) ->
+    <<_:Offset/binary-unit:64,
+      Segment/binary>> = get_segment(Id, Msg),
+    {Segment, Msg};
+do_get_segment(Id, Offset, Length, Msg) ->
+    <<_:Offset/binary-unit:64,
+      Segment:Length/binary-unit:64,
+      _/binary>> = get_segment(Id, Msg),
+    {Segment, Msg}.
+
+
+%% ===================================================================
+%% Data utils
+%% ===================================================================
+
+get_segment(Id, #msg{ data=Segments }) ->
+    lists:nth(Id + 1, Segments).
 
 segment_count(#msg{ alloc=List }) ->
-    length(List);
-segment_count(#object{ msg=Msg }) ->
-    segment_count(Msg).
-
+    length(List).
 
 set_segment(Id, Segment, #msg{ data=Segments }=Msg) ->
     {Pre, [_|Post]} = lists:split(Id, Segments),
     Msg#msg{ data = Pre ++ [Segment|Post] }.
 
-alloc_data([Id|Ids], Size, Object) ->
-    case alloc_data(Id, Size, Object) of
-        false -> alloc_data(Ids, Size, Object);
-        Result -> Result
-    end;
-alloc_data([], _Size, _Object) ->
-    false; %% TODO: add new segment
-                     
-alloc_data(Id, Size, #object{ msg=Msg }=Object) ->
-    Segment = get_segment(Id, Object),
-    SegSize = size(Segment),
-    {PreA, [Alloced|PostA]} = lists:split(Id, Msg#msg.alloc),
-    if Size =< (SegSize - Alloced) ->
-            {{Id, Alloced}, 
-             Object#object{
-               msg = Msg#msg{ 
-                       alloc = PreA ++ [Alloced + Size|PostA] 
-                      }}};
-       true -> false
-    end.

@@ -41,20 +41,21 @@
 -type schema_types() :: list({atom(), schema_type()}).
 -type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
 
-%% Runtime data
--record(msg, {
-          alloc = [] :: list(integer()),
-          data = [] :: list(binary())
-         }).
 
+%% Runtime data
 -record(object, {
           segment_id=0 :: integer(),
           doffset=0 :: integer(),
           poffset=0 :: integer(),
           type :: #struct{},
           parent :: #object{} | #schema{},
-          msg :: #msg{}
+          data :: pid()
          }).
 
 %% For internal use
 -record(list_ptr, { offset, size, count, object }).
+
+-record(msg, {
+          alloc = [] :: list(integer()),
+          data = [] :: list(binary())
+         }).
