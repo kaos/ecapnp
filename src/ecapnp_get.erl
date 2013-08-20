@@ -147,7 +147,7 @@ dereference_ptr( #ptr{ idx=Index }=Ptr, Obj) ->
                      end,
             ecapnp_obj:get(
               Ptr#ptr.type, 
-              [{offset, ecapnp_obj:ptr_offset(Index + 1 + (Offset bsr 2))},
+              [{offset, ecapnp_obj:ptr_offset(Index + 1 + (Offset bsr 2), Obj)},
                {copy, Obj}, {parent, Parent}]);
         list ->
             #list_ptr{
