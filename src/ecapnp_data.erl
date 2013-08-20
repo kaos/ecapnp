@@ -17,7 +17,8 @@
 -module(ecapnp_data).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([new/1, alloc/3, update_segment/4, get_segment/4]).
+-export([new/1, alloc/3, update_segment/3,
+         get_segment/4, get_message/1]).
 
 -include("ecapnp.hrl").
 
@@ -34,7 +35,7 @@ alloc(Id, Size, Pid)
   when is_integer(Id), is_integer(Size) ->
     data_request(alloc, {Id, Size}, Pid).
     
-update_segment(Id, Offset, Data, Pid)
+update_segment({Id, Offset}, Data, Pid)
   when is_integer(Id), is_integer(Offset), is_binary(Data) ->
     data_request(update_segment, {Id, Offset, Data}, Pid).
 
@@ -43,19 +44,8 @@ get_segment(Id, Offset, Length, Pid)
        is_integer(Length); Length == all ->
     data_request(get_segment, {Id, Offset, Length}, Pid).
 
-
-%% update_data(Data, Offset, Obj) ->
-%%     update_segment(
-%%       segment_id(Obj),
-%%       Obj#object.doffset + Offset,
-%%       Data, Obj).
-
-%% update_pointer(Data, Offset, Obj) ->
-%%     update_segment(
-%%       segment_id(Obj),
-%%       Obj#object.poffset + Offset,
-%%       Data, Obj).
-
+get_message(Pid) ->
+    data_request(get_message, [], Pid).
 
 
 %% ===================================================================
@@ -76,26 +66,34 @@ data_request(Request, Args, Pid)
 %% Data state functions, should only be called from the data process
 %% ===================================================================
 
-data_state(Message0)
-  when is_record(Message0, msg) ->
+data_state(Message)
+  when is_record(Message, msg) ->
     receive
         {From, Request, Args} ->
-            {Rsp, Message} = handle_request(Request, Args, Message0),
-            From ! {Request, Rsp},
-            data_state(Message)
+            handle_response(
+              handle_request(Request, Args, Message),
+              {Request, From})
     end;
 
 data_state(Size) 
   when is_integer(Size) ->
     data_state(#msg{ alloc=[0], data=empty_message(Size)}).
 
-
+handle_response({Response, Msg}, {Request, From}) ->
+    From ! {Request, Response},
+    data_state(Msg);
+handle_response(Msg, {Request, From}) ->
+    From ! {Request, ok},
+    data_state(Msg).
+    
 handle_request(alloc, {Id, Size}, Msg) ->
     do_alloc(Id, Size, Msg);
 handle_request(update_segment, {Id, Offset, Data}, Msg) ->
     do_update_segment(Id, Offset, Data, Msg);
 handle_request(get_segment, {Id, Offset, Length}, Msg) ->
     do_get_segment(Id, Offset, Length, Msg);
+handle_request(get_message, _, Msg) ->
+    {Msg, Msg};
 handle_request(Req, _Args, Msg) ->
     {{bad_request, Req}, Msg}.
 
@@ -117,10 +115,10 @@ do_alloc(Id, Size, Msg) ->
         Result -> Result
     end.
     
-do_alloc_data(Id, Size, #msg{ alloc=Size }=Msg) ->
+do_alloc_data(Id, Size, #msg{ alloc=Alloc }=Msg) ->
     Segment = get_segment(Id, Msg),
     SegSize = size(Segment),
-    {PreA, [Alloced|PostA]} = lists:split(Id, Size),
+    {PreA, [Alloced|PostA]} = lists:split(Id, Alloc),
     if Size =< (SegSize - Alloced) ->
             {{Id, Alloced}, 
              Msg#msg{ 

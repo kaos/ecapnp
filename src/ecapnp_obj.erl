@@ -17,7 +17,8 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/2, segment_id/1, segment/3,
+-export([get/2, alloc/2, segment_id/1, 
+         segment/3, update/3,
          data_segment/3, ptr_segment/3,
          data_offset/2, ptr_offset/2,
          create_ptr/1, create_ptr/2, list_size/2]).
@@ -50,11 +51,17 @@ get(Type, Fields) ->
       }.
 -undef(Init_field).
 
+alloc(Size, #object{ segment_id=Id, data=Pid }) ->
+    ecapnp_data:alloc(Id, Size, Pid).
+
 segment_id(#object{ segment_id=Id }) -> Id;
 segment_id(_) -> 0.
 
 segment(Offset, Length, #object{ segment_id=Id, data=Pid }) ->
     ecapnp_data:get_segment(Id, Offset, Length, Pid).
+
+update(Offset, Data, #object{ segment_id=Id, data=Pid }) ->
+    ecapnp_data:update_segment({Id, Offset}, Data, Pid).
 
 data_segment(Offset, Length, Obj) ->
     segment(data_offset(Offset, Obj), Length, Obj).

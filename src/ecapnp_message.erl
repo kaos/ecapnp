@@ -17,7 +17,9 @@
 -module(ecapnp_message).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([read/1]).
+-export([read/1, write/1]).
+
+-include("ecapnp.hrl").
 
 %% ===================================================================
 %% API functions
@@ -26,6 +28,19 @@
 read(Data)
   when is_binary(Data) ->
     read_message(Data).
+
+write(#object{ data=Pid }) ->
+    #msg{ alloc=Alloc, data=Segments } =
+        ecapnp_data:get_message(Pid),
+    SegCount = length(Segments) - 1,
+    SegSizes = << <<Size:32/integer-little>> || Size <- Alloc >>,
+    Pad = SegCount rem 2,
+    Padding = <<0:Pad/integer-unit:32>>,
+    Data = << <<Segment:Size/binary-unit:64>>
+              || {Segment, Size} <- lists:zip(Segments, Alloc) >>,
+    <<SegCount:32/integer-little, SegSizes/binary,
+      Padding/binary, Data/binary>>.
+
 
 %% ===================================================================
 %% internal functions

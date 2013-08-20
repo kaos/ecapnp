@@ -57,22 +57,18 @@ field(Field, Object)
 %% ===================================================================
 
 %% Enum field
-get_data(#data{ type={enum, Type}, align=Align }, Object) ->
-    <<_:Align/bits,
-      Value:16/integer-little,
-      _/binary>> = data_segment(0, 1 + (Align div 64), Object),
+get_data(#data{ type={enum, Type} }=D, Object) ->
+    Value = get_data(D#data{ type=uint16 }, Object),
     {ok, #enum{ values=Values }} = lookup(Type, Object),
     lists:nth(Value + 1, Values);
 
 %% Union field
-get_data(#data{ type={union, Fields}, align=Align }, Object) ->
-    <<_:Align/bits,
-      Tag:16/integer-little,
-      _/binary>> = data_segment(0, 1 + (Align div 64), Object),
+get_data(#data{ type={union, Fields} }=D, Object) ->
+    Tag = get_data(D#data{ type=uint16 }, Object),
     {FieldName, Field} = lists:nth(Tag + 1, Fields),
-    case Field of
-        void -> FieldName;
-        _ ->
+    if Field == void -> 
+            FieldName;
+       true ->
             FieldValue = field(Field, Object),
             {FieldName, FieldValue}
     end;
