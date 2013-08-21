@@ -1,0 +1,214 @@
+<!doctype html>
+<!-- The Time Machine GitHub pages theme was designed and developed by Jon Rohan, on Feb 7, 2012. -->
+<!-- Follow him for fun. http://twitter.com/jonrohan. Tail his code on http://github.com/jonrohan -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="stylesheet" href="stylesheets/stylesheet.css" media="screen"/>
+  <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="javascripts/script.js"></script>
+
+  <title>ecapnp</title>
+  <meta name="description" content="Cap'n Proto library for Erlang">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <header>
+      <h1 class="title">ecapnp</h1>
+    </header>
+    <div id="container">
+      <p class="tagline">Cap'n Proto library for Erlang</p>
+      <div id="main" role="main">
+        <div class="download-bar">
+        <div class="inner">
+          <a href="https://github.com/kaos/ecapnp/tarball/master" class="download-button tar"><span>Download</span></a>
+          <a href="https://github.com/kaos/ecapnp/zipball/master" class="download-button zip"><span>Download</span></a>
+          <a href="https://github.com/kaos/ecapnp" class="code">View ecapnp on GitHub</a>
+        </div>
+        <span class="blc"></span><span class="trc"></span>
+        </div>
+        <article class="markdown-body">
+          <h1>
+<a name="ecapnp" class="anchor" href="#ecapnp"><span class="octicon octicon-link"></span></a>ecapnp</h1>
+
+<p>Cap'n Proto library for Erlang.</p>
+
+<p>NOTICE: Not all schema features are yet implemented.</p>
+
+<h2>
+<a name="prerequisites" class="anchor" href="#prerequisites"><span class="octicon octicon-link"></span></a>Prerequisites</h2>
+
+<p>Naturally, the
+<a href="http://kentonv.github.io/capnproto/index.html">Cap'n Proto</a> framework
+is needed in order to compile any <code>.capnp</code> schema files.</p>
+
+<h1>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h1>
+
+<p>Build and install <code>ecapnp</code> somewhere in you <code>ERL_LIBS</code> path.</p>
+
+<p>Then use <code>capnp</code> to compile schema files to be used in Erlang:</p>
+
+<pre><code>   capnp compile -oerl &lt;schemafile.capnp&gt;
+</code></pre>
+
+<p>See <code>capnp compile --help</code> for compile options.</p>
+
+<p>Include the compiled <code>schemafile.capnp.hrl</code> header file in the module
+where you need to read Cap'n Proto messages.</p>
+
+<h1>
+<a name="basic-api" class="anchor" href="#basic-api"><span class="octicon octicon-link"></span></a>Basic API</h1>
+
+<p>The compiled schema adds a few functions to help read messages.</p>
+
+<ul>
+<li>
+<p><code>schemafile(root, 'RootStructTypeName', Message) :: {ok, RootObject}</code></p>
+
+<p>Get the message's root object. <code>Message</code> is a list of binary
+segments, as returned by <code>ecapnp_message:read/1</code>.</p>
+</li>
+<li>
+<p><code>schemafile(root, 'RootStructTypeName') :: {ok, RootObject}</code></p>
+
+<p>Create a new message with the given root object.</p>
+</li>
+<li>
+<p><code>schemafile(get, FieldName, Object) :: Value | Object | list(Object)</code></p>
+
+<p>Read <code>FieldName</code> of <code>Object</code>. For data fields, this results in a
+standard Erlang value, where as for objects it is a opaque value to
+be passed in another get field value request. List values are also
+plain Erlang lists, where each list element's value follows the
+above rules.</p>
+</li>
+<li>
+<p><code>schemafile(set, FieldName, Value, Object) :: ok | list(Object)</code></p>
+
+<p>Write <code>Value</code> to <code>FieldName</code> of <code>Object</code>. In case the field is a list
+of objects, the <code>Value</code> should be number of elements to allocate for
+the list, and the result is a list of objects.
+The implementation of other list types are incomplete at this moment.</p>
+</li>
+<li>
+<p><code>schemafile(schema) :: schema()</code></p>
+
+<p>This returns the entire message schema.</p>
+</li>
+</ul><p>The library has a few exported functions as well:</p>
+
+<ul>
+<li>
+<p><code>ecapnp:get_root(Type, Schema, Message) :: {ok, RootObject}</code></p>
+
+<p>This is the function wrapped by <code>schemafile(root, ...)</code>.</p>
+</li>
+<li>
+<p><code>ecapnp:set_root(Type, Schema) :: {ok, RootObject}</code></p>
+
+<p>This is the function wrapped by <code>schemafile(root, ...)</code>.</p>
+</li>
+<li>
+<p><code>ecapnp:get(Field, Object) :: Value | Object</code></p>
+
+<p>This is the function wrapped by <code>schemafile(get, ...)</code>.</p>
+</li>
+<li>
+<p><code>ecapnp:set(Field, Value, Object) :: ok | list(Object)</code></p>
+
+<p>This is the function wrapped by <code>schemafile(set, ...)</code>.</p>
+</li>
+<li>
+<p><code>ecapnp_message:read(Data) :: Message</code></p>
+
+<p>Parse a binary Cap'n Proto message. The <code>Data</code> should begin with
+the message header (segment count and sizes) followed by the
+segment data.</p>
+</li>
+<li>
+<p><code>ecapnp_message:write(Object) :: binary()</code></p>
+
+<p>Build a binary Cap'n Proto message with proper message header. Any
+<code>Object</code> that belongs to the message may be used as argument to
+this call.</p>
+</li>
+<li>
+<p><code>ecapnp_serialize:unpack(Data) :: binary()</code></p>
+
+<p>If a message is packed, it has to be unpacked prior to reading it
+with <code>ecapnp_message:read/1</code>.</p>
+</li>
+<li>
+<p><code>ecapnp_serialize:pack(Data) :: binary()</code></p>
+
+<p>Any message can be packed in order to reduce the message size.</p>
+</li>
+<li>
+<p><code>ecapnpc:compile_file(FileName)</code>
+<code>ecapnpc:compile_data(Binary)</code>
+<code>ecapnpc:compile_message(Message)</code></p>
+
+<p>The <code>ecapnpc</code> module takes care of taking a capnp <code>schema</code> message,
+and compile it to a erlang header file.</p>
+</li>
+</ul><h1>
+<a name="sample" class="anchor" href="#sample"><span class="octicon octicon-link"></span></a>Sample</h1>
+
+<p>In the Cap'n Proto distribution there is a AddressBook example. The
+same example is provided in a <code>escript</code> version in the <code>priv/samples</code>
+directory.</p>
+
+<p>This version packs/unpacks the messages, so it works the same as the
+C++ counterpart, and can be used interchangeably.</p>
+
+<h1>
+<a name="bugs" class="anchor" href="#bugs"><span class="octicon octicon-link"></span></a>BUGS!!</h1>
+
+<p>On <em>Windows</em> (should you be unfortunate enough to be on that platform)
+there is a rather bad design decision in Erlang to convert all <code>\r</code> to
+<code>\n</code> that are read from <code>stdin</code>. Either patch <code>beam.smp.dll</code>, the
+source, or avoid reading Cap'n Proto messages from <code>stdin</code>.</p>
+
+<p>(I have a patch for erl 5.9.3.1 if you need one)</p>
+        </article>
+      </div>
+    </div>
+    <footer>
+      <div class="owner">
+      <p><a href="https://github.com/kaos" class="avatar"><img src="https://1.gravatar.com/avatar/eaf911f3cfba9a89eaf6300cc659dd9b?d=https%3A%2F%2Fidenticons.github.com%2F5c38e19a910657ec18a4115b6888b2b0.png&amp;s=30" width="48" height="48"/></a> <a href="https://github.com/kaos">kaos</a> maintains <a href="https://github.com/kaos/ecapnp">ecapnp</a></p>
+
+
+      </div>
+      <div class="creds">
+        <small>This page generated using <a href="https://pages.github.com/">GitHub Pages</a><br/>theme by <a href="https://twitter.com/jonrohan/">Jon Rohan</a></small>
+      </div>
+    </footer>
+  </div>
+  <div class="current-section">
+    <a href="#top">Scroll to top</a>
+    <a href="https://github.com/kaos/ecapnp/tarball/master" class="tar">tar</a><a href="https://github.com/kaos/ecapnp/zipball/master" class="zip">zip</a><a href="" class="code">source code</a>
+    <p class="name"></p>
+  </div>
+
+            <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-8367989-4");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+</body>
+</html>
