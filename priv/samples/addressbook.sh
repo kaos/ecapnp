@@ -21,16 +21,6 @@ read([]) ->
     dump_message(read_stdin()).
 
 write([]) ->    
-    %% dbg:tracer(),
-    %% dbg:p(all, call),
-    %% dbg:p(new, messages),
-    %% dbg:tpl(ecapnp_data, []),
-    %% dbg:tpl(ecapnp_set, []),
-    %% dbg:tp(ecapnp_obj, alloc, []),
-    %% dbg:tpl(ecapnp, []),
-    %% dbg:tpl(ecapnp_data, update_segment, []),
-    %% dbg:tpl(ecapnp_set, []),
-
     {ok, Root} = addressbook(root, 'AddressBook'),
     [Alice, Bob] = addressbook(set, people, 2, Root),
     [AlicePhone] = addressbook(set, phones, 1, Alice),
@@ -61,16 +51,18 @@ write([]) ->
             ],
         {Field, Value} <- FieldValues],
 
-    %% Get message data
-    Data1 = ecapnp_message:write(Root),
+    %% Get message data and pack it
+    Data1 = ecapnp_serialize:pack(
+              ecapnp_message:write(Root)),
     %% io:put_chars/1 needs this unicode translation stuff, for some reason... ?!
     Data2 = unicode:characters_to_binary(Data1, latin1),
-    %% io:format(standard_error, "Data1: ~p~nLen: ~.16#~nData2: ~p~nLen: ~.16#~n", [Data1, size(Data1), Data2, size(Data2)]),
     io:put_chars(Data2).
 
 
 dump_message(Data) ->
-    {ok, Message} = ecapnp_message:read(Data),
+    %% unpack and read message data
+    {ok, Message} = ecapnp_message:read(
+                      ecapnp_serialize:unpack(Data)),
     {ok, Root} = addressbook(root, 'AddressBook', Message),
 
     People = addressbook(get, people, Root),
@@ -101,9 +93,7 @@ read_stdin(Acc)
     read_stdin(file:read(standard_io, 1024), Acc).
 
 read_stdin(eof, Acc) ->
-    Bin = list_to_binary(
-            lists:reverse(Acc)),
-    %% io:format(standard_error, "Data : ~p~nLen: ~.16#~n", [Bin, size(Bin)]),
-    Bin;
+    list_to_binary(
+      lists:reverse(Acc));
 read_stdin({ok, Data}, Acc) ->
     read_stdin([Data|Acc]).

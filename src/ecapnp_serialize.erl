@@ -17,19 +17,74 @@
 -module(ecapnp_serialize).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([unpack/1]).
+-export([pack/1, unpack/1]).
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
+pack(Data)
+  when is_binary(Data) ->
+    pack_data(Data).
+
 unpack(Data)
   when is_binary(Data) ->
     unpack_data(Data).
 
+
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+
+pack_data(Data) -> pack_data(Data, <<>>).
+
+pack_data(<<0:1/integer-unit:64, Rest/binary>>, Acc) ->
+    {Count, Rest2} = pack_nulls(Rest),
+    pack_data(Rest2, <<Acc/binary, 0, Count:8/integer>>);
+pack_data(<<Word:1/binary-unit:64, Rest/binary>>, Acc) ->
+    case pack_tag(Word, <<>>) of
+        {{8, 255}, TagData} ->
+            Count = pack_blob(Rest),
+            <<BlobData:Count/binary-unit:64, Rest2/binary>> = Rest,
+            pack_data(Rest2, <<Acc/binary, 255, TagData/binary, Count:8/integer, BlobData/binary>>);
+        {{_, TagByte}, TagData} ->
+            pack_data(Rest, <<Acc/binary, TagByte:8/integer, TagData/binary>>)
+    end;
+pack_data(<<>>, Acc) -> Acc.
+
+pack_tag(Word, Acc) -> pack_tag([], Word, Acc).
+
+pack_tag(Tag, <<0, Rest/binary>>, Acc) ->
+    pack_tag([0|Tag], Rest, Acc);
+pack_tag(Tag, <<Byte:1/binary, Rest/binary>>, Acc) ->
+    pack_tag([1|Tag], Rest, <<Acc/binary, Byte/binary>>);
+pack_tag(Tag, <<>>, Acc) ->
+    TagByte = lists:foldl(
+                fun(B, {C, V}) ->
+                        {C + B, (V bsl 1) bor B}
+                end,
+                {0, 0},
+                Tag),
+    {TagByte, Acc}.
+
+pack_blob(Data) -> pack_blob(0, Data).
+
+pack_blob(Count, <<Word:1/binary-unit:64, Rest/binary>>) ->
+    case pack_tag(Word, <<>>) of
+        {{C, _V}, _Tag} when C >= 6 ->
+            %% keep packing blob as long as we only have 2 or fewer zero bytes in each word
+            pack_blob(Count + 1, Rest);
+        _ -> Count
+    end;
+pack_blob(Count, <<>>) -> Count.
+
+pack_nulls(Data) -> pack_nulls(0, Data).
+
+pack_nulls(Count, <<0:1/binary-unit:64, Rest/binary>>) ->
+    pack_nulls(Count + 1, Rest);
+pack_nulls(Count, Rest) ->
+    {Count, Rest}.
+
 
 unpack_data(Data) -> unpack_data(Data, <<>>).
 
@@ -49,4 +104,3 @@ unpack_tag([1|Bs], <<B:1/binary, Rest/binary>>, Acc) ->
     unpack_tag(Bs, Rest, <<Acc/binary, B/binary>>);
 unpack_tag([], Rest, Acc) ->
     unpack_data(Rest, Acc).
-
