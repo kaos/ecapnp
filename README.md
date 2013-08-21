@@ -3,7 +3,8 @@ ecapnp
 
 Cap'n Proto library for Erlang.
 
-Currently only read operations are supported.
+NOTICE: Not all schema features are yet implemented.
+
 
 Prerequisites
 -------------
@@ -29,6 +30,7 @@ See `capnp compile --help` for compile options.
 Include the compiled `schemafile.capnp.hrl` header file in the module
 where you need to read Cap'n Proto messages.
 
+
 Basic API
 =========
 
@@ -39,7 +41,11 @@ The compiled schema adds a few functions to help read messages.
    Get the message's root object. `Message` is a list of binary
    segments, as returned by `ecapnp_message:read/1`.
 
-* `schemafile(get, FieldName, Object) :: Value | Object`
+* `schemafile(root, 'RootStructTypeName') :: {ok, RootObject}`
+
+   Create a new message with the given root object.
+   
+* `schemafile(get, FieldName, Object) :: Value | Object | list(Object)`
 
    Read `FieldName` of `Object`. For data fields, this results in a
    standard Erlang value, where as for objects it is a opaque value to
@@ -47,6 +53,13 @@ The compiled schema adds a few functions to help read messages.
    plain Erlang lists, where each list element's value follows the
    above rules.
 
+* `schemafile(set, FieldName, Value, Object) :: ok | list(Object)`
+
+   Write `Value` to `FieldName` of `Object`. In case the field is a list
+   of objects, the `Value` should be number of elements to allocate for
+   the list, and the result is a list of objects.
+   The implementation of other list types are incomplete at this moment.
+   
 * `schemafile(schema) :: schema()`
 
    This returns the entire message schema.
@@ -57,9 +70,38 @@ The library has a few exported functions as well:
 
    This is the function wrapped by `schemafile(root, ...)`.
 
+* `ecapnp:set_root(Type, Schema) :: {ok, RootObject}`
+
+   This is the function wrapped by `schemafile(root, ...)`.
+
 * `ecapnp:get(Field, Object) :: Value | Object`
 
    This is the function wrapped by `schemafile(get, ...)`.
+
+* `ecapnp:set(Field, Value, Object) :: ok | list(Object)`
+
+   This is the function wrapped by `schemafile(set, ...)`.
+
+* `ecapnp_message:read(Data) :: Message`
+
+   Parse a binary Cap'n Proto message. The `Data` should begin with
+   the message header (segment count and sizes) followed by the
+   segment data.
+
+* `ecapnp_message:write(Object) :: binary()`
+
+   Build a binary Cap'n Proto message with proper message header. Any
+   `Object` that belongs to the message may be used as argument to
+   this call.
+
+* `ecapnp_serialize:unpack(Data) :: binary()`
+
+   If a message is packed, it has to be unpacked prior to reading it
+   with `ecapnp_message:read/1`.
+   
+* `ecapnp_serialize:pack(Data) :: binary()`
+
+   Any message can be packed in order to reduce the message size.
 
 * `ecapnpc:compile_file(FileName)`
   `ecapnpc:compile_data(Binary)`
@@ -68,12 +110,17 @@ The library has a few exported functions as well:
    The `ecapnpc` module takes care of taking a capnp `schema` message,
    and compile it to a erlang header file.
 
+
 Sample
 ======
 
-In the Cap'n Proto distribution there is a AddressBook example.
-As only read operations are yet supported, only half of the example is
-implemented in ecapnp. See `priv/sample` for the implementation.
+In the Cap'n Proto distribution there is a AddressBook example. The
+same example is provided in a `escript` version in the `priv/samples`
+directory.
+
+This version packs/unpacks the messages, so it works the same as the
+C++ counterpart, and can be used interchangeably.
+
 
 BUGS!!
 ======

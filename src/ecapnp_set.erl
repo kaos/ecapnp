@@ -144,13 +144,21 @@ set_ptr(_Field, _Value, _Object) ->
                <<Pre:Offset/binary-unit:64,
                  PreV:Align/bits,
                  _:Size/TypeSpec,
-                 Post/binary>> = Segment,
-               <<Pre/binary, PreV/bits, Value:Size/TypeSpec, Post/binary>>
-).
+                 Post/bits>> = Segment,
+               <<Pre/binary, PreV/bits, Value:Size/TypeSpec, Post/bits>>
+                   ).
 
 ?SET_VALUE(uint64, 64, integer-unsigned-little);
 ?SET_VALUE(uint32, 32, integer-unsigned-little);
-?SET_VALUE(uint16, 16, integer-unsigned-little).
+?SET_VALUE(uint16, 16, integer-unsigned-little);
+?SET_VALUE(uint8, 8, integer-unsigned-little);
+?SET_VALUE(int64, 64, integer-signed-little);
+?SET_VALUE(int32, 32, integer-signed-little);
+?SET_VALUE(int16, 16, integer-signed-little);
+?SET_VALUE(int8, 8, integer-signed-little);
+?SET_VALUE(bool, 1, bits);
+?SET_VALUE(float32, 32, float-little);
+?SET_VALUE(float64, 64, float-little).
 
 ptr_offset(Offset, #ptr{ idx=Idx }, #object{ poffset=PtrOffset }) ->
     Offset - PtrOffset - Idx - 1.

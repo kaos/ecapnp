@@ -120,14 +120,21 @@ get_ptr(Ptr, Object)
                <<_:Offset/binary-unit:64,
                  _:Align/bits,
                  Value:Size/TypeSpec,
-                 _/binary>> = Segment,
+                 _/bits>> = Segment,
                Value
-).
+                   ).
 
 ?GET_VALUE(uint64, 64, integer-unsigned-little);
 ?GET_VALUE(uint32, 32, integer-unsigned-little);
-?GET_VALUE(uint16, 16, integer-unsigned-little).
-
+?GET_VALUE(uint16, 16, integer-unsigned-little);
+?GET_VALUE(uint8, 8, integer-unsigned-little);
+?GET_VALUE(int64, 64, integer-signed-little);
+?GET_VALUE(int32, 32, integer-signed-little);
+?GET_VALUE(int16, 16, integer-signed-little);
+?GET_VALUE(int8, 8, integer-signed-little);
+?GET_VALUE(bool, 1, bits);
+?GET_VALUE(float32, 32, float-little);
+?GET_VALUE(float64, 64, float-little).
 
 %% Pointer field helpers
 dereference_ptr( #ptr{ idx=Index }=Ptr, Obj) ->
