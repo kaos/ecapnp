@@ -1,2 +1,2 @@
 #!/bin/bash
-./addressbook.sh addressbook.msg
+./addressbook.sh write | ./addressbook.sh read
