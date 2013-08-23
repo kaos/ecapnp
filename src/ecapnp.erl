@@ -42,7 +42,7 @@ get(Field, #object{ type=#struct{
                            }}=Object)
   when is_atom(Field) ->
     ecapnp_get:field(
-      proplists:get_value(Field, Fields),
+      lookup_field(Field, Fields),
       Object
      ).
 
@@ -51,7 +51,7 @@ set(Field, Value, #object{ type=#struct{
                                   }}=Object)
   when is_atom(Field) ->
     ecapnp_set:field( 
-      proplists:get_value(Field, Fields),
+      lookup_field(Field, Fields),
       Value, Object
      ).
 
@@ -59,3 +59,6 @@ set(Field, Value, #object{ type=#struct{
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+
+lookup_field(Name, Fields) ->
+    proplists:get_value(Name, Fields, {unknown_field, Name}).
