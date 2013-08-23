@@ -2,16 +2,16 @@
 %% Schema meta data types
 
 -record(schema, {
+          name :: atom(),
           id :: atom(),
           source = <<>> :: binary(),
-          name :: atom(),
           types=[] :: schema_types()
          }).
 
 -record(struct, {
+          name :: atom(), 
           id :: atom(),
           source = <<>> :: binary(),
-          name :: atom(), 
           dsize=0 :: integer(),
           psize=0 :: integer(),
           esize=inlineComposite :: element_size(),
@@ -20,9 +20,9 @@
          }).
 
 -record(enum, {
+          name :: atom(),
           id :: atom(),
           source = <<>> :: binary(),
-          name :: atom(),
           values=[] :: list(),
           types=[] :: schema_types()
          }).
@@ -43,12 +43,18 @@
 
 
 %% Runtime data
+-record(type, {
+          name :: atom(),
+          id=0 :: integer()
+         }).
+
 -record(object, {
+          type :: #type{},
           segment_id=0 :: integer(),
           doffset=0 :: integer(),
+          dsize=0 :: integer(),
           poffset=0 :: integer(),
-          type :: #struct{},
-          parent :: #object{} | #schema{},
+          psize=0 :: integer(),
           data :: pid()
          }).
 
@@ -56,6 +62,7 @@
 -record(list_ptr, { offset, size, count, object }).
 
 -record(msg, {
+          schema :: #schema{},
           alloc = [] :: list(integer()),
           data = [] :: list(binary())
          }).

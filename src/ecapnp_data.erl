@@ -18,7 +18,8 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([new/1, alloc/3, update_segment/3,
-         get_segment/4, get_message/1]).
+         get_segment/4, get_message/1,
+         get_type/2]).
 
 -include("ecapnp.hrl").
 
@@ -26,7 +27,6 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
-
 
 new(Init) ->
     spawn_link(fun() -> data_state(Init) end).
@@ -47,6 +47,10 @@ get_segment(Id, Offset, Length, Pid)
 get_message(Pid) ->
     data_request(get_message, [], Pid).
 
+get_type(Type, Pid)
+  when is_atom(Type) ->
+    data_request(get_type, Type, Pid).
+
 
 %% ===================================================================
 %% internal functions
@@ -62,105 +66,146 @@ data_request(Request, Args, Pid)
         {Request, Result} -> Result
     end.
 
+
 %% ===================================================================
 %% Data state functions, should only be called from the data process
 %% ===================================================================
 
-data_state(Message)
-  when is_record(Message, msg) ->
+-record(state, { msg, types }).
+
+data_state(State)
+  when is_record(State, state) ->
     receive
         {From, Request, Args} ->
             handle_response(
-              handle_request(Request, Args, Message),
+              handle_request(Request, Args, State),
               {Request, From})
     end;
 
-data_state(Size) 
-  when is_integer(Size) ->
-    data_state(#msg{ alloc=[0], data=empty_message(Size)}).
+data_state(Message)
+  when is_record(Message, msg) ->
+    data_state(new_state(Message));
+data_state({Schema, MsgSize}) ->
+    data_state(new_state(#msg{ 
+                            schema=Schema, 
+                            alloc=[0],
+                            data=empty_message(MsgSize)
+                           })).
 
-handle_response({Response, Msg}, {Request, From}) ->
+new_state(#msg{ schema=Schema }=Msg) ->
+    #state{
+       msg=Msg,
+       types=list_types(Schema, [])
+      }.
+
+-define(list_types(Type),
+        list_types({_, #Type{ types=Ts }}=T, Acc) -> 
+               list_types(Ts, [T|Acc]);
+            list_types(#Type{ types=Ts }, Acc) ->
+               list_types(Ts, Acc)
+                   ).
+?list_types(schema);
+?list_types(struct);
+?list_types(enum);
+list_types([T|Ts], Acc) ->
+    list_types(Ts, list_types(T, Acc));
+list_types([], Acc) -> Acc.
+-undef(list_types).
+
+handle_response({Response, State}, {Request, From}) ->
     From ! {Request, Response},
-    data_state(Msg);
-handle_response(Msg, {Request, From}) ->
+    data_state(State);
+handle_response(State, {Request, From}) ->
     From ! {Request, ok},
-    data_state(Msg).
+    data_state(State).
     
-handle_request(alloc, {Id, Size}, Msg) ->
-    do_alloc(Id, Size, Msg);
-handle_request(update_segment, {Id, Offset, Data}, Msg) ->
-    do_update_segment(Id, Offset, Data, Msg);
-handle_request(get_segment, {Id, Offset, Length}, Msg) ->
-    do_get_segment(Id, Offset, Length, Msg);
-handle_request(get_message, _, Msg) ->
-    {Msg, Msg};
-handle_request(Req, _Args, Msg) ->
-    {{bad_request, Req}, Msg}.
+handle_request(alloc, {Id, Size}, State) ->
+    do_alloc(Id, Size, State);
+handle_request(update_segment, {Id, Offset, Data}, State) ->
+    do_update_segment(Id, Offset, Data, State);
+handle_request(get_segment, {Id, Offset, Length}, State) ->
+    do_get_segment(Id, Offset, Length, State);
+handle_request(get_message, _, State) ->
+    {State#state.msg, State};
+handle_request(get_type, Type, State) ->
+    do_get_type(Type, State);
+handle_request(Req, _Args, State) ->
+    {{bad_request, Req}, State}.
 
                              
-do_alloc([Id|Ids], Size, Msg) ->
-    case do_alloc_data(Id, Size, Msg) of
-        {false, Msg} -> do_alloc(Ids, Size, Msg);
+do_alloc([Id|Ids], Size, State0) ->
+    case do_alloc_data(Id, Size, State0) of
+        {false, State} -> do_alloc(Ids, Size, State);
         Result -> Result
     end;
-do_alloc([], _Size, Msg) ->
-    {false, Msg}; %% TODO: add new segment
+do_alloc([], _Size, State) ->
+    {false, State}; %% TODO: add new segment
                      
-do_alloc(Id, Size, Msg) ->
-    case do_alloc_data(Id, Size, Msg) of
-        {false, Msg} ->
+do_alloc(Id, Size, State) ->
+    case do_alloc_data(Id, Size, State) of
+        {false, State} ->
             do_alloc_data(
-              lists:seq(0, segment_count(Msg) - 1) -- [Id],
-              Size, Msg);
+              lists:seq(0, segment_count(State) - 1) -- [Id],
+              Size, State);
         Result -> Result
     end.
     
-do_alloc_data(Id, Size, #msg{ alloc=Alloc }=Msg) ->
-    Segment = get_segment(Id, Msg),
+do_alloc_data(Id, Size, State) ->
+    Segment = get_segment(Id, State),
     SegSize = size(Segment),
+    Msg = State#state.msg,
+    Alloc = Msg#msg.alloc,
     {PreA, [Alloced|PostA]} = lists:split(Id, Alloc),
     if Size =< (SegSize - Alloced) ->
             {{Id, Alloced}, 
-             Msg#msg{ 
-               alloc = PreA ++ [Alloced + Size|PostA] 
-              }};
-       true -> {false, Msg}
+             State#state{
+               msg=Msg#msg{ 
+                     alloc = PreA ++ [Alloced + Size|PostA] 
+                    }}
+            };
+       true -> {false, State}
     end.
 
-do_update_segment(Id, Offset, Data, Msg) ->
+do_update_segment(Id, Offset, Data, State) ->
     Size = size(Data),
     <<Pre:Offset/binary-unit:64,
       _:Size/binary,
-      Post/binary>> = get_segment(Id, Msg),
+      Post/binary>> = get_segment(Id, State),
     set_segment(
       Id,
       <<Pre/binary,
         Data/binary, 
         Post/binary>>,
-      Msg).
+      State).
 
-do_get_segment(Id, Offset, all, Msg) ->
+do_get_segment(Id, Offset, all, State) ->
     <<_:Offset/binary-unit:64,
-      Segment/binary>> = get_segment(Id, Msg),
-    {Segment, Msg};
-do_get_segment(Id, Offset, Length, Msg) ->
+      Segment/binary>> = get_segment(Id, State),
+    {Segment, State};
+do_get_segment(Id, Offset, Length, State) ->
     <<_:Offset/binary-unit:64,
       Segment:Length/binary-unit:64,
-      _/binary>> = get_segment(Id, Msg),
-    {Segment, Msg}.
+      _/binary>> = get_segment(Id, State),
+    {Segment, State}.
+
+do_get_type(Type, #state{ types=Ts }=State) ->
+    {proplists:get_value(Type, Ts), State}.
 
 
 %% ===================================================================
 %% Data utils
 %% ===================================================================
 
-get_segment(Id, #msg{ data=Segments }) ->
+get_segment(Id, #state{ msg=#msg{ data=Segments } }) ->
     lists:nth(Id + 1, Segments).
 
-segment_count(#msg{ alloc=List }) ->
+segment_count(#state{ msg=#msg{ alloc=List } }) ->
     length(List).
 
-set_segment(Id, Segment, #msg{ data=Segments }=Msg) ->
+set_segment(Id, Segment, 
+            #state{
+               msg=#msg{
+                      data=Segments }=Msg
+              }=State) ->
     {Pre, [_|Post]} = lists:split(Id, Segments),
-    Msg#msg{ data = Pre ++ [Segment|Post] }.
-
+    State#state{ msg=Msg#msg{ data = Pre ++ [Segment|Post] } }.

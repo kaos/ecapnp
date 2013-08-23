@@ -30,16 +30,7 @@ read(Data)
     read_message(Data).
 
 write(#object{ data=Pid }) ->
-    #msg{ alloc=Alloc, data=Segments } =
-        ecapnp_data:get_message(Pid),
-    SegCount = length(Segments) - 1,
-    SegSizes = << <<Size:32/integer-little>> || Size <- Alloc >>,
-    Pad = SegCount rem 2,
-    Padding = <<0:Pad/integer-unit:32>>,
-    Data = << <<Segment:Size/binary-unit:64>>
-              || {Segment, Size} <- lists:zip(Segments, Alloc) >>,
-    <<SegCount:32/integer-little, SegSizes/binary,
-      Padding/binary, Data/binary>>.
+    write_message(ecapnp_data:get_message(Pid)).
 
 
 %% ===================================================================
@@ -60,3 +51,13 @@ read_message(<<SegSize:32/integer-little, SegSizes/binary>>, Data, Segments) ->
     read_message(SegSizes, Rest, [Segment|Segments]);
 read_message(<<>>, <<>>, Segments) ->
     {ok, lists:reverse(Segments)}.
+
+write_message(#msg{ alloc=Alloc, data=Segments }) ->
+    SegCount = length(Segments) - 1,
+    SegSizes = << <<Size:32/integer-little>> || Size <- Alloc >>,
+    Pad = SegCount rem 2,
+    Padding = <<0:Pad/integer-unit:32>>,
+    Data = << <<Segment:Size/binary-unit:64>>
+              || {Segment, Size} <- lists:zip(Segments, Alloc) >>,
+    <<SegCount:32/integer-little, SegSizes/binary,
+      Padding/binary, Data/binary>>.

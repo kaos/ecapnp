@@ -39,14 +39,16 @@
 %% allocate object meta data
 get(Type, Fields) ->
     D = proplists:get_value(copy, Fields, #object{}),
-    Offset = proplists:get_value(offset, Fields, D#object.doffset),
     {ok, T} = lookup(Type, D),
+    Offset = proplists:get_value(offset, Fields, D#object.doffset),
+    DSize = proplists:get_value(dsize, Fields, T#struct.dsize),
     #object{
+       type=#type{ name=T#struct.name, id=T#struct.id },
        ?Init_field(segment_id),
        doffset=Offset,
-       ?Init_field(poffset, Offset + T#struct.dsize),
-       type=T,
-       ?Init_field(parent, D),
+       dsize=DSize,
+       ?Init_field(poffset, Offset + DSize),
+       ?Init_field(psize, T#struct.psize),
        ?Init_field(data)
       }.
 -undef(Init_field).

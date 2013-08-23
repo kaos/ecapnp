@@ -17,7 +17,7 @@
 -module(ecapnp_schema).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([lookup/2]).
+-export([type_of/1, lookup/2]).
 
 -include("ecapnp.hrl").
 
@@ -35,6 +35,13 @@ lookup(Type, _)
   when is_record(Type, struct);
        is_record(Type, enum) ->
     {ok, Type};
+
+lookup(Type, #object{ data=Pid }) ->
+    case ecapnp_data:get_type(Type, Pid) of
+        undefined -> lookup(Type, undefined);
+        T -> {ok, T}
+    end;
+
 lookup(Type, #schema{ types=Ts }) ->
     case proplists:get_value(Type, Ts) of
         undefined -> lookup(Type, undefined);
@@ -50,13 +57,11 @@ lookup(Type, #enum{ types=Ts }) ->
         undefined -> undefined;
         T -> {ok, T}
     end;
-lookup(Type, #object{ type=T }=Obj) ->
-    case lookup(Type, T) of
-        undefined -> lookup(Type, Obj#object.parent);
-        Ok -> Ok
-    end;
 lookup(Type, undefined) ->
     {unknown_type, Type}.
+
+type_of(#object{ type=#type{ name=Type }}=Obj) ->
+    lookup(Type, Obj).
 
 
 %% ===================================================================

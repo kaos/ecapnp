@@ -37,21 +37,17 @@ set_root(Type, Schema)
        is_record(Schema, schema) ->
     ecapnp_set:root(Type, Schema).
 
-get(Field, #object{ type=#struct{
-                            fields=Fields
-                           }}=Object)
-  when is_atom(Field) ->
+get(Field, Object)
+  when is_atom(Field), is_record(Object, object) ->
     ecapnp_get:field(
-      lookup_field(Field, Fields),
+      lookup_field(Field, Object),
       Object
      ).
 
-set(Field, Value, #object{ type=#struct{
-                                   fields=Fields
-                                  }}=Object)
-  when is_atom(Field) ->
+set(Field, Value, Object)
+  when is_atom(Field), is_record(Object, object) ->
     ecapnp_set:field( 
-      lookup_field(Field, Fields),
+      lookup_field(Field, Object),
       Value, Object
      ).
 
@@ -60,5 +56,6 @@ set(Field, Value, #object{ type=#struct{
 %% internal functions
 %% ===================================================================
 
-lookup_field(Name, Fields) ->
-    proplists:get_value(Name, Fields, {unknown_field, Name}).
+lookup_field(Name, Object) ->
+    {ok, T} = ecapnp_schema:type_of(Object),
+    proplists:get_value(Name, T#struct.fields, {unknown_field, Name}).

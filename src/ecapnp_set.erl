@@ -34,7 +34,7 @@
 
 root(Type, Schema) ->
     {ok, RootType} = lookup(Type, Schema),
-    Data = ecapnp_data:new(100),
+    Data = ecapnp_data:new({Schema, 100}),
     ok = update_segment(
            ecapnp_data:alloc(
              0,
@@ -46,7 +46,6 @@ root(Type, Schema) ->
            RootType,
            [{offset, 1},
             {type, RootType},
-            {parent, Schema},
             {data, Data}
            ])
     }.
