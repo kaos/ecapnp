@@ -18,8 +18,8 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([new/1, alloc/3, update_segment/3,
-         get_segment/4, get_message/1,
-         get_type/2]).
+         get_segment/4, get_segment_size/2,
+         get_message/1, get_type/2]).
 
 -include("ecapnp.hrl").
 
@@ -43,6 +43,9 @@ get_segment(Id, Offset, Length, Pid)
   when is_integer(Id), is_integer(Offset) andalso
        is_integer(Length); Length == all ->
     data_request(get_segment, {Id, Offset, Length}, Pid).
+
+get_segment_size(Id, Pid) ->
+    data_request(get_segment_size, Id, Pid).
 
 get_message(Pid) ->
     data_request(get_message, [], Pid).
@@ -125,6 +128,8 @@ handle_request(update_segment, {Id, Offset, Data}, State) ->
     do_update_segment(Id, Offset, Data, State);
 handle_request(get_segment, {Id, Offset, Length}, State) ->
     do_get_segment(Id, Offset, Length, State);
+handle_request(get_segment_size, Id, State) ->
+    do_get_segment_size(Id, State);
 handle_request(get_message, _, State) ->
     {State#state.msg, State};
 handle_request(get_type, Type, State) ->
@@ -187,6 +192,9 @@ do_get_segment(Id, Offset, Length, State) ->
       Segment:Length/binary-unit:64,
       _/binary>> = get_segment(Id, State),
     {Segment, State}.
+
+do_get_segment_size(Id, State) ->
+    {size(get_segment(Id, State)) div 8, State}.
 
 do_get_type(Type, #state{ types=Ts }=State) ->
     {proplists:get_value(Type, Ts), State}.

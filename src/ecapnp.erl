@@ -19,6 +19,7 @@
 
 -export([get_root/3, get/2]).
 -export([set_root/2, set/3]).
+-export([type/1, type/2]).
 
 -include("ecapnp.hrl").
 
@@ -51,11 +52,24 @@ set(Field, Value, Object)
       Value, Object
      ).
 
+type(#object{ type=T }) ->
+    T.
+
+type(name, Object) ->
+    (type(Object))#type.name;
+type(id, Object) ->
+    (type(Object))#type.id;
+type(schema, Object) ->
+    {ok, Schema} = ecapnp_schema:type_of(Object),
+    Schema.
+
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
 
 lookup_field(Name, Object) ->
-    {ok, T} = ecapnp_schema:type_of(Object),
-    proplists:get_value(Name, T#struct.fields, {unknown_field, Name}).
+    proplists:get_value(
+      Name,
+      (type(schema, Object))#struct.fields,
+      {unknown_field, Name}).

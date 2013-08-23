@@ -20,7 +20,7 @@
 -export([root/3, field/2]).
 
 -import(ecapnp_schema, [lookup/2]).
--import(ecapnp_obj, [data_segment/3, ptr_segment/3]).
+-import(ecapnp_obj, [data_segment/3, ptr_segment/3, ptr_type/2]).
 -include("ecapnp.hrl").
 
 
@@ -30,17 +30,14 @@
 
 root(Type, Schema, Segments) ->
     {ok, RootType} = lookup(Type, Schema),
-    {ok, ecapnp_obj:get(
-           RootType,
-           [{offset, 1},
-            {type, RootType},
-            {data, ecapnp_data:new(
-                     #msg{
-                        schema=Schema,
-                        alloc=[size(S) || S <- Segments],
-                        data=Segments
-                       })}
-           ])
+    {ok, ecapnp_obj:from_ptr(
+           0, 0, RootType,
+           ecapnp_data:new(
+             #msg{
+                schema=Schema,
+                alloc=[size(S) || S <- Segments],
+                data=Segments
+               }))
     }.
 
 %% Lookup field value in object
@@ -88,11 +85,14 @@ get_ptr(#ptr{ type={list, Type} }=Ptr, Object) ->
     case dereference_ptr(Ptr, Object) of
         #list_ptr{ size=composite, 
                    object=Obj }=L ->
+            {DSize, PSize, Offsets} = get_offset_list(L),
             [ecapnp_obj:get(
                Type,
                [{offset, ecapnp_obj:ptr_offset(O, Obj)},
+                {dsize, DSize},
+                {psize, PSize},
                 {copy, Obj}])
-             || O <- get_offset_list(L)];
+             || O <- Offsets];
         #list_ptr{ object=Obj }=L -> 
             S = ptr_segment(0, all, Obj),
             [get_value(Type, O, A, S)
@@ -148,10 +148,10 @@ get_ptr(Ptr, Object)
 dereference_ptr( #ptr{ idx=Index }=Ptr,
                  #object{ psize=PSize }=Obj)
   when Index < PSize ->
-    <<Offset:32/integer-little-signed, 
+    <<Offset:32/integer-signed-little, 
       Size:32/integer-little>> = ptr_segment(Index, 1, Obj),
 
-    case ptr_type(Offset band 3, Offset, Size) of
+    case ptr_type(Offset, Size) of
         null -> null;
         struct ->
             ecapnp_obj:get(
@@ -169,8 +169,9 @@ dereference_ptr( #ptr{ idx=Index }=Ptr,
               };
         far_ptr ->
             SegmentId = Size,
+            %% TODO: check if B == 1 (bit 2 of Offset) for special far ptr
             dereference_ptr(
-              Ptr#ptr{ idx = Offset bsr 3 }, %% todo: check if B==1 in the far_ptr 
+              Ptr#ptr{ idx = Offset bsr 3 },
               get_segment_object(SegmentId, Obj)
              )
     end;
@@ -182,10 +183,13 @@ get_offset_list(#list_ptr{ offset=Offset,
                            size=composite, 
                            count=TotalWordCount,
                            object=Obj }) ->
-    <<C:32/integer-little, _/binary>> = ptr_segment(Offset, 1, Obj),
+    <<C:32/integer-little,
+      DSize:16/integer-little,
+      PSize:16/integer-little>> =
+        ptr_segment(Offset, 1, Obj),
     ElementCount = C bsr 2,
     ElementSize = TotalWordCount div ElementCount,
-    lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize);
+    {DSize, PSize, lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize)};
 get_offset_list(#list_ptr{ offset=Offset,
                            size=Size,
                            count=Count }) ->
@@ -196,8 +200,10 @@ get_offset_list(#list_ptr{ offset=Offset,
      end || Idx <- lists:seq(0, Count - 1)].
 
 get_segment_object(Id, #object{ data=Pid }) ->
+    Size = ecapnp_data:get_segment_size(Id, Pid),
     #object{ type=segment,
              poffset=0,
+             psize=Size,
              segment_id=Id,
              data=Pid }.
 
@@ -210,11 +216,3 @@ list_element_size(4) -> 4*8;
 list_element_size(5) -> 8*8;
 list_element_size(6) -> ptr;
 list_element_size(7) -> composite.
-
-ptr_type(_, 0, 0) -> null;
-ptr_type(T, _, _) -> ptr_type(T).
-
-ptr_type(0) -> struct;
-ptr_type(1) -> list;
-ptr_type(2) -> far_ptr;
-ptr_type(3) -> reserved_ptr_type.

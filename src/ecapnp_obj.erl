@@ -17,10 +17,10 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/2, alloc/2, segment_id/1, 
+-export([get/2, from_ptr/4, alloc/2, segment_id/1, 
          segment/3, update/3,
          data_segment/3, ptr_segment/3,
-         data_offset/2, ptr_offset/2,
+         data_offset/2, ptr_offset/2, ptr_type/2,
          create_ptr/1, create_ptr/2, list_size/2]).
 
 -import(ecapnp_schema, [lookup/2]).
@@ -32,6 +32,25 @@
 %% API functions
 %% ===================================================================
 
+from_ptr(SegmentId, Offset, Type, #object{ data=Pid }) ->
+    from_ptr(SegmentId, Offset, Type, Pid);
+from_ptr(SegmentId, Offset, Type, Pid) ->
+    <<PtrOffset:32/integer-signed-little,
+      DSize:16/integer-little,
+      PSize:16/integer-little>> =
+        ecapnp_data:get_segment(SegmentId, Offset, 1, Pid),
+    case ptr_type(PtrOffset, DSize + PSize) of
+        struct ->
+            get(Type,
+               [{offset, Offset + 1 + (PtrOffset bsr 2)},
+                {dsize, DSize},
+                {psize, PSize},
+                {data, Pid}
+               ]);
+        null ->
+            {null, {SegmentId, Offset, Type}}
+    end.
+
 %% Internal defs used by get/2
 -define(Init_field(F), F=proplists:get_value(F, Fields, D#object.F)).
 -define(Init_field(F, Def), F=proplists:get_value(F, Fields, Def)).
@@ -39,7 +58,7 @@
 %% allocate object meta data
 get(Type, Fields) ->
     D = proplists:get_value(copy, Fields, #object{}),
-    {ok, T} = lookup(Type, D),
+    {ok, T} = lookup(Type, proplists:get_value(data, Fields, D)),
     Offset = proplists:get_value(offset, Fields, D#object.doffset),
     DSize = proplists:get_value(dsize, Fields, T#struct.dsize),
     #object{
@@ -81,7 +100,7 @@ create_ptr(Ptr) -> create_ptr(0, Ptr).
 
 create_ptr(Offset, #struct{ dsize=DSize, psize=PSize }) ->
     Off = (Offset bsl 2),
-    <<Off:32/integer-little,
+    <<Off:32/integer-signed-little,
       DSize:16/integer-little,
       PSize:16/integer-little>>;
 create_ptr(0, #list_ptr{ offset=Offset,
@@ -105,6 +124,15 @@ list_size(Length, BitSize) ->
     if Bits rem 64 == 0 -> Words;
        true -> Words + 1
     end.
+
+ptr_type(0, 0) -> null;
+ptr_type(Offset, _) -> 
+    ptr_type(Offset band 3).
+
+ptr_type(0) -> struct;
+ptr_type(1) -> list;
+ptr_type(2) -> far_ptr;
+ptr_type(3) -> reserved_ptr_type.
 
 
 %% ===================================================================

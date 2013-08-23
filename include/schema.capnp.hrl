@@ -1,5 +1,6 @@
 %%% DO NOT EDIT, this file was generated.
 -include_lib("ecapnp/include/ecapnp.hrl").
+-export([schema/1, schema/3]).
 
 schema(root, Type, Message) ->
     ecapnp:get_root(Type, schema(schema), Message);
@@ -42,7 +43,17 @@ schema(schema) ->
                     #ptr{ type={struct,'AnnotationNode'}, idx=3 }}
                   ]} }},
              {displayNamePrefixLength,
-              #data{ type=uint32, align=160 }}
+              #data{ type=uint32, align=160 }},
+             {union,
+              #data{ align=96, type=
+                   {union,
+                    [{file, void},
+                     {struct, void},
+                     {enum, void},
+                     {interface, void},
+                     {const, void},
+                     {annotation, void}
+                    ]}}}
             ],
           types=
             [{'NestedNode',

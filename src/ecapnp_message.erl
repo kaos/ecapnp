@@ -17,9 +17,10 @@
 -module(ecapnp_message).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([read/1, write/1]).
+-export([read/1, write/1, read_file/1]).
 
 -include("ecapnp.hrl").
+
 
 %% ===================================================================
 %% API functions
@@ -31,6 +32,10 @@ read(Data)
 
 write(#object{ data=Pid }) ->
     write_message(ecapnp_data:get_message(Pid)).
+
+read_file(Filename) ->
+    {ok, Data} = file:read_file(Filename),
+    read(Data).
 
 
 %% ===================================================================
