@@ -222,21 +222,17 @@ compile_struct_field_type({nonGroup, Field}) ->
     Type = schema(get, type, Field),
     compile_field(schema(get, Type), schema(get, offset, Field));
 compile_struct_field_type({group, Id}) ->
-    #group{ type=id_to_typename(Id) }.
+    #group{ type=Id }.
 
 compile_field({list, Type}, Offset) -> ptr_field(list_field_type(Type), Offset);
-compile_field({enum, Id}, Offset) -> data_field({{enum, id_to_typename(Id)}, 16}, Offset);
-compile_field({struct, Id}, Offset) -> ptr_field({struct, id_to_typename(Id)}, Offset);
-compile_field({interface, Id}, Offset) -> ptr_field({interface, id_to_typename(Id)}, Offset);
+compile_field({enum, Id}, Offset) -> data_field({{enum, Id}, 16}, Offset);
+compile_field({struct, Id}, Offset) -> ptr_field({struct, Id}, Offset);
+compile_field({interface, Id}, Offset) -> ptr_field({interface, Id}, Offset);
 compile_field(object, Offset) -> ptr_field(object, Offset);
 compile_field(text, Offset) -> ptr_field(text, Offset);
 compile_field(Type, Offset)
   when is_atom(Type) ->
     data_field(capnp_type_info(Type), Offset).
-
-id_to_typename(Id) ->
-    %% fun(IdNames) -> proplists:get_value(Id, IdNames, {unknown_id, Id}) end.
-    Id.
 
 list_field_type(Type) ->
     {list, 
@@ -247,8 +243,8 @@ list_field_type(Type) ->
              DataType;
          {list, ListType} ->
              list_field_type(ListType);
-         {Kind, Id} ->
-             {Kind, id_to_typename(Id)}
+         {Kind, Id} -> 
+             {Kind, Id}
      end}.
 
 capnp_type_info(void) -> void;
@@ -281,9 +277,7 @@ link_node(Id, NodeName, Nodes) ->
     {Node, Schema} = proplists:get_value(Id, Nodes),
     NestedNodes = [begin
                        Name = binary_to_atom(schema(get, name, N), latin1),
-                       %%{Name, 
-                        link_node(schema(get, id, N), Name, Nodes)
-                       %%}
+                       link_node(schema(get, id, N), Name, Nodes)
                    end || N <- schema(get, nestedNodes, Node)],
     Groups = case schema(get, Node) of
                  {struct, S} ->
@@ -291,12 +285,8 @@ link_node(Id, NodeName, Nodes) ->
                        fun(F, G) ->
                                case schema(get, F) of
                                    {group, GroupId} ->
-                                       [%%{GroupId,
-                                         link_node(GroupId, 
-                                                   binary_to_atom(schema(get, name, F), latin1), 
-                                                   Nodes)
-                                                %}
-                                        |G];
+                                       Name = binary_to_atom(schema(get, name, F), latin1),
+                                       [link_node(GroupId, Name, Nodes)|G];
                                    _ -> G
                                end
                        end,
