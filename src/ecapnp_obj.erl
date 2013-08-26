@@ -18,7 +18,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([get/2, from_ptr/4, alloc/2, segment_id/1, 
-         segment/3, update/3,
+         segment/3, update/3, set_type/2,
          data_segment/3, ptr_segment/3,
          data_offset/2, ptr_offset/2, ptr_type/2,
          create_ptr/1, create_ptr/2, list_size/2]).
@@ -42,11 +42,11 @@ from_ptr(SegmentId, Offset, Type, Pid) ->
     case ptr_type(PtrOffset, DSize + PSize) of
         struct ->
             get(Type,
-               [{offset, Offset + 1 + (PtrOffset bsr 2)},
-                {dsize, DSize},
-                {psize, PSize},
-                {data, Pid}
-               ]);
+                [{offset, Offset + 1 + (PtrOffset bsr 2)},
+                 {dsize, DSize},
+                 {psize, PSize},
+                 {data, Pid}
+                ]);
         null ->
             {null, {SegmentId, Offset, Type}}
     end.
@@ -61,17 +61,26 @@ get(Type, Fields) ->
     {ok, T} = lookup(Type, proplists:get_value(data, Fields, D)),
     Offset = proplists:get_value(offset, Fields, D#object.doffset),
     DSize = proplists:get_value(dsize, Fields, T#struct.dsize),
-    #object{
-       type=#type{ name=T#struct.name, id=T#struct.id },
-       ?Init_field(segment_id),
-       doffset=Offset,
-       dsize=DSize,
-       ?Init_field(poffset, Offset + DSize),
-       ?Init_field(psize, T#struct.psize),
-       ?Init_field(data)
-      }.
+    set_type(
+      T, #object{
+            ?Init_field(segment_id),
+            doffset=Offset,
+            dsize=DSize,
+            ?Init_field(poffset, Offset + DSize),
+            ?Init_field(psize, T#struct.psize),
+            ?Init_field(data)
+           }).
 -undef(Init_field).
 
+set_type(Type, Object0) ->
+    {ok, T} = lookup(Type, Object0),
+    Object = Object0#object{
+               type=#type{ name=T#struct.name, id=T#struct.id }
+              },
+    Object#object{
+      union_value=ecapnp_get:field(T#struct.union_field, Object)
+     }.
+    
 alloc(Size, #object{ segment_id=Id, data=Pid }) ->
     ecapnp_data:alloc(Id, Size, Pid).
 

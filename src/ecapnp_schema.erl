@@ -60,7 +60,7 @@ lookup(Type, #enum{ types=Ts }) ->
 lookup(Type, undefined) ->
     {unknown_type, Type}.
 
-type_of(#object{ type=#type{ name=Type }}=Obj) ->
+type_of(#object{ type=#type{ id=Type }}=Obj) ->
     lookup(Type, Obj).
 
 

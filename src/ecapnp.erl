@@ -17,7 +17,7 @@
 -module(ecapnp).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get_root/3, get/2]).
+-export([get_root/3, get/1, get/2]).
 -export([set_root/2, set/3]).
 -export([type/1, type/2]).
 
@@ -37,6 +37,9 @@ set_root(Type, Schema)
   when is_atom(Type),
        is_record(Schema, schema) ->
     ecapnp_set:root(Type, Schema).
+
+get(#object{ union_value=Value }) ->
+    Value.
 
 get(Field, Object)
   when is_atom(Field), is_record(Object, object) ->

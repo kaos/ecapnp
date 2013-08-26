@@ -51,7 +51,8 @@ get_message(Pid) ->
     data_request(get_message, [], Pid).
 
 get_type(Type, Pid)
-  when is_atom(Type) ->
+  when is_atom(Type);
+       is_integer(Type) ->
     data_request(get_type, Type, Pid).
 
 
@@ -102,8 +103,8 @@ new_state(#msg{ schema=Schema }=Msg) ->
       }.
 
 -define(list_types(Type),
-        list_types({_, #Type{ types=Ts }}=T, Acc) -> 
-               list_types(Ts, [T|Acc]);
+        list_types({_, #Type{ id=Id, types=Ts }=T}=Named, Acc) -> 
+               list_types(Ts, [{Id, T},Named|Acc]);
             list_types(#Type{ types=Ts }, Acc) ->
                list_types(Ts, Acc)
                    ).

@@ -20,7 +20,8 @@
 -export([root/3, field/2]).
 
 -import(ecapnp_schema, [lookup/2]).
--import(ecapnp_obj, [data_segment/3, ptr_segment/3, ptr_type/2]).
+-import(ecapnp_obj, [segment/3, data_segment/3, ptr_segment/3,
+                     ptr_type/2, ptr_offset/2]).
 -include("ecapnp.hrl").
 
 
@@ -46,7 +47,13 @@ field(Field, Object)
     get_data(Field, Object);
 field(Field, Object)
   when is_record(Field, ptr) ->
-    get_ptr(Field, Object).
+    get_ptr(Field, Object);
+field(Field, Object)
+  when is_record(Field, group) ->
+    get_group(Field, Object);
+field(none, _) ->
+    none.
+
 
 
 %% ===================================================================
@@ -74,109 +81,119 @@ get_data(#data{ type={union, Fields} }=D, Object) ->
 get_data(#data{ type=Type, align=Align },
          #object{ dsize=DSize }=Obj)
   when (Align div 64) < DSize ->
-    get_value(Type, 0, Align, data_segment(0, 1 + (Align div 64), Obj));
-
-get_data(_, _) -> null.
+    read_value(Type, 0, Align, data_segment(0, 1 + (Align div 64), Obj)).
 
 
+%% Ptr field (list, text, struct, object etc)
+get_ptr(#ptr{ idx=Index }=Ptr,
+        #object{ psize=PSize }=Obj)
+  when Index < PSize ->
+    read_ptr(Ptr, Obj).
 
-%% List field
-get_ptr(#ptr{ type={list, Type} }=Ptr, Object) ->
-    case dereference_ptr(Ptr, Object) of
-        #list_ptr{ size=composite, 
-                   object=Obj }=L ->
-            {DSize, PSize, Offsets} = get_offset_list(L),
-            [ecapnp_obj:get(
-               Type,
-               [{offset, ecapnp_obj:ptr_offset(O, Obj)},
-                {dsize, DSize},
-                {psize, PSize},
-                {copy, Obj}])
-             || O <- Offsets];
-        #list_ptr{ object=Obj }=L -> 
-            S = ptr_segment(0, all, Obj),
-            [get_value(Type, O, A, S)
-             || {O, A} <- get_offset_list(L)];
-        null -> [];
-        Other ->
-            io:format("### Other: ~P~n---~n", [Other, 10]),
-            Other
-    end;
 
-%% Text field
-get_ptr(#ptr{ type=text }=Ptr, Object) ->
-    case dereference_ptr(Ptr, Object) of
-        #list_ptr{ offset=Offset, 
-                   size=8,
-                   count=Count,
-                   object=Obj } ->
-            TextLen = Count - 1,
-            <<Text:TextLen/binary, _/binary>> =
-                ptr_segment(Offset, 1 + (TextLen div 8), Obj),
-            Text;
-        null -> <<>>
-    end;
+%% Group field
+get_group(#group{ id=TypeId }, Object) ->
+    ecapnp_obj:set_type(TypeId, Object).
 
-%% Struct field
-get_ptr(Ptr, Object) 
-  when is_record(Ptr, ptr) ->
-    dereference_ptr(Ptr, Object).
 
 %% Data field helpers
--define(GET_VALUE(ValueType, Size, TypeSpec),
-        get_value(ValueType, Offset, Align, Segment) ->
+-define(READ_VALUE(ValueType, Size, TypeSpec),
+        read_value(ValueType, Offset, Align, Segment) ->
                <<_:Offset/binary-unit:64,
                  _:Align/bits,
                  Value:Size/TypeSpec,
                  _/bits>> = Segment,
-               Value
+               get_value(ValueType, Value)
                    ).
 
-?GET_VALUE(uint64, 64, integer-unsigned-little);
-?GET_VALUE(uint32, 32, integer-unsigned-little);
-?GET_VALUE(uint16, 16, integer-unsigned-little);
-?GET_VALUE(uint8, 8, integer-unsigned-little);
-?GET_VALUE(int64, 64, integer-signed-little);
-?GET_VALUE(int32, 32, integer-signed-little);
-?GET_VALUE(int16, 16, integer-signed-little);
-?GET_VALUE(int8, 8, integer-signed-little);
-?GET_VALUE(bool, 1, bits);
-?GET_VALUE(float32, 32, float-little);
-?GET_VALUE(float64, 64, float-little).
+?READ_VALUE(uint64, 64, integer-unsigned-little);
+?READ_VALUE(uint32, 32, integer-unsigned-little);
+?READ_VALUE(uint16, 16, integer-unsigned-little);
+?READ_VALUE(uint8, 8, integer-unsigned-little);
+?READ_VALUE(int64, 64, integer-signed-little);
+?READ_VALUE(int32, 32, integer-signed-little);
+?READ_VALUE(int16, 16, integer-signed-little);
+?READ_VALUE(int8, 8, integer-signed-little);
+?READ_VALUE(bool, 1, bits);
+?READ_VALUE(float32, 32, float-little);
+?READ_VALUE(float64, 64, float-little).
+
+%% convert read value to erlang
+get_value(bool, <<0:1>>) -> false;
+get_value(bool, <<1:1>>) -> true;
+get_value(_, Value) -> Value.
+
 
 %% Pointer field helpers
-dereference_ptr( #ptr{ idx=Index }=Ptr,
-                 #object{ psize=PSize }=Obj)
-  when Index < PSize ->
+read_ptr(#ptr{ type=Type, idx=Index }=Ptr, Obj) ->
     <<Offset:32/integer-signed-little, 
       Size:32/integer-little>> = ptr_segment(Index, 1, Obj),
-
     case ptr_type(Offset, Size) of
-        null -> null;
+        null ->
+            case Type of
+                text -> <<>>;
+                {list, _} -> [];
+                _ -> null
+            end;
         struct ->
-            ecapnp_obj:get(
-              Ptr#ptr.type, 
-              [{offset, ecapnp_obj:ptr_offset(Index + 1 + (Offset bsr 2), Obj)},
-               {dsize, Size bsr 16}, {psize, Size band 16#ffff},
-               {copy, Obj}
-              ]);
-        list ->
-            #list_ptr{
-               offset = Index + (Offset bsr 2) + 1,
-               size = list_element_size(Size band 7),
-               count = Size bsr 3,
-               object = Obj
-              };
+            read_struct(
+              Ptr, #struct_ptr{
+                      offset = ptr_offset(Index + 1 + (Offset bsr 2), Obj),
+                      dsize = Size band 16#ffff,
+                      psize = Size bsr 16,
+                      object = Obj });
+        list -> 
+            read_list(
+              Ptr, #list_ptr{
+                      offset = ptr_offset(Index + 1 + (Offset bsr 2), Obj),
+                      size = list_element_size(Size band 7),
+                      count = Size bsr 3,
+                      object = Obj });
         far_ptr ->
+            %% only support B == 0 for now..
+            0 = Offset band 4,
             SegmentId = Size,
-            %% TODO: check if B == 1 (bit 2 of Offset) for special far ptr
-            dereference_ptr(
-              Ptr#ptr{ idx = Offset bsr 3 },
-              get_segment_object(SegmentId, Obj)
-             )
-    end;
-dereference_ptr(_, _) -> null.
+            read_ptr(
+              Ptr#ptr{ idx=Offset bsr 3 },
+              get_segment_object(SegmentId, Obj))
+    end.
 
+read_struct(#ptr{ type=Type },
+            #struct_ptr{ offset=Offset,
+                         dsize=DSize,
+                         psize=PSize,
+                         object=Obj }) ->
+    ecapnp_obj:get( Type, 
+                    [{offset, Offset},
+                     {dsize, DSize},
+                     {psize, PSize},
+                     {copy, Obj}]).
+
+read_list(#ptr{ type=text },
+          #list_ptr{ offset=Offset,
+                     count=Count,
+                     size=8,
+                     object=Obj }) ->
+    TextLen = Count - 1,
+    <<Text:TextLen/binary, _/binary>> =
+        segment(Offset, 1 + (TextLen div 8), Obj),
+    Text;
+read_list(#ptr{ type={list, Type} },
+          #list_ptr{ object=Obj }=ListPtr) ->
+    case get_offset_list(ListPtr) of
+        {DSize, PSize, Offsets} ->
+            [ecapnp_obj:get(
+               Type,
+               [{offset, O},
+                {dsize, DSize},
+                {psize, PSize},
+                {copy, Obj}])
+             || O <- Offsets];
+        Offsets ->
+            S = ptr_segment(0, all, Obj),
+            [read_value(Type, O, A, S)
+             || {O, A} <- Offsets]
+    end.
 
 get_offset_list(#list_ptr{ count=0 }) -> [];
 get_offset_list(#list_ptr{ offset=Offset,
@@ -186,7 +203,7 @@ get_offset_list(#list_ptr{ offset=Offset,
     <<C:32/integer-little,
       DSize:16/integer-little,
       PSize:16/integer-little>> =
-        ptr_segment(Offset, 1, Obj),
+        segment(Offset, 1, Obj),
     ElementCount = C bsr 2,
     ElementSize = TotalWordCount div ElementCount,
     {DSize, PSize, lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize)};
