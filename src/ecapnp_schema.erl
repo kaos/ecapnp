@@ -36,35 +36,43 @@ lookup(Type, _)
        is_record(Type, enum) ->
     {ok, Type};
 
+lookup(Type, Types)
+  when is_atom(Type),
+       is_list(Types) ->
+    lists:keyfind(Type, #struct.name, Types);
+lookup(Type, Types)
+  when is_integer(Type),
+       is_list(Types) ->
+    lists:keyfind(Type, #struct.id, Types);
+
 lookup(Type, #object{ data=Pid }) ->
     case ecapnp_data:get_type(Type, Pid) of
-        undefined -> lookup(Type, undefined);
+        false -> lookup(Type, null);
         T -> {ok, T}
     end;
 
 lookup(Type, #schema{ types=Ts }) ->
-    case proplists:get_value(Type, Ts) of
-        undefined -> lookup(Type, undefined);
+    case lookup(Type, Ts) of
+        false -> lookup(Type, null);
         T -> {ok, T}
     end;
 lookup(Type, #struct{ types=Ts }) ->
-    case proplists:get_value(Type, Ts) of
-        undefined -> undefined;
+    case lookup(Type, Ts) of
+        false -> false;
         T -> {ok, T}
     end;
 lookup(Type, #enum{ types=Ts }) ->
-    case proplists:get_value(Type, Ts) of
-        undefined -> undefined;
+    case lookup(Type, Ts) of
+        false -> false;
         T -> {ok, T}
     end;
-lookup(Type, undefined) ->
+lookup(Type, null) ->
     {unknown_type, Type}.
 
 type_of(#object{ type=#type{ id=Type }}=Obj) ->
     lookup(Type, Obj).
 
-
+    
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-

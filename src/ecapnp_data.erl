@@ -103,10 +103,8 @@ new_state(#msg{ schema=Schema }=Msg) ->
       }.
 
 -define(list_types(Type),
-        list_types({_, #Type{ id=Id, types=Ts }=T}=Named, Acc) -> 
-               list_types(Ts, [{Id, T},Named|Acc]);
-            list_types(#Type{ types=Ts }, Acc) ->
-               list_types(Ts, Acc)
+        list_types(#Type{ name=Name, id=Id, types=Ts }=T, Acc) -> 
+               list_types(Ts, [{Id, T},{Name, T}|Acc])
                    ).
 ?list_types(schema);
 ?list_types(struct);
@@ -198,7 +196,7 @@ do_get_segment_size(Id, State) ->
     {size(get_segment(Id, State)) div 8, State}.
 
 do_get_type(Type, #state{ types=Ts }=State) ->
-    {proplists:get_value(Type, Ts), State}.
+    {proplists:get_value(Type, Ts, false), State}.
 
 
 %% ===================================================================

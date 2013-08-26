@@ -151,7 +151,7 @@ export_item(#data{ type={union, L}, align=A }, Out, Indent) ->
          "{union,~n~*s[",
          A, I, "", I + 2, ""]),
     export_items(L, Out, {first, I + 3}),
-    Out(["]} }"]);
+    Out(["~n~*s]} }", I, ""]);
 export_item(#data{ type=T, align=A }, Out, _Indent) ->
     Out(["#data{ type=~p, align=~p }", T, A]);
 export_item(#ptr{ type=T, idx=I }, Out, _Indent) ->
@@ -228,6 +228,7 @@ compile_field({list, Type}, Offset) -> ptr_field(list_field_type(Type), Offset);
 compile_field({enum, Id}, Offset) -> data_field({{enum, id_to_typename(Id)}, 16}, Offset);
 compile_field({struct, Id}, Offset) -> ptr_field({struct, id_to_typename(Id)}, Offset);
 compile_field({interface, Id}, Offset) -> ptr_field({interface, id_to_typename(Id)}, Offset);
+compile_field(object, Offset) -> ptr_field(object, Offset);
 compile_field(text, Offset) -> ptr_field(text, Offset);
 compile_field(Type, Offset)
   when is_atom(Type) ->
@@ -262,9 +263,7 @@ capnp_type_info(uint32) -> {uint32, 32};
 capnp_type_info(uint64) -> {uint64, 64};
 capnp_type_info(float32) -> {float32, 32};
 capnp_type_info(float64) -> {float64, 64};
-capnp_type_info(text) -> {text, 8};
-capnp_type_info(data) -> {data, 8};
-capnp_type_info(object) -> {object, 64}. %% ptr to any kind of object
+capnp_type_info(data) -> {data, 8}.
     
 data_field(void, _Offset) -> void;
 data_field({Type, 1}, Offset) ->
@@ -282,7 +281,9 @@ link_node(Id, NodeName, Nodes) ->
     {Node, Schema} = proplists:get_value(Id, Nodes),
     NestedNodes = [begin
                        Name = binary_to_atom(schema(get, name, N), latin1),
-                       {Name, link_node(schema(get, id, N), Name, Nodes)}
+                       %%{Name, 
+                        link_node(schema(get, id, N), Name, Nodes)
+                       %%}
                    end || N <- schema(get, nestedNodes, Node)],
     Groups = case schema(get, Node) of
                  {struct, S} ->
@@ -290,10 +291,12 @@ link_node(Id, NodeName, Nodes) ->
                        fun(F, G) ->
                                case schema(get, F) of
                                    {group, GroupId} ->
-                                       [{GroupId,
+                                       [%%{GroupId,
                                          link_node(GroupId, 
                                                    binary_to_atom(schema(get, name, F), latin1), 
-                                                   Nodes)}|G];
+                                                   Nodes)
+                                                %}
+                                        |G];
                                    _ -> G
                                end
                        end,
