@@ -76,7 +76,8 @@ dump_person(Person) ->
     [io:format("  ~s phone: ~s~n", [addressbook(get, type, P),
                                     addressbook(get, number, P)]) 
      || P <- Phones],
-    case addressbook(get, employment, Person) of
+    %% hmm... not the best looking api, this.. :/
+    case addressbook(get, addressbook(get, employment, Person)) of
         unemployed -> io:format("  unemployed~n");
         {employer, Employer} ->
             io:format("  employer: ~s~n", [Employer]);

@@ -156,8 +156,8 @@ export_item(#data{ type=T, align=A }, Out, _Indent) ->
     Out(["#data{ type=~p, align=~p }", T, A]);
 export_item(#ptr{ type=T, idx=I }, Out, _Indent) ->
     Out(["#ptr{ type=~p, idx=~p }", T, I]);
-export_item(#group{ type=T }, Out, _Indent) ->
-    Out(["#group{ id=~p }", T]);
+export_item(#group{ id=Id }, Out, _Indent) ->
+    Out(["#group{ id=~p }", Id]);
 export_item(Item, Out, _Indent) ->
     Out(["~p", Item]).
 
@@ -222,7 +222,7 @@ compile_struct_field_type({nonGroup, Field}) ->
     Type = schema(get, type, Field),
     compile_field(schema(get, Type), schema(get, offset, Field));
 compile_struct_field_type({group, Id}) ->
-    #group{ type=Id }.
+    #group{ id=Id }.
 
 compile_field({list, Type}, Offset) -> ptr_field(list_field_type(Type), Offset);
 compile_field({enum, Id}, Offset) -> data_field({{enum, Id}, 16}, Offset);

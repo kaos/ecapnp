@@ -56,7 +56,10 @@ field(Field, Value, Object)
     set_data(Field, Value, Object);
 field(Field, Value, Object) 
   when is_record(Field, ptr) ->
-    set_ptr(Field, Value, Object).
+    set_ptr(Field, Value, Object);
+field(Field, Value, Object)
+  when is_record(Field, group) ->
+    set_group(Field, Value, Object).
 
 
 %% ===================================================================
@@ -136,6 +139,11 @@ set_ptr(#ptr{ type=text }=Ptr, Value, Object)
 %% Struct field
 set_ptr(_Field, _Value, _Object) ->
     nyi.
+
+%% Group field
+set_group(#group{ id=TypeId }, Value, Object) ->
+    {ok, T} = lookup(TypeId, Object),
+    field(T#struct.union_field, Value, Object).
 
 %% Data field helpers
 -define(SET_VALUE(ValueType, Size, TypeSpec),

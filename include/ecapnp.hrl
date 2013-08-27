@@ -20,7 +20,6 @@
          }).
 
 -record(group, {
-          type,
           id :: integer()
          }).
 
