@@ -5,3 +5,4 @@ deps
 *.plt
 ebin/
 *.dump
+erlang.mk
