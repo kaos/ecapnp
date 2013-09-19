@@ -218,7 +218,7 @@ compile_struct_field(Field) ->
     {binary_to_atom(schema(get, name, Field), latin1),
      compile_struct_field_type(schema(get, Field))}.
 
-compile_struct_field_type({nonGroup, Field}) ->
+compile_struct_field_type({slot, Field}) ->
     Type = schema(get, type, Field),
     compile_field(schema(get, Type), schema(get, offset, Field));
 compile_struct_field_type({group, Id}) ->
@@ -234,7 +234,8 @@ compile_field(Type, Offset)
   when is_atom(Type) ->
     data_field(capnp_type_info(Type), Offset).
 
-list_field_type(Type) ->
+list_field_type(List) ->
+    Type = schema(get, elementType, List),
     {list, 
      case schema(get, Type) of
          void -> void;
@@ -259,7 +260,9 @@ capnp_type_info(uint32) -> {uint32, 32};
 capnp_type_info(uint64) -> {uint64, 64};
 capnp_type_info(float32) -> {float32, 32};
 capnp_type_info(float64) -> {float64, 64};
-capnp_type_info(data) -> {data, 8}.
+capnp_type_info(text) -> {text, 8};
+capnp_type_info(data) -> {data, 8};
+capnp_type_info(Other) -> throw({unknown_capnp_type, Other}).
     
 data_field(void, _Offset) -> void;
 data_field({Type, 1}, Offset) ->
