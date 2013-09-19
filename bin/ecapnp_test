@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
-# Just a dummy print to pass the single test we have now..
-cat <<EOF
-( int = 1234567890,
-  msg = "a short message..." )
-EOF
+# The tmpfile hack is to avoid using stdin from erlang
+# as that is seriously bugged on windows
+
+tmpfile=`mktemp ecapnp_test.XXXXXXXXXX`
+cat > $tmpfile && ${0%/*}/run_test $tmpfile $*
+rm $tmpfile

@@ -20,4 +20,10 @@ include/schema.capnp.hrl: /usr/local/include/capnp/schema.capnp
 # target: check, for running the `capnp_test` tests
 .PHONY: check
 check: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
-check: build-test-deps
+check: test-schema build-test-deps
+
+test-schema: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
+
+#test/capnp_test/
+bin/test.capnp.hrl: $(DEPS_DIR)/capnp_test/test.capnp
+	capnpc -oerl:$(dir $@) --src-prefix=$(dir $<) $<

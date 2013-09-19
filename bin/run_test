@@ -1,0 +1,14 @@
+#!/usr/bin/env escript
+%% -*- mode: erlang -*-
+
+-include("test.capnp.hrl").
+
+main([File, Case, Test]) ->
+    {ok, Data} = file:read_file(File),
+    {ok, Message} = ecapnp_message:read(Data),
+    run_test(list_to_atom(Case), list_to_atom(Test), Message).
+
+run_test(decode, simpleTest, Msg) ->
+    {ok, Root} = test(root, 'SimpleTest', Msg),
+    io:format("( int = ~b,~n  msg = \"~s\" )~n",
+              [test(get, int, Root), test(get, msg, Root)]).
