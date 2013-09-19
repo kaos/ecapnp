@@ -24,6 +24,5 @@ check: test-schema build-test-deps
 
 test-schema: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
 
-#test/capnp_test/
 bin/test.capnp.hrl: $(DEPS_DIR)/capnp_test/test.capnp
 	capnpc -oerl:$(dir $@) --src-prefix=$(dir $<) $<

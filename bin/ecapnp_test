@@ -3,6 +3,10 @@
 # The tmpfile hack is to avoid using stdin from erlang
 # as that is seriously bugged on windows
 
-tmpfile=`mktemp ecapnp_test.XXXXXXXXXX`
-cat > $tmpfile && ${0%/*}/run_test $tmpfile $*
-rm $tmpfile
+case $1 in
+    decode*)
+        tmpfile=`mktemp ecapnp_test.XXXXXXXXXX`
+        cat > $tmpfile && ${0%/*}/run_test $tmpfile $*
+        rm $tmpfile ;;
+    *) ${0%/*}/run_test $* ;;
+esac

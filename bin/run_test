@@ -6,9 +6,28 @@
 main([File, Case, Test]) ->
     {ok, Data} = file:read_file(File),
     {ok, Message} = ecapnp_message:read(Data),
-    run_test(list_to_atom(Case), list_to_atom(Test), Message).
+    run_test(Case, Test, Message);
+main([Case, Test]) ->
+    run_test(Case, Test, undefined).
+
+run_test(Case, Test, Message) when is_list(Case) ->
+    try
+        run_test(list_to_atom(Case), list_to_atom(Test), Message)
+    catch
+        Class:Error ->
+            io:format(standard_error, "ecapnp_test error: ~p:~p~n", [Class, Error])
+    end;
 
 run_test(decode, simpleTest, Msg) ->
     {ok, Root} = test(root, 'SimpleTest', Msg),
-    io:format("( int = ~b,~n  msg = \"~s\" )~n",
-              [test(get, int, Root), test(get, msg, Root)]).
+    io:format("(int = ~b, msg = \"~s\")~n",
+              [test(get, int, Root), test(get, msg, Root)]);
+
+run_test(encode, simpleTest, undefined) ->
+    {ok, Root} = test(root, 'SimpleTest'),
+    ok = test(set, int, 1234567890, Root),
+    ok = test(set, msg, <<"a short message...">>, Root),
+    io:put_chars(unicode:characters_to_binary(ecapnp_message:write(Root), latin1));
+
+run_test(Action, Test, _) ->
+    io:format(standard_error, "Test ~p-~p not implemented.~n", [Action, Test]).
