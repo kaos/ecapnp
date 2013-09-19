@@ -150,10 +150,10 @@ schema(schema) ->
          dsize=3, psize=4, esize=inlineComposite,
          union_field=#data{ align=64, type=
            {union,
-             [{nonGroup,
+             [{slot,
                #group{ id=14133145859926553711 }},
               {group,
-               #data{ type=uint64, align=128 }}
+               #group{ id=14626792032033250577 }}
            ]} },
          fields=
            [{name,
@@ -177,8 +177,16 @@ schema(schema) ->
                    {explicit,
                     #data{ type=uint16, align=96 }}
                 ]} }},
+            #struct{ %% 0xcafccddb68db1d11
+              name=group, id=14626792032033250577, source= <<"schema.capnp:Field.group">>,
+              dsize=3, psize=4, esize=inlineComposite,
+              union_field=none,
+              fields=
+                [{typeId,
+                  #data{ type=uint64, align=128 }}
+                ]},
             #struct{ %% 0xc42305476bb4746f
-              name=nonGroup, id=14133145859926553711, source= <<"schema.capnp:Field.nonGroup">>,
+              name=slot, id=14133145859926553711, source= <<"schema.capnp:Field.slot">>,
               dsize=3, psize=4, esize=inlineComposite,
               union_field=none,
               fields=
@@ -256,15 +264,49 @@ schema(schema) ->
               {text,void},
               {data,void},
               {list,
-               #ptr{ type={struct,15020482145304562784}, idx=0 }},
+               #group{ id=9792858745991129751 }},
               {enum,
-               #data{ type=uint64, align=64 }},
+               #group{ id=11389172934837766057 }},
               {struct,
-               #data{ type=uint64, align=64 }},
+               #group{ id=12410354185295152851 }},
               {interface,
-               #data{ type=uint64, align=64 }},
+               #group{ id=17116997365232503999 }},
               {object,void}
-           ]} }},
+           ]} },
+         types=
+           [#struct{ %% 0xed8bca69f7fb0cbf
+              name=interface, id=17116997365232503999, source= <<"schema.capnp:Type.interface">>,
+              dsize=2, psize=1, esize=inlineComposite,
+              union_field=none,
+              fields=
+                [{typeId,
+                  #data{ type=uint64, align=64 }}
+                ]},
+            #struct{ %% 0xac3a6f60ef4cc6d3
+              name=struct, id=12410354185295152851, source= <<"schema.capnp:Type.struct">>,
+              dsize=2, psize=1, esize=inlineComposite,
+              union_field=none,
+              fields=
+                [{typeId,
+                  #data{ type=uint64, align=64 }}
+                ]},
+            #struct{ %% 0x9e0e78711a7f87a9
+              name=enum, id=11389172934837766057, source= <<"schema.capnp:Type.enum">>,
+              dsize=2, psize=1, esize=inlineComposite,
+              union_field=none,
+              fields=
+                [{typeId,
+                  #data{ type=uint64, align=64 }}
+                ]},
+            #struct{ %% 0x87e739250a60ea97
+              name=list, id=9792858745991129751, source= <<"schema.capnp:Type.list">>,
+              dsize=2, psize=1, esize=inlineComposite,
+              union_field=none,
+              fields=
+                [{elementType,
+                  #ptr{ type={struct,15020482145304562784}, idx=0 }}
+                ]}
+           ]},
        #struct{ %% 0xce23dcd2d7b00c9b
          name='Value', id=14853958794117909659, source= <<"schema.capnp:Value">>,
          dsize=2, psize=1, esize=inlineComposite,
