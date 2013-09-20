@@ -21,11 +21,13 @@ schema(get, Object) ->
 %% schema/1
 
 schema(schema) ->
-  #schema{ %% 0xa93fc509624c72d9
-    name=schema, id=12195682960037147353, source= <<"schema.capnp">>,
+  #schema{
+    node=#node{ %% 0xa93fc509624c72d9
+      name=schema, id=12195682960037147353, source= <<"schema.capnp">> },
     types=
-      [#struct{ %% 0xe682ab4cf923a417
-         name='Node', id=16610026722781537303, source= <<"schema.capnp:Node">>,
+      [#struct{
+         node=#node{ %% 0xe682ab4cf923a417
+           name='Node', id=16610026722781537303, source= <<"schema.capnp:Node">> },
          dsize=5, psize=5, esize=inlineComposite,
          union_field=#data{ align=96, type=
            {union,
@@ -56,8 +58,9 @@ schema(schema) ->
              #ptr{ type={list,{struct,17422339044421236034}}, idx=2 }}
            ],
          types=
-           [#struct{ %% 0xdebf55bbfa0fc242
-              name='NestedNode', id=16050641862814319170, source= <<"schema.capnp:Node.NestedNode">>,
+           [#struct{
+              node=#node{ %% 0xdebf55bbfa0fc242
+                name='NestedNode', id=16050641862814319170, source= <<"schema.capnp:Node.NestedNode">> },
               dsize=1, psize=1, esize=inlineComposite,
               union_field=none,
               fields=
@@ -66,8 +69,9 @@ schema(schema) ->
                  {id,
                   #data{ type=uint64, align=0 }}
                 ]},
-            #struct{ %% 0xec1619d4400a0290
-              name=annotation, id=17011813041836786320, source= <<"schema.capnp:Node.annotation">>,
+            #struct{
+              node=#node{ %% 0xec1619d4400a0290
+                name=annotation, id=17011813041836786320, source= <<"schema.capnp:Node.annotation">> },
               dsize=5, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
@@ -98,8 +102,9 @@ schema(schema) ->
                  {targetsAnnotation,
                   #data{ type=bool, align=124 }}
                 ]},
-            #struct{ %% 0xb18aa5ac7a0d9420
-              name=const, id=12793219851699983392, source= <<"schema.capnp:Node.const">>,
+            #struct{
+              node=#node{ %% 0xb18aa5ac7a0d9420
+                name=const, id=12793219851699983392, source= <<"schema.capnp:Node.const">> },
               dsize=5, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
@@ -108,24 +113,27 @@ schema(schema) ->
                  {value,
                   #ptr{ type={struct,14853958794117909659}, idx=4 }}
                 ]},
-            #struct{ %% 0xe82753cff0c2218f
-              name=interface, id=16728431493453586831, source= <<"schema.capnp:Node.interface">>,
+            #struct{
+              node=#node{ %% 0xe82753cff0c2218f
+                name=interface, id=16728431493453586831, source= <<"schema.capnp:Node.interface">> },
               dsize=5, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
                 [{methods,
                   #ptr{ type={list,{struct,10736806783679155584}}, idx=3 }}
                 ]},
-            #struct{ %% 0xb54ab3364333f598
-              name=enum, id=13063450714778629528, source= <<"schema.capnp:Node.enum">>,
+            #struct{
+              node=#node{ %% 0xb54ab3364333f598
+                name=enum, id=13063450714778629528, source= <<"schema.capnp:Node.enum">> },
               dsize=5, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
                 [{enumerants,
                   #ptr{ type={list,{struct,10919677598968879693}}, idx=3 }}
                 ]},
-            #struct{ %% 0x9ea0b19b37fb4435
-              name=struct, id=11430331134483579957, source= <<"schema.capnp:Node.struct">>,
+            #struct{
+              node=#node{ %% 0x9ea0b19b37fb4435
+                name=struct, id=11430331134483579957, source= <<"schema.capnp:Node.struct">> },
               dsize=5, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
@@ -145,8 +153,9 @@ schema(schema) ->
                   #ptr{ type={list,{struct,11145653318641710175}}, idx=3 }}
                 ]}
            ]},
-       #struct{ %% 0x9aad50a41f4af45f
-         name='Field', id=11145653318641710175, source= <<"schema.capnp:Field">>,
+       #struct{
+         node=#node{ %% 0x9aad50a41f4af45f
+           name='Field', id=11145653318641710175, source= <<"schema.capnp:Field">> },
          dsize=3, psize=4, esize=inlineComposite,
          union_field=#data{ align=64, type=
            {union,
@@ -168,8 +177,9 @@ schema(schema) ->
              #group{ id=13515537513213004774 }}
            ],
          types=
-           [#struct{ %% 0xbb90d5c287870be6
-              name=ordinal, id=13515537513213004774, source= <<"schema.capnp:Field.ordinal">>,
+           [#struct{
+              node=#node{ %% 0xbb90d5c287870be6
+                name=ordinal, id=13515537513213004774, source= <<"schema.capnp:Field.ordinal">> },
               dsize=3, psize=4, esize=inlineComposite,
               union_field=#data{ align=80, type=
                 {union,
@@ -177,16 +187,18 @@ schema(schema) ->
                    {explicit,
                     #data{ type=uint16, align=96 }}
                 ]} }},
-            #struct{ %% 0xcafccddb68db1d11
-              name=group, id=14626792032033250577, source= <<"schema.capnp:Field.group">>,
+            #struct{
+              node=#node{ %% 0xcafccddb68db1d11
+                name=group, id=14626792032033250577, source= <<"schema.capnp:Field.group">> },
               dsize=3, psize=4, esize=inlineComposite,
               union_field=none,
               fields=
                 [{typeId,
                   #data{ type=uint64, align=128 }}
                 ]},
-            #struct{ %% 0xc42305476bb4746f
-              name=slot, id=14133145859926553711, source= <<"schema.capnp:Field.slot">>,
+            #struct{
+              node=#node{ %% 0xc42305476bb4746f
+                name=slot, id=14133145859926553711, source= <<"schema.capnp:Field.slot">> },
               dsize=3, psize=4, esize=inlineComposite,
               union_field=none,
               fields=
@@ -198,8 +210,9 @@ schema(schema) ->
                   #ptr{ type={struct,14853958794117909659}, idx=3 }}
                 ]}
            ]},
-       #struct{ %% 0x978a7cebdc549a4d
-         name='Enumerant', id=10919677598968879693, source= <<"schema.capnp:Enumerant">>,
+       #struct{
+         node=#node{ %% 0x978a7cebdc549a4d
+           name='Enumerant', id=10919677598968879693, source= <<"schema.capnp:Enumerant">> },
          dsize=1, psize=2, esize=inlineComposite,
          union_field=none,
          fields=
@@ -210,8 +223,9 @@ schema(schema) ->
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=1 }}
            ]},
-       #struct{ %% 0x9500cce23b334d80
-         name='Method', id=10736806783679155584, source= <<"schema.capnp:Method">>,
+       #struct{
+         node=#node{ %% 0x9500cce23b334d80
+           name='Method', id=10736806783679155584, source= <<"schema.capnp:Method">> },
          dsize=1, psize=4, esize=inlineComposite,
          union_field=none,
          fields=
@@ -229,8 +243,9 @@ schema(schema) ->
              #ptr{ type={list,{struct,17422339044421236034}}, idx=3 }}
            ],
          types=
-           [#struct{ %% 0xcbc0c86dae91fcf6
-              name='Param', id=14681955158633610486, source= <<"schema.capnp:Method.Param">>,
+           [#struct{
+              node=#node{ %% 0xcbc0c86dae91fcf6
+                name='Param', id=14681955158633610486, source= <<"schema.capnp:Method.Param">> },
               dsize=0, psize=4, esize=inlineComposite,
               union_field=none,
               fields=
@@ -244,8 +259,9 @@ schema(schema) ->
                   #ptr{ type={list,{struct,17422339044421236034}}, idx=3 }}
                 ]}
            ]},
-       #struct{ %% 0xd07378ede1f9cc60
-         name='Type', id=15020482145304562784, source= <<"schema.capnp:Type">>,
+       #struct{
+         node=#node{ %% 0xd07378ede1f9cc60
+           name='Type', id=15020482145304562784, source= <<"schema.capnp:Type">> },
          dsize=2, psize=1, esize=inlineComposite,
          union_field=#data{ align=0, type=
            {union,
@@ -274,32 +290,36 @@ schema(schema) ->
               {object,void}
            ]} },
          types=
-           [#struct{ %% 0xed8bca69f7fb0cbf
-              name=interface, id=17116997365232503999, source= <<"schema.capnp:Type.interface">>,
+           [#struct{
+              node=#node{ %% 0xed8bca69f7fb0cbf
+                name=interface, id=17116997365232503999, source= <<"schema.capnp:Type.interface">> },
               dsize=2, psize=1, esize=inlineComposite,
               union_field=none,
               fields=
                 [{typeId,
                   #data{ type=uint64, align=64 }}
                 ]},
-            #struct{ %% 0xac3a6f60ef4cc6d3
-              name=struct, id=12410354185295152851, source= <<"schema.capnp:Type.struct">>,
+            #struct{
+              node=#node{ %% 0xac3a6f60ef4cc6d3
+                name=struct, id=12410354185295152851, source= <<"schema.capnp:Type.struct">> },
               dsize=2, psize=1, esize=inlineComposite,
               union_field=none,
               fields=
                 [{typeId,
                   #data{ type=uint64, align=64 }}
                 ]},
-            #struct{ %% 0x9e0e78711a7f87a9
-              name=enum, id=11389172934837766057, source= <<"schema.capnp:Type.enum">>,
+            #struct{
+              node=#node{ %% 0x9e0e78711a7f87a9
+                name=enum, id=11389172934837766057, source= <<"schema.capnp:Type.enum">> },
               dsize=2, psize=1, esize=inlineComposite,
               union_field=none,
               fields=
                 [{typeId,
                   #data{ type=uint64, align=64 }}
                 ]},
-            #struct{ %% 0x87e739250a60ea97
-              name=list, id=9792858745991129751, source= <<"schema.capnp:Type.list">>,
+            #struct{
+              node=#node{ %% 0x87e739250a60ea97
+                name=list, id=9792858745991129751, source= <<"schema.capnp:Type.list">> },
               dsize=2, psize=1, esize=inlineComposite,
               union_field=none,
               fields=
@@ -307,8 +327,9 @@ schema(schema) ->
                   #ptr{ type={struct,15020482145304562784}, idx=0 }}
                 ]}
            ]},
-       #struct{ %% 0xce23dcd2d7b00c9b
-         name='Value', id=14853958794117909659, source= <<"schema.capnp:Value">>,
+       #struct{
+         node=#node{ %% 0xce23dcd2d7b00c9b
+           name='Value', id=14853958794117909659, source= <<"schema.capnp:Value">> },
          dsize=2, psize=1, esize=inlineComposite,
          union_field=#data{ align=0, type=
            {union,
@@ -338,7 +359,7 @@ schema(schema) ->
               {text,
                #ptr{ type=text, idx=0 }},
               {data,
-               #data{ type=data, align=0 }},
+               #ptr{ type=data, idx=0 }},
               {list,
                #ptr{ type=object, idx=0 }},
               {enum,
@@ -349,8 +370,9 @@ schema(schema) ->
               {object,
                #ptr{ type=object, idx=0 }}
            ]} }},
-       #struct{ %% 0xf1c8950dab257542
-         name='Annotation', id=17422339044421236034, source= <<"schema.capnp:Annotation">>,
+       #struct{
+         node=#node{ %% 0xf1c8950dab257542
+           name='Annotation', id=17422339044421236034, source= <<"schema.capnp:Annotation">> },
          dsize=1, psize=1, esize=inlineComposite,
          union_field=none,
          fields=
@@ -359,8 +381,9 @@ schema(schema) ->
             {value,
              #ptr{ type={struct,14853958794117909659}, idx=0 }}
            ]},
-       #enum{ %% 0xd1958f7dba521926
-         name='ElementSize', id=15102134695616452902, source= <<"schema.capnp:ElementSize">>,
+       #enum{
+         node=#node{ %% 0xd1958f7dba521926
+           name='ElementSize', id=15102134695616452902, source= <<"schema.capnp:ElementSize">> },
          values=
            [empty,
             bit,
@@ -371,8 +394,9 @@ schema(schema) ->
             pointer,
             inlineComposite
            ]},
-       #struct{ %% 0xbfc546f6210ad7ce
-         name='CodeGeneratorRequest', id=13818529054586492878, source= <<"schema.capnp:CodeGeneratorRequest">>,
+       #struct{
+         node=#node{ %% 0xbfc546f6210ad7ce
+           name='CodeGeneratorRequest', id=13818529054586492878, source= <<"schema.capnp:CodeGeneratorRequest">> },
          dsize=0, psize=2, esize=inlineComposite,
          union_field=none,
          fields=
@@ -382,8 +406,9 @@ schema(schema) ->
              #ptr{ type={list,{struct,14981803260258615394}}, idx=1 }}
            ],
          types=
-           [#struct{ %% 0xcfea0eb02e810062
-              name='RequestedFile', id=14981803260258615394, source= <<"schema.capnp:CodeGeneratorRequest.RequestedFile">>,
+           [#struct{
+              node=#node{ %% 0xcfea0eb02e810062
+                name='RequestedFile', id=14981803260258615394, source= <<"schema.capnp:CodeGeneratorRequest.RequestedFile">> },
               dsize=1, psize=2, esize=inlineComposite,
               union_field=none,
               fields=
@@ -395,8 +420,9 @@ schema(schema) ->
                   #ptr{ type={list,{struct,12560611460656617445}}, idx=1 }}
                 ],
               types=
-                [#struct{ %% 0xae504193122357e5
-                   name='Import', id=12560611460656617445, source= <<"schema.capnp:CodeGeneratorRequest.RequestedFile.Import">>,
+                [#struct{
+                   node=#node{ %% 0xae504193122357e5
+                     name='Import', id=12560611460656617445, source= <<"schema.capnp:CodeGeneratorRequest.RequestedFile.Import">> },
                    dsize=1, psize=1, esize=inlineComposite,
                    union_field=none,
                    fields=

@@ -54,7 +54,7 @@ export([Schema|Ss]) ->
     end;
 export([]) -> ok.
 
-export_schema(#schema{ source=Src }=Schema) ->
+export_schema(#schema{ node=#node{ source=Src } }=Schema) ->
     FileName = get_output_filename(Src),
     {ok, File} = create_output_file(FileName),
     try 
@@ -76,7 +76,7 @@ write_header(Out, _) ->
     Out(["%%% DO NOT EDIT, this file was generated.~n"
          "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"]).
 
-write_api(Out, #schema{ name=Name }) ->
+write_api(Out, #schema{ node=#node{ name=Name } }) ->
     {ok, Stubs} = file:read_file(
                     filename:join(
                       code:priv_dir(ecapnp), 
@@ -89,12 +89,14 @@ write_api(Out, #schema{ name=Name }) ->
             ]),
     Out(["~s~n", Api]).
 
-export_schema(Out, #schema{ id=Id, source=Src, name=Name, types=Types }) ->
+export_schema(Out, #schema{ node=Node, types=Types }) ->
+    I = 4,
     Out(["~p(schema) ->~n"
-         "  #schema{ %% 0x~.16b~n"
-         "    name=~p, id=~b, source= ~p",
-         Name, Id, Name, Id, Src]),
-    export_list("types", Types, Out, 4),
+         "  #schema{~n"
+         "    node=",
+         Node#node.name]),
+    export_item(Node, Out, I),
+    export_list("types", Types, Out, I),
     Out(["}.~n"]).
 
 export_list(_Label, [], _Out, _Indent) -> ok;
@@ -119,31 +121,51 @@ export_item({Tag, Type}, Out, Indent)
     Out(["{~p,~n~*s", Tag, I, ""]),
     export_item(Type, Out, I),
     Out(["}"]);
-export_item(#struct{ id=Id, source=Src, name=Name,
-                     dsize=DSize, psize=PSize, esize=ESize,
-                     fields=Fields, types=Types, union_field=Union },
-           Out, Indent) ->
+export_item(#node{ id=Id, source=Src, name=Name }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#struct{ %% 0x~.16b~n~*s"
-         "name=~p, id=~b, source= ~p,~n~*s"
+    Out(["#node{ %% 0x~.16b~n~*s"
+         "name=~p, id=~b, source= ~p }",
+         Id, I, "", Name, Id, Src]);
+export_item(#struct{ node=Node, dsize=DSize, psize=PSize, esize=ESize,
+                     fields=Fields, types=Types, union_field=Union },
+            Out, Indent) ->
+    I = Indent + 2,
+    Out(["#struct{~n~*s"
+         "node=", I, ""]),
+    export_item(Node, Out, I),
+    Out([",~n~*s"
          "dsize=~p, psize=~p, esize=~p,~n~*s"
          "union_field=",
-         Id, I, "", Name, Id, Src,
          I, "", DSize, PSize, ESize,
          I, ""]),
     export_item(Union, Out, I),
     export_list("fields", Fields, Out, I),
     export_list("types", Types, Out, I),
     Out(["}"]);
-export_item(#enum{ id=Id, source=Src, name=Name,
-                   values=Values, types=Types },
-           Out, Indent) ->
+export_item(#enum{ node=Node, values=Values, types=Types },
+            Out, Indent) ->
     I = Indent + 2,
-    Out(["#enum{ %% 0x~.16b~n~*s"
-         "name=~p, id=~b, source= ~p",
-         Id, I, "", Name, Id, Src]),
+    Out(["#enum{~n~*s"
+         "node=", I, ""]),
+    export_item(Node, Out, I),
     export_list("values", Values, Out, I),
     export_list("types", Types, Out, I),
+    Out(["}"]);
+export_item(#interface{ node=Node }, Out, Indent) ->
+    I = Indent + 2,
+    Out(["#interface{ %% NYI..~n~*snode=", I, ""]),
+    export_item(Node, Out, I),
+    Out(["}"]);
+export_item(#const{ node=Node }, Out, Indent) ->
+    I = Indent + 2,
+    Out(["#const{~n~*s"
+         "node=", I, ""]),
+    export_item(Node, Out, I),
+    Out(["}"]);
+export_item(#annotation{ node=Node }, Out, Indent) ->
+    I = Indent + 2,
+    Out(["#annotation{ %% NYI..~n~*snode=", I, ""]),
+    export_item(Node, Out, I),
     Out(["}"]);
 export_item(#data{ type={union, L}, align=A }, Out, Indent) ->
     I = Indent + 2,
@@ -178,19 +200,21 @@ compile_node(Node) ->
     {schema(get, id, Node),
      {Node, compile_node(
               schema(get, Node),
-              Node)}
-    }.
+              #node{
+                 id = schema(get, id, Node),
+                 source = schema(get, displayName, Node)}
+             )
+     }}.
 
 compile_node(file, Node) ->
-    #schema{ id = schema(get, id, Node), source = schema(get, displayName, Node) };
+    #schema{ node = Node };
 compile_node({struct, Struct}, Node) ->
     {Fields, Union} = lists:partition(
                         fun (F) ->
                                 0 == schema(get, discriminantValue, F)
                         end,
                         schema(get, fields, Struct)),
-    #struct{ id = schema(get, id, Node),
-             source = schema(get, displayName, Node),
+    #struct{ node = Node,
              dsize = schema(get, dataWordCount, Struct),
              psize = schema(get, pointerCount, Struct),
              esize = schema(get, preferredListEncoding, Struct),
@@ -205,14 +229,19 @@ compile_node({struct, Struct}, Node) ->
                            end
            };
 compile_node({enum, Enum}, Node) ->
-    #enum{ id = schema(get, id, Node),
-           source = schema(get, displayName, Node),
+    #enum{ node = Node,
            values =
                [binary_to_atom(schema(get, name, E), latin1) 
                 || E <- schema(get, enumerants, Enum)]
          };
-compile_node(_, _) ->
-    skip.
+compile_node({interface, _Interface}, Node) ->
+    #interface{ node = Node };
+compile_node({const, _Const}, Node) ->
+    #const{ node = Node };
+compile_node({annotation, _Annotation}, Node) ->
+    #annotation{ node = Node };
+compile_node({What, _}, Node) ->
+    throw({unknown_node, What, Node}).
 
 compile_struct_field(Field) ->
     {binary_to_atom(schema(get, name, Field), latin1),
@@ -221,49 +250,15 @@ compile_struct_field(Field) ->
 compile_struct_field_type({slot, Field}) ->
     Type = schema(get, type, Field),
     compile_field(schema(get, Type), schema(get, offset, Field));
-compile_struct_field_type({group, Id}) ->
-    #group{ id=Id }.
+compile_struct_field_type({group, Group}) ->
+    #group{ id=schema(get, typeId, Group) }.
 
-compile_field({list, Type}, Offset) -> ptr_field(list_field_type(Type), Offset);
-compile_field({enum, Id}, Offset) -> data_field({{enum, Id}, 16}, Offset);
-compile_field({struct, Id}, Offset) -> ptr_field({struct, Id}, Offset);
-compile_field({interface, Id}, Offset) -> ptr_field({interface, Id}, Offset);
-compile_field(object, Offset) -> ptr_field(object, Offset);
-compile_field(text, Offset) -> ptr_field(text, Offset);
-compile_field(Type, Offset)
-  when is_atom(Type) ->
-    data_field(capnp_type_info(Type), Offset).
+compile_field(Type, Offset) ->
+    case capnp_type_info(Type) of
+        {data_field, DataType} -> data_field(DataType, Offset);
+        {ptr_field, PtrType} -> ptr_field(PtrType, Offset)
+    end.
 
-list_field_type(List) ->
-    Type = schema(get, elementType, List),
-    {list, 
-     case schema(get, Type) of
-         void -> void;
-         CapnpType when is_atom(CapnpType) ->
-             {DataType, _} = capnp_type_info(CapnpType),
-             DataType;
-         {list, ListType} ->
-             list_field_type(ListType);
-         {Kind, Id} -> 
-             {Kind, Id}
-     end}.
-
-capnp_type_info(void) -> void;
-capnp_type_info(bool) -> {bool, 1};
-capnp_type_info(int8) -> {int8, 8};
-capnp_type_info(int16) -> {int16, 16};
-capnp_type_info(int32) -> {int32, 32};
-capnp_type_info(int64) -> {int64, 64};
-capnp_type_info(uint8) -> {uint8, 8};
-capnp_type_info(uint16) -> {uint16, 16};
-capnp_type_info(uint32) -> {uint32, 32};
-capnp_type_info(uint64) -> {uint64, 64};
-capnp_type_info(float32) -> {float32, 32};
-capnp_type_info(float64) -> {float64, 64};
-capnp_type_info(text) -> {text, 8};
-capnp_type_info(data) -> {data, 8};
-capnp_type_info(Other) -> throw({unknown_capnp_type, Other}).
-    
 data_field(void, _Offset) -> void;
 data_field({Type, 1}, Offset) ->
     %% compensate for erlangs big endian bit streams.. yuck!
@@ -275,6 +270,35 @@ data_field({Type, Size}, Offset) ->
 ptr_field(Type, Index) ->
     #ptr{ type=Type, idx=Index }.
 
+capnp_type_info(void) -> {data_field, void};
+capnp_type_info(bool) -> {data_field, {bool, 1}};
+capnp_type_info(int8) -> {data_field, {int8, 8}};
+capnp_type_info(int16) -> {data_field, {int16, 16}};
+capnp_type_info(int32) -> {data_field, {int32, 32}};
+capnp_type_info(int64) -> {data_field, {int64, 64}};
+capnp_type_info(uint8) -> {data_field, {uint8, 8}};
+capnp_type_info(uint16) -> {data_field, {uint16, 16}};
+capnp_type_info(uint32) -> {data_field, {uint32, 32}};
+capnp_type_info(uint64) -> {data_field, {uint64, 64}};
+capnp_type_info(float32) -> {data_field, {float32, 32}};
+capnp_type_info(float64) -> {data_field, {float64, 64}};
+capnp_type_info(text) -> {ptr_field, text};
+capnp_type_info(data) -> {ptr_field, data};
+capnp_type_info(object) -> {ptr_field, object};
+capnp_type_info({list, List}) -> {ptr_field, {list, list_field_type(List)}};
+capnp_type_info({enum, Enum}) -> {data_field, {{enum, schema(get, typeId, Enum)}, 16}};
+capnp_type_info({RefT, Obj})
+  when RefT == struct; RefT == interface ->
+    {ptr_field, {RefT, schema(get, typeId, Obj)}};
+capnp_type_info(Other) -> throw({unknown_capnp_type, Other}).
+    
+list_field_type(List) ->
+    Type = schema(get, elementType, List),
+    case capnp_type_info(schema(get, Type)) of
+        {data_field, {T, _}} -> T;
+        {_, T} -> T
+    end.
+
 
 link_node(Id, NodeName, Nodes) ->
     {Node, Schema} = proplists:get_value(Id, Nodes),
@@ -283,34 +307,39 @@ link_node(Id, NodeName, Nodes) ->
                        link_node(schema(get, id, N), Name, Nodes)
                    end || N <- schema(get, nestedNodes, Node)],
     Groups = case schema(get, Node) of
-                 {struct, S} ->
+                 {struct, O} ->
                      lists:foldl(
                        fun(F, G) ->
                                case schema(get, F) of
-                                   {group, GroupId} ->
+                                   {group, Group} ->
                                        Name = binary_to_atom(schema(get, name, F), latin1),
-                                       [link_node(GroupId, Name, Nodes)|G];
+                                       [link_node(schema(get, typeId, Group), Name, Nodes)|G];
                                    _ -> G
                                end
                        end,
                        [],
-                       schema(get, fields, S));
+                       schema(get, fields, O));
                  _ -> []
              end,
     Types = NestedNodes ++ Groups,
-    set_types(Schema, NodeName, Types).
+    case Schema of
+        #schema{ node=N }=S
+          when NodeName == root ->
+            S#schema{ node=N#node{ name=schema_name(N) },
+                      types=Types };
+        #struct{ node=N }=S ->
+            S#struct{ node=N#node{ name=NodeName },
+                      types=Types };
+        #enum{ node=N }=E ->
+            E#enum{ node=N#node{ name=NodeName },
+                    types=Types };
+        #interface{ node=N }=I ->
+            I#interface{ node=N#node{ name=NodeName } };
+        #const{ node=N }=C ->
+            C#const{ node=N#node{ name=NodeName } };
+        #annotation{ node=N }=A ->
+            A#annotation{ node=N#node{ name=NodeName } }
+    end.
 
-set_types(Node, root, Types)
-  when is_record(Node, schema) ->
-    Node#schema{ name=schema_name(Node), types=Types };
-set_types(Node, Name, Types)
-  when is_record(Node, struct) ->
-    Node#struct{ name=Name, types=Types };
-set_types(Node, Name, Types)
-  when is_record(Node, enum) ->
-    Node#enum{ name=Name, types=Types };
-set_types(skip, _, _) ->
-    [].
-
-schema_name(#schema{ source=Src }) ->
+schema_name(#node{ source=Src }) ->
     binary_to_atom(filename:basename(Src, ".capnp"), latin1).

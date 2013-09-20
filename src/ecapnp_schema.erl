@@ -39,11 +39,11 @@ lookup(Type, _)
 lookup(Type, Types)
   when is_atom(Type),
        is_list(Types) ->
-    lists:keyfind(Type, #struct.name, Types);
+    keyfind(Type, #node.name, Types);
 lookup(Type, Types)
   when is_integer(Type),
        is_list(Types) ->
-    lists:keyfind(Type, #struct.id, Types);
+    keyfind(Type, #node.id, Types);
 
 lookup(Type, #object{ data=Pid }) ->
     case ecapnp_data:get_type(Type, Pid) of
@@ -69,10 +69,16 @@ lookup(Type, #enum{ types=Ts }) ->
 lookup(Type, null) ->
     {unknown_type, Type}.
 
-type_of(#object{ type=#type{ id=Type }}=Obj) ->
+type_of(#object{ type=#node{ id=Type }}=Obj) ->
     lookup(Type, Obj).
 
     
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+
+keyfind(_Key, _N, []) -> false;
+keyfind(Key, N, [T|Ts]) ->
+    if element(N, element(#schema.node, T)) == Key -> T;
+       true -> keyfind(Key, N, Ts)
+    end.

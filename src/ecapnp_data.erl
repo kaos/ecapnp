@@ -103,7 +103,7 @@ new_state(#msg{ schema=Schema }=Msg) ->
       }.
 
 -define(list_types(Type),
-        list_types(#Type{ name=Name, id=Id, types=Ts }=T, Acc) -> 
+        list_types(#Type{ node=#node{ name=Name, id=Id }, types=Ts }=T, Acc) -> 
                list_types(Ts, [{Id, T},{Name, T}|Acc])
                    ).
 ?list_types(schema);

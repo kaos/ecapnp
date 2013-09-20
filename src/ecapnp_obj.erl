@@ -74,9 +74,7 @@ get(Type, Fields) ->
 
 set_type(Type, Object0) ->
     {ok, T} = lookup(Type, Object0),
-    Object = Object0#object{
-               type=#type{ name=T#struct.name, id=T#struct.id }
-              },
+    Object = Object0#object{ type=T#struct.node },
     Object#object{
       union_value=ecapnp_get:field(T#struct.union_field, Object)
      }.

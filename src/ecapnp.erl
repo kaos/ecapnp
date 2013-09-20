@@ -59,9 +59,9 @@ type(#object{ type=T }) ->
     T.
 
 type(name, Object) ->
-    (type(Object))#type.name;
+    (type(Object))#node.name;
 type(id, Object) ->
-    (type(Object))#type.id;
+    (type(Object))#node.id;
 type(schema, Object) ->
     {ok, Schema} = ecapnp_schema:type_of(Object),
     Schema.
