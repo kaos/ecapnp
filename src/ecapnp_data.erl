@@ -103,16 +103,23 @@ new_state(#msg{ schema=Schema }=Msg) ->
       }.
 
 -define(list_types(Type),
-        list_types(#Type{ node=#node{ name=Name, id=Id }, types=Ts }=T, Acc) -> 
+        list_types(#Type{ node=#node{ name=Name, id=Id }, types=Ts }=T, Acc) ->
                list_types(Ts, [{Id, T},{Name, T}|Acc])
+                   ).
+-define(list_type(Type),
+       list_types(#Type{ node=#node{ name=Name, id=Id } }=T, Acc) ->
+               [{Id, T},{Name, T}|Acc]
                    ).
 ?list_types(schema);
 ?list_types(struct);
 ?list_types(enum);
+?list_type(interface);
+?list_type(const);
 list_types([T|Ts], Acc) ->
     list_types(Ts, list_types(T, Acc));
 list_types([], Acc) -> Acc.
 -undef(list_types).
+-undef(list_type).
 
 handle_response({Response, State}, {Request, From}) ->
     From ! {Request, Response},
