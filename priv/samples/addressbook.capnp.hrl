@@ -21,11 +21,13 @@ addressbook(get, Object) ->
 %% addressbook/1
 
 addressbook(schema) ->
-  #schema{ %% 0x9eb32e19f86ee174
-    name=addressbook, id=11435534567900897652, source= <<"addressbook.capnp">>,
+  #schema{
+    node=#node{ %% 0x9eb32e19f86ee174
+      name=addressbook, id=11435534567900897652, source= <<"addressbook.capnp">> },
     types=
-      [#struct{ %% 0x98808e9832e8bc18
-         name='Person', id=10988939875124296728, source= <<"addressbook.capnp:Person">>,
+      [#struct{
+         node=#node{ %% 0x98808e9832e8bc18
+           name='Person', id=10988939875124296728, source= <<"addressbook.capnp:Person">> },
          dsize=1, psize=4, esize=inlineComposite,
          union_field=none,
          fields=
@@ -41,8 +43,9 @@ addressbook(schema) ->
              #group{ id=13477914502553102653 }}
            ],
          types=
-           [#struct{ %% 0x814e90b29c9e8ad0
-              name='PhoneNumber', id=9317543775882349264, source= <<"addressbook.capnp:Person.PhoneNumber">>,
+           [#struct{
+              node=#node{ %% 0x814e90b29c9e8ad0
+                name='PhoneNumber', id=9317543775882349264, source= <<"addressbook.capnp:Person.PhoneNumber">> },
               dsize=1, psize=1, esize=inlineComposite,
               union_field=none,
               fields=
@@ -52,16 +55,18 @@ addressbook(schema) ->
                   #data{ type={enum,10511609358742521391}, align=0 }}
                 ],
               types=
-                [#enum{ %% 0x91e0bd04d585062f
-                   name='Type', id=10511609358742521391, source= <<"addressbook.capnp:Person.PhoneNumber.Type">>,
+                [#enum{
+                   node=#node{ %% 0x91e0bd04d585062f
+                     name='Type', id=10511609358742521391, source= <<"addressbook.capnp:Person.PhoneNumber.Type">> },
                    values=
                      [mobile,
                       home,
                       work
                      ]}
                 ]},
-            #struct{ %% 0xbb0b2bd4bdc3693d
-              name=employment, id=13477914502553102653, source= <<"addressbook.capnp:Person.employment">>,
+            #struct{
+              node=#node{ %% 0xbb0b2bd4bdc3693d
+                name=employment, id=13477914502553102653, source= <<"addressbook.capnp:Person.employment">> },
               dsize=1, psize=4, esize=inlineComposite,
               union_field=#data{ align=32, type=
                 {union,
@@ -73,8 +78,9 @@ addressbook(schema) ->
                    {selfEmployed,void}
                 ]} }}
            ]},
-       #struct{ %% 0xf934d9b354a8a134
-         name='AddressBook', id=17957216978475721012, source= <<"addressbook.capnp:AddressBook">>,
+       #struct{
+         node=#node{ %% 0xf934d9b354a8a134
+           name='AddressBook', id=17957216978475721012, source= <<"addressbook.capnp:AddressBook">> },
          dsize=0, psize=1, esize=pointer,
          union_field=none,
          fields=
