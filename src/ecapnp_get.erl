@@ -18,6 +18,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([root/3, field/2]).
+-export([list_element_size/1]).
 
 -import(ecapnp_schema, [lookup/2]).
 -import(ecapnp_obj, [segment/3, data_segment/3, ptr_segment/3,
@@ -125,27 +126,28 @@ get_value(_, Value) -> Value.
 
 
 %% Pointer field helpers
-read_ptr(#ptr{ type=Type, idx=Index }=Ptr, Obj) ->
+read_ptr(#ptr{ idx=Index }=Ptr, Obj) ->
     <<Offset:32/integer-signed-little, 
       Size:32/integer-little>> = ptr_segment(Index, 1, Obj),
     case ptr_type(Offset, Size) of
         null ->
-            case Type of
+            case Ptr#ptr.type of
                 text -> <<>>;
                 {list, _} -> [];
+                %%{struct, Type} -> TODO: initialize new object
                 _ -> null
             end;
         struct ->
             read_struct(
               Ptr, #struct_ptr{
-                      offset = ptr_offset(Index + 1 + (Offset bsr 2), Obj),
+                      offset = Index + 1 + (Offset bsr 2),
                       dsize = Size band 16#ffff,
                       psize = Size bsr 16,
                       object = Obj });
         list -> 
             read_list(
               Ptr, #list_ptr{
-                      offset = ptr_offset(Index + 1 + (Offset bsr 2), Obj),
+                      offset = Index + 1 + (Offset bsr 2),
                       size = list_element_size(Size band 7),
                       count = Size bsr 3,
                       object = Obj });
@@ -164,7 +166,7 @@ read_struct(#ptr{ type=Type },
                          psize=PSize,
                          object=Obj }) ->
     ecapnp_obj:get( Type, 
-                    [{offset, Offset},
+                    [{offset, ptr_offset(Offset, Obj)},
                      {dsize, DSize},
                      {psize, PSize},
                      {copy, Obj}]).
@@ -176,7 +178,7 @@ read_list(#ptr{ type=text },
                      object=Obj }) ->
     TextLen = Count - 1,
     <<Text:TextLen/binary, _/binary>> =
-        segment(Offset, 1 + (TextLen div 8), Obj),
+        ptr_segment(Offset, 1 + (TextLen div 8), Obj),
     Text;
 read_list(#ptr{ type={list, Type} },
           #list_ptr{ object=Obj }=ListPtr) ->
@@ -188,6 +190,9 @@ read_list(#ptr{ type={list, Type} },
                 {dsize, DSize},
                 {psize, PSize},
                 {copy, Obj}])
+             || O <- Offsets];
+        {ptrs, Offsets} ->
+            [read_ptr( #ptr{ type=Type, idx=O }, Obj)
              || O <- Offsets];
         Offsets ->
             S = ptr_segment(0, all, Obj),
@@ -203,16 +208,23 @@ get_offset_list(#list_ptr{ offset=Offset,
     <<C:32/integer-little,
       DSize:16/integer-little,
       PSize:16/integer-little>> =
-        segment(Offset, 1, Obj),
+        ptr_segment(Offset, 1, Obj),
     ElementCount = C bsr 2,
     ElementSize = TotalWordCount div ElementCount,
-    {DSize, PSize, lists:seq(Offset + 1, Offset + TotalWordCount, ElementSize)};
+    ObjOffset = ptr_offset(Offset, Obj),
+    {DSize, PSize, lists:seq(ObjOffset + 1, ObjOffset + TotalWordCount, ElementSize)};
+get_offset_list(#list_ptr{ offset=Offset,
+                           size=ptr,
+                           count=Count }) ->
+    {ptrs, [Offset + Idx || Idx <- lists:seq(0, Count - 1)]};
 get_offset_list(#list_ptr{ offset=Offset,
                            size=Size,
-                           count=Count }) ->
+                           count=Count,
+                           object=Obj }) ->
+    ObjOffset = ptr_offset(Offset, Obj),
     [begin
          BitOffset = (Idx * Size),
-         {Offset + BitOffset div 64,
+         {ObjOffset + BitOffset div 64,
           BitOffset rem 64}
      end || Idx <- lists:seq(0, Count - 1)].
 

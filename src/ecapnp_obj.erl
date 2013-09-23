@@ -20,8 +20,9 @@
 -export([get/2, from_ptr/4, alloc/2, segment_id/1, 
          segment/3, update/3, set_type/2,
          data_segment/3, ptr_segment/3,
-         data_offset/2, ptr_offset/2, ptr_type/2,
-         create_ptr/1, create_ptr/2, list_size/2]).
+         data_offset/2, ptr_offset/2, segment_offset_ptr/3,
+         ptr_type/2, create_ptr/1, create_ptr/2, list_size/2,
+         element_size/1]).
 
 -import(ecapnp_schema, [lookup/2]).
 -import(ecapnp_data, [get_segment/4]).
@@ -103,6 +104,11 @@ data_offset(Offset, #object{ doffset=Data }) ->
 ptr_offset(Offset, #object{ poffset=Ptrs }) ->
     Offset + Ptrs.
 
+%% Get offset to ptr from segment offset
+segment_offset_ptr(Offset, PtrIdx, #object{ poffset=Ptrs }) ->
+    Offset - Ptrs - PtrIdx.
+
+create_ptr(#list_ptr{ offset=Offset }=Ptr) -> create_ptr(Offset, Ptr);
 create_ptr(Ptr) -> create_ptr(0, Ptr).
 
 create_ptr(Offset, #struct{ dsize=DSize, psize=PSize }) ->
@@ -110,22 +116,21 @@ create_ptr(Offset, #struct{ dsize=DSize, psize=PSize }) ->
     <<Off:32/integer-signed-little,
       DSize:16/integer-little,
       PSize:16/integer-little>>;
-create_ptr(0, #list_ptr{ offset=Offset,
-                         size=Size,
-                         count=Count }) ->
+create_ptr(Offset, #list_ptr{ size=Size, count=Count }) ->
     Off = (Offset bsl 2) + 1,
     Sz = (Count bsl 3) + element_size(Size),
     <<Off:32/integer-little,
       Sz:32/integer-little>>.
 
-list_size(Length, #struct{ esize=inlineComposite,
-                           dsize=DSize, psize=PSize }) ->
+list_size(Length, {inlineComposite, #struct{ dsize=DSize, psize=PSize }}) ->
     list_size(Length, (DSize + PSize) * 64) + 1;
-list_size(Length, #struct{ esize=pointer }) -> 
+list_size(Length, {ESize,_}) -> 
+    list_size(Length, ESize);
+list_size(Length, ptr) ->
     list_size(Length, 64);
-list_size(Length, #struct{ esize=ESize }) ->
+list_size(Length, ESize) when is_atom(ESize) ->
     list_size(Length, ecapnp_get:list_element_size(element_size(ESize)));
-list_size(Length, BitSize) ->
+list_size(Length, BitSize) when is_integer(BitSize) ->
     Bits = Length * BitSize,
     Words = Bits div 64,
     if Bits rem 64 == 0 -> Words;
@@ -141,11 +146,6 @@ ptr_type(1) -> list;
 ptr_type(2) -> far_ptr;
 ptr_type(3) -> reserved_ptr_type.
 
-
-%% ===================================================================
-%% internal functions
-%% ===================================================================
-
 %% element size encoded value
 element_size(empty) -> 0;
 element_size(bit) -> 1;
@@ -155,4 +155,9 @@ element_size(fourBytes) -> 4;
 element_size(eightBytes) -> 5;
 element_size(pointer) -> 6;
 element_size(inlineComposite) -> 7.
+
+
+%% ===================================================================
+%% internal functions
+%% ===================================================================
 
