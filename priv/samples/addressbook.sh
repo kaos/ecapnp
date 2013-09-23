@@ -54,9 +54,8 @@ write([]) ->
     %% Get message data and pack it
     Data1 = ecapnp_serialize:pack(
               ecapnp_message:write(Root)),
-    %% io:put_chars/1 needs this unicode translation stuff, for some reason... ?!
-    Data2 = unicode:characters_to_binary(Data1, latin1),
-    io:put_chars(Data2).
+    io:setopts([{encoding, unicode}]),
+    io:put_chars(Data1).
 
 
 dump_message(Data) ->
@@ -64,7 +63,6 @@ dump_message(Data) ->
     {ok, Message} = ecapnp_message:read(
                       ecapnp_serialize:unpack(Data)),
     {ok, Root} = addressbook(root, 'AddressBook', Message),
-
     People = addressbook(get, people, Root),
     [dump_person(Person) || Person <- People].
 

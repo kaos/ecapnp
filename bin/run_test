@@ -36,12 +36,14 @@ run_test(encode, simpleTest, undefined) ->
     {ok, Root} = test(root, 'SimpleTest'),
     ok = test(set, int, 1234567890, Root),
     ok = test(set, msg, <<"a short message...">>, Root),
-    io:put_chars(unicode:characters_to_binary(ecapnp_message:write(Root), latin1));
+    io:setopts([{encoding, unicode}]),
+    io:put_chars( ecapnp_message:write(Root) );
 
 run_test(encode, textListTypeTest, undefined) ->
     {ok, Root} = test(root, 'ListTest'),
     ok = test(set, textList, [<<"foo">>, <<"bar">>, <<"baz">>], Root),
-    io:put_chars(unicode:characters_to_binary(ecapnp_message:write(Root), latin1));
+    io:setopts([{encode, unicode}]),
+    io:put_chars(ecapnp_message:write(Root));
 
 run_test(Action, Test, _) ->
     io:format(standard_error, "Test ~p-~p not implemented.~n", [Action, Test]).
