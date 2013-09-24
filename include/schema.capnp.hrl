@@ -45,17 +45,23 @@ schema(schema) ->
            ]} },
          fields=
            [{id,
-             #data{ type=uint64, align=0 }},
+             #data{ type=uint64, align=0,
+                    default= 0 }},
             {displayName,
-             #ptr{ type=text, idx=0 }},
+             #ptr{ type=text, idx=0,
+                   default= <<>> }},
             {displayNamePrefixLength,
-             #data{ type=uint32, align=64 }},
+             #data{ type=uint32, align=64,
+                    default= 0 }},
             {scopeId,
-             #data{ type=uint64, align=128 }},
+             #data{ type=uint64, align=128,
+                    default= 0 }},
             {nestedNodes,
-             #ptr{ type={list,{struct,16050641862814319170}}, idx=1 }},
+             #ptr{ type={list,{struct,16050641862814319170}}, idx=1,
+                   default= null }},
             {annotations,
-             #ptr{ type={list,{struct,17422339044421236034}}, idx=2 }}
+             #ptr{ type={list,{struct,17422339044421236034}}, idx=2,
+                   default= null }}
            ],
          types=
            [#struct{
@@ -65,9 +71,11 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{name,
-                  #ptr{ type=text, idx=0 }},
+                  #ptr{ type=text, idx=0,
+                        default= <<>> }},
                  {id,
-                  #data{ type=uint64, align=0 }}
+                  #data{ type=uint64, align=0,
+                         default= 0 }}
                 ]},
             #struct{
               node=#node{ %% 0xec1619d4400a0290
@@ -76,31 +84,44 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{type,
-                  #ptr{ type={struct,15020482145304562784}, idx=3 }},
+                  #ptr{ type={struct,15020482145304562784}, idx=3,
+                        default= null }},
                  {targetsFile,
-                  #data{ type=bool, align=119 }},
+                  #data{ type=bool, align=119,
+                         default= false }},
                  {targetsConst,
-                  #data{ type=bool, align=118 }},
+                  #data{ type=bool, align=118,
+                         default= false }},
                  {targetsEnum,
-                  #data{ type=bool, align=117 }},
+                  #data{ type=bool, align=117,
+                         default= false }},
                  {targetsEnumerant,
-                  #data{ type=bool, align=116 }},
+                  #data{ type=bool, align=116,
+                         default= false }},
                  {targetsStruct,
-                  #data{ type=bool, align=115 }},
+                  #data{ type=bool, align=115,
+                         default= false }},
                  {targetsField,
-                  #data{ type=bool, align=114 }},
+                  #data{ type=bool, align=114,
+                         default= false }},
                  {targetsUnion,
-                  #data{ type=bool, align=113 }},
+                  #data{ type=bool, align=113,
+                         default= false }},
                  {targetsGroup,
-                  #data{ type=bool, align=112 }},
+                  #data{ type=bool, align=112,
+                         default= false }},
                  {targetsInterface,
-                  #data{ type=bool, align=127 }},
+                  #data{ type=bool, align=127,
+                         default= false }},
                  {targetsMethod,
-                  #data{ type=bool, align=126 }},
+                  #data{ type=bool, align=126,
+                         default= false }},
                  {targetsParam,
-                  #data{ type=bool, align=125 }},
+                  #data{ type=bool, align=125,
+                         default= false }},
                  {targetsAnnotation,
-                  #data{ type=bool, align=124 }}
+                  #data{ type=bool, align=124,
+                         default= false }}
                 ]},
             #struct{
               node=#node{ %% 0xb18aa5ac7a0d9420
@@ -109,9 +130,11 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{type,
-                  #ptr{ type={struct,15020482145304562784}, idx=3 }},
+                  #ptr{ type={struct,15020482145304562784}, idx=3,
+                        default= null }},
                  {value,
-                  #ptr{ type={struct,14853958794117909659}, idx=4 }}
+                  #ptr{ type={struct,14853958794117909659}, idx=4,
+                        default= null }}
                 ]},
             #struct{
               node=#node{ %% 0xe82753cff0c2218f
@@ -120,7 +143,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{methods,
-                  #ptr{ type={list,{struct,10736806783679155584}}, idx=3 }}
+                  #ptr{ type={list,{struct,10736806783679155584}}, idx=3,
+                        default= null }}
                 ]},
             #struct{
               node=#node{ %% 0xb54ab3364333f598
@@ -129,7 +153,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{enumerants,
-                  #ptr{ type={list,{struct,10919677598968879693}}, idx=3 }}
+                  #ptr{ type={list,{struct,10919677598968879693}}, idx=3,
+                        default= null }}
                 ]},
             #struct{
               node=#node{ %% 0x9ea0b19b37fb4435
@@ -138,19 +163,26 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{dataWordCount,
-                  #data{ type=uint16, align=112 }},
+                  #data{ type=uint16, align=112,
+                         default= 0 }},
                  {pointerCount,
-                  #data{ type=uint16, align=192 }},
+                  #data{ type=uint16, align=192,
+                         default= 0 }},
                  {preferredListEncoding,
-                  #data{ type={enum,15102134695616452902}, align=208 }},
+                  #data{ type={enum,15102134695616452902}, align=208,
+                         default= 0 }},
                  {isGroup,
-                  #data{ type=bool, align=231 }},
+                  #data{ type=bool, align=231,
+                         default= false }},
                  {discriminantCount,
-                  #data{ type=uint16, align=240 }},
+                  #data{ type=uint16, align=240,
+                         default= 0 }},
                  {discriminantOffset,
-                  #data{ type=uint32, align=256 }},
+                  #data{ type=uint32, align=256,
+                         default= 0 }},
                  {fields,
-                  #ptr{ type={list,{struct,11145653318641710175}}, idx=3 }}
+                  #ptr{ type={list,{struct,11145653318641710175}}, idx=3,
+                        default= null }}
                 ]}
            ]},
        #struct{
@@ -166,13 +198,17 @@ schema(schema) ->
            ]} },
          fields=
            [{name,
-             #ptr{ type=text, idx=0 }},
+             #ptr{ type=text, idx=0,
+                   default= <<>> }},
             {codeOrder,
-             #data{ type=uint16, align=0 }},
+             #data{ type=uint16, align=0,
+                    default= 0 }},
             {annotations,
-             #ptr{ type={list,{struct,17422339044421236034}}, idx=1 }},
+             #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
+                   default= null }},
             {discriminantValue,
-             #data{ type=uint16, align=16 }},
+             #data{ type=uint16, align=16,
+                    default= 65535 }},
             {ordinal,
              #group{ id=13515537513213004774 }}
            ],
@@ -185,7 +221,8 @@ schema(schema) ->
                 {union,
                   [{implicit,void},
                    {explicit,
-                    #data{ type=uint16, align=96 }}
+                    #data{ type=uint16, align=96,
+                           default= 0 }}
                 ]} }},
             #struct{
               node=#node{ %% 0xcafccddb68db1d11
@@ -194,7 +231,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{typeId,
-                  #data{ type=uint64, align=128 }}
+                  #data{ type=uint64, align=128,
+                         default= 0 }}
                 ]},
             #struct{
               node=#node{ %% 0xc42305476bb4746f
@@ -203,11 +241,14 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{offset,
-                  #data{ type=uint32, align=32 }},
+                  #data{ type=uint32, align=32,
+                         default= 0 }},
                  {type,
-                  #ptr{ type={struct,15020482145304562784}, idx=2 }},
+                  #ptr{ type={struct,15020482145304562784}, idx=2,
+                        default= null }},
                  {defaultValue,
-                  #ptr{ type={struct,14853958794117909659}, idx=3 }}
+                  #ptr{ type={struct,14853958794117909659}, idx=3,
+                        default= null }}
                 ]}
            ]},
        #struct{
@@ -217,11 +258,14 @@ schema(schema) ->
          union_field=none,
          fields=
            [{name,
-             #ptr{ type=text, idx=0 }},
+             #ptr{ type=text, idx=0,
+                   default= <<>> }},
             {codeOrder,
-             #data{ type=uint16, align=0 }},
+             #data{ type=uint16, align=0,
+                    default= 0 }},
             {annotations,
-             #ptr{ type={list,{struct,17422339044421236034}}, idx=1 }}
+             #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
+                   default= null }}
            ]},
        #struct{
          node=#node{ %% 0x9500cce23b334d80
@@ -230,17 +274,23 @@ schema(schema) ->
          union_field=none,
          fields=
            [{name,
-             #ptr{ type=text, idx=0 }},
+             #ptr{ type=text, idx=0,
+                   default= <<>> }},
             {codeOrder,
-             #data{ type=uint16, align=0 }},
+             #data{ type=uint16, align=0,
+                    default= 0 }},
             {params,
-             #ptr{ type={list,{struct,14681955158633610486}}, idx=1 }},
+             #ptr{ type={list,{struct,14681955158633610486}}, idx=1,
+                   default= null }},
             {requiredParamCount,
-             #data{ type=uint16, align=16 }},
+             #data{ type=uint16, align=16,
+                    default= 0 }},
             {returnType,
-             #ptr{ type={struct,15020482145304562784}, idx=2 }},
+             #ptr{ type={struct,15020482145304562784}, idx=2,
+                   default= null }},
             {annotations,
-             #ptr{ type={list,{struct,17422339044421236034}}, idx=3 }}
+             #ptr{ type={list,{struct,17422339044421236034}}, idx=3,
+                   default= null }}
            ],
          types=
            [#struct{
@@ -250,13 +300,17 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{name,
-                  #ptr{ type=text, idx=0 }},
+                  #ptr{ type=text, idx=0,
+                        default= <<>> }},
                  {type,
-                  #ptr{ type={struct,15020482145304562784}, idx=1 }},
+                  #ptr{ type={struct,15020482145304562784}, idx=1,
+                        default= null }},
                  {defaultValue,
-                  #ptr{ type={struct,14853958794117909659}, idx=2 }},
+                  #ptr{ type={struct,14853958794117909659}, idx=2,
+                        default= null }},
                  {annotations,
-                  #ptr{ type={list,{struct,17422339044421236034}}, idx=3 }}
+                  #ptr{ type={list,{struct,17422339044421236034}}, idx=3,
+                        default= null }}
                 ]}
            ]},
        #struct{
@@ -297,7 +351,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{typeId,
-                  #data{ type=uint64, align=64 }}
+                  #data{ type=uint64, align=64,
+                         default= 0 }}
                 ]},
             #struct{
               node=#node{ %% 0xac3a6f60ef4cc6d3
@@ -306,7 +361,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{typeId,
-                  #data{ type=uint64, align=64 }}
+                  #data{ type=uint64, align=64,
+                         default= 0 }}
                 ]},
             #struct{
               node=#node{ %% 0x9e0e78711a7f87a9
@@ -315,7 +371,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{typeId,
-                  #data{ type=uint64, align=64 }}
+                  #data{ type=uint64, align=64,
+                         default= 0 }}
                 ]},
             #struct{
               node=#node{ %% 0x87e739250a60ea97
@@ -324,7 +381,8 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{elementType,
-                  #ptr{ type={struct,15020482145304562784}, idx=0 }}
+                  #ptr{ type={struct,15020482145304562784}, idx=0,
+                        default= null }}
                 ]}
            ]},
        #struct{
@@ -335,40 +393,57 @@ schema(schema) ->
            {union,
              [{void,void},
               {bool,
-               #data{ type=bool, align=23 }},
+               #data{ type=bool, align=23,
+                      default= false }},
               {int8,
-               #data{ type=int8, align=16 }},
+               #data{ type=int8, align=16,
+                      default= 0 }},
               {int16,
-               #data{ type=int16, align=16 }},
+               #data{ type=int16, align=16,
+                      default= 0 }},
               {int32,
-               #data{ type=int32, align=32 }},
+               #data{ type=int32, align=32,
+                      default= 0 }},
               {int64,
-               #data{ type=int64, align=64 }},
+               #data{ type=int64, align=64,
+                      default= 0 }},
               {uint8,
-               #data{ type=uint8, align=16 }},
+               #data{ type=uint8, align=16,
+                      default= 0 }},
               {uint16,
-               #data{ type=uint16, align=16 }},
+               #data{ type=uint16, align=16,
+                      default= 0 }},
               {uint32,
-               #data{ type=uint32, align=32 }},
+               #data{ type=uint32, align=32,
+                      default= 0 }},
               {uint64,
-               #data{ type=uint64, align=64 }},
+               #data{ type=uint64, align=64,
+                      default= 0 }},
               {float32,
-               #data{ type=float32, align=32 }},
+               #data{ type=float32, align=32,
+                      default= 0.0 }},
               {float64,
-               #data{ type=float64, align=64 }},
+               #data{ type=float64, align=64,
+                      default= 0.0 }},
               {text,
-               #ptr{ type=text, idx=0 }},
+               #ptr{ type=text, idx=0,
+                     default= <<>> }},
               {data,
-               #ptr{ type=data, idx=0 }},
+               #ptr{ type=data, idx=0,
+                     default= null }},
               {list,
-               #ptr{ type=object, idx=0 }},
+               #ptr{ type=object, idx=0,
+                     default= null }},
               {enum,
-               #data{ type=uint16, align=16 }},
+               #data{ type=uint16, align=16,
+                      default= 0 }},
               {struct,
-               #ptr{ type=object, idx=0 }},
+               #ptr{ type=object, idx=0,
+                     default= null }},
               {interface,void},
               {object,
-               #ptr{ type=object, idx=0 }}
+               #ptr{ type=object, idx=0,
+                     default= null }}
            ]} }},
        #struct{
          node=#node{ %% 0xf1c8950dab257542
@@ -377,9 +452,11 @@ schema(schema) ->
          union_field=none,
          fields=
            [{id,
-             #data{ type=uint64, align=0 }},
+             #data{ type=uint64, align=0,
+                    default= 0 }},
             {value,
-             #ptr{ type={struct,14853958794117909659}, idx=0 }}
+             #ptr{ type={struct,14853958794117909659}, idx=0,
+                   default= null }}
            ]},
        #enum{
          node=#node{ %% 0xd1958f7dba521926
@@ -401,9 +478,11 @@ schema(schema) ->
          union_field=none,
          fields=
            [{nodes,
-             #ptr{ type={list,{struct,16610026722781537303}}, idx=0 }},
+             #ptr{ type={list,{struct,16610026722781537303}}, idx=0,
+                   default= null }},
             {requestedFiles,
-             #ptr{ type={list,{struct,14981803260258615394}}, idx=1 }}
+             #ptr{ type={list,{struct,14981803260258615394}}, idx=1,
+                   default= null }}
            ],
          types=
            [#struct{
@@ -413,11 +492,14 @@ schema(schema) ->
               union_field=none,
               fields=
                 [{id,
-                  #data{ type=uint64, align=0 }},
+                  #data{ type=uint64, align=0,
+                         default= 0 }},
                  {filename,
-                  #ptr{ type=text, idx=0 }},
+                  #ptr{ type=text, idx=0,
+                        default= <<>> }},
                  {imports,
-                  #ptr{ type={list,{struct,12560611460656617445}}, idx=1 }}
+                  #ptr{ type={list,{struct,12560611460656617445}}, idx=1,
+                        default= null }}
                 ],
               types=
                 [#struct{
@@ -427,9 +509,11 @@ schema(schema) ->
                    union_field=none,
                    fields=
                      [{id,
-                       #data{ type=uint64, align=0 }},
+                       #data{ type=uint64, align=0,
+                              default= 0 }},
                       {name,
-                       #ptr{ type=text, idx=0 }}
+                       #ptr{ type=text, idx=0,
+                             default= <<>> }}
                      ]}
                 ]}
            ]}

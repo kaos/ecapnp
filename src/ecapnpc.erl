@@ -174,10 +174,12 @@ export_item(#data{ type={union, L}, align=A }, Out, Indent) ->
          A, I, "", I + 2, ""]),
     export_items(L, Out, {first, I + 3}),
     Out(["~n~*s]} }", I, ""]);
-export_item(#data{ type=T, align=A }, Out, _Indent) ->
-    Out(["#data{ type=~p, align=~p }", T, A]);
-export_item(#ptr{ type=T, idx=I }, Out, _Indent) ->
-    Out(["#ptr{ type=~p, idx=~p }", T, I]);
+export_item(#data{ type=T, align=A, default=D }, Out, Indent) ->
+    Out(["#data{ type=~p, align=~p,~n~*s"
+         "       default= ~p }", T, A, Indent, "", D]);
+export_item(#ptr{ type=T, idx=I, default=D }, Out, Indent) ->
+    Out(["#ptr{ type=~p, idx=~p,~n~*s"
+         "      default= ~p }", T, I, Indent, "", D]);
 export_item(#group{ id=Id }, Out, _Indent) ->
     Out(["#group{ id=~p }", Id]);
 export_item(Item, Out, _Indent) ->
@@ -225,7 +227,7 @@ compile_node({struct, Struct}, Node) ->
                                _ -> data_field(
                                       {{union,
                                         [compile_struct_field(F) || F <- Union]}, 16},
-                                      schema(get, discriminantOffset, Struct))
+                                      schema(get, discriminantOffset, Struct), {union, 0})
                            end
            };
 compile_node({enum, Enum}, Node) ->
@@ -248,27 +250,37 @@ compile_struct_field(Field) ->
      compile_struct_field_type(schema(get, Field))}.
 
 compile_struct_field_type({slot, Field}) ->
-    Type = schema(get, type, Field),
-    compile_field(schema(get, Type), schema(get, offset, Field));
+    compile_field(Field);
 compile_struct_field_type({group, Group}) ->
     #group{ id=schema(get, typeId, Group) }.
 
-compile_field(Type, Offset) ->
-    case capnp_type_info(Type) of
-        {data_field, DataType} -> data_field(DataType, Offset);
-        {ptr_field, PtrType} -> ptr_field(PtrType, Offset)
+compile_field(Field) ->
+    Offset = schema(get, offset, Field),
+    Default = schema(get, defaultValue, Field),
+    case capnp_type_info(schema(get, schema(get, type, Field))) of
+        {data_field, DataType} -> data_field(DataType, Offset, Default);
+        {ptr_field, PtrType} -> ptr_field(PtrType, Offset, Default)
     end.
 
-data_field(void, _Offset) -> void;
-data_field({Type, 1}, Offset) ->
+data_field(void, _Offset, _Default) -> void;
+data_field({Type, 1}, Offset, Default) ->
     %% compensate for erlangs big endian bit streams.. yuck!
-    data_field({Type, 8}, (Offset div 8) + ((7 - (Offset rem 8))/8));
-data_field({Type, Size}, Offset) ->
+    data_field({Type, 8}, (Offset div 8) + ((7 - (Offset rem 8))/8), Default);
+data_field({Type, Size}, Offset, Default) ->
     %% convert alignment to integer (Size * Offset should never be a fraction)
-    #data{ type=Type, align=round(Size * Offset) }.
+    #data{ type=Type, align=round(Size * Offset), default=default_value(Type, Default) }.
 
-ptr_field(Type, Index) ->
-    #ptr{ type=Type, idx=Index }.
+ptr_field(Type, Index, Default) ->
+    #ptr{ type=Type, idx=Index, default=default_value(Type, Default) }.
+
+default_value(Type, #object{ type=#node{ name='Value' } }=Object) ->
+    default_value(Type, schema(get, Object));
+default_value({struct, _Type}, {struct, #object{ dsize=DSize, psize=_PSize }=Object}) ->
+    {ecapnp_obj:data_segment(0, DSize, Object), []}; %% todo: get list of pointer data..
+default_value({Type, _}, {Type, Value}) -> Value;
+default_value(Type, {Type, Value}) -> Value;
+default_value(Type, Value) -> throw({value_type_mismatch, Type, Value}).
+
 
 capnp_type_info(void) -> {data_field, void};
 capnp_type_info(bool) -> {data_field, {bool, 1}};

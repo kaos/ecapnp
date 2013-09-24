@@ -32,7 +32,8 @@ lookup({struct, Type}, Ts) ->
 lookup({list, Type}, Ts) ->
     lookup(Type, Ts);
 lookup(Type, _)
-  when is_record(Type, struct);
+  when Type == object;
+       is_record(Type, struct);
        is_record(Type, enum) ->
     {ok, Type};
 

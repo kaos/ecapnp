@@ -10,12 +10,14 @@
 
 -record(ptr, {
           type :: term(),
-          idx=0 :: integer()
+          idx=0 :: integer(),
+          default
          }).
 
 -record(data, {
           type :: term(),
-          align=0 :: integer()
+          align=0 :: integer(),
+          default
          }).
 
 -record(group, {

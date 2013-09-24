@@ -19,7 +19,7 @@
 
 -export([get/2, from_ptr/4, alloc/2, segment_id/1, 
          segment/3, update/3, set_type/2,
-         data_segment/3, ptr_segment/3,
+         data_segment/3, ptr_segment/3, size/1,
          data_offset/2, ptr_offset/2, segment_offset_ptr/3,
          ptr_type/2, create_ptr/1, create_ptr/2, list_size/2,
          element_size/1]).
@@ -61,18 +61,20 @@ get(Type, Fields) ->
     D = proplists:get_value(copy, Fields, #object{}),
     {ok, T} = lookup(Type, proplists:get_value(data, Fields, D)),
     Offset = proplists:get_value(offset, Fields, D#object.doffset),
-    DSize = proplists:get_value(dsize, Fields, T#struct.dsize),
+    DSize = proplists:get_value(dsize, Fields, data_size(T)),
     set_type(
       T, #object{
             ?Init_field(segment_id),
             doffset=Offset,
             dsize=DSize,
             ?Init_field(poffset, Offset + DSize),
-            ?Init_field(psize, T#struct.psize),
+            ?Init_field(psize, ptrs_size(T)),
             ?Init_field(data)
            }).
 -undef(Init_field).
 
+set_type(object, Object) ->
+    Object#object{ type=object, union_value=undefined };
 set_type(Type, Object0) ->
     {ok, T} = lookup(Type, Object0),
     Object = Object0#object{ type=T#struct.node },
@@ -82,6 +84,9 @@ set_type(Type, Object0) ->
     
 alloc(Size, #object{ segment_id=Id, data=Pid }) ->
     ecapnp_data:alloc(Id, Size, Pid).
+
+size(#object{ dsize=DSize, psize=PSize }) ->
+    DSize + PSize.
 
 segment_id(#object{ segment_id=Id }) -> Id;
 segment_id(_) -> 0.
@@ -161,3 +166,8 @@ element_size(inlineComposite) -> 7.
 %% internal functions
 %% ===================================================================
 
+data_size(#struct{ dsize=DSize }) -> DSize;
+data_size(object) -> undefined.
+
+ptrs_size(#struct{ psize=PSize }) -> PSize;
+ptrs_size(object) -> undefined.
