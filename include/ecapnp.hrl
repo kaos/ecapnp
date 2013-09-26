@@ -11,13 +11,13 @@
 -record(ptr, {
           type :: term(),
           idx=0 :: integer(),
-          default
+          default :: value()
          }).
 
 -record(data, {
           type :: term(),
           align=0 :: integer(),
-          default
+          default :: value()
          }).
 
 -record(group, {
@@ -69,6 +69,7 @@
 -type object_field() :: #data{} | #ptr{}.
 -type object_fields() :: list({atom(), object_field()}).
 -type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
+-type value() :: number() | list(value()) | {binary(), list(binary())} | null | undefined.
 
 
 %% Runtime data

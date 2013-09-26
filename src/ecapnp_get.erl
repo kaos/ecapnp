@@ -79,10 +79,10 @@ get_data(#data{ type={union, Fields} }=D, Object) ->
     end;
 
 %% Value field
-get_data(#data{ type=Type, align=Align },
+get_data(#data{ type=Type, align=Align, default=Default },
          #object{ dsize=DSize }=Obj)
   when (Align div 64) < DSize ->
-    read_value(Type, 0, Align, data_segment(0, 1 + (Align div 64), Obj)).
+    ecapnp_val:get(Type, 0, Align, Default, data_segment(0, 1 + (Align div 64), Obj)).
 
 
 %% Ptr field (list, text, struct, object etc)
@@ -95,34 +95,6 @@ get_ptr(#ptr{ idx=Index }=Ptr,
 %% Group field
 get_group(#group{ id=TypeId }, Object) ->
     ecapnp_obj:set_type(TypeId, Object).
-
-
-%% Data field helpers
--define(READ_VALUE(ValueType, Size, TypeSpec),
-        read_value(ValueType, Offset, Align, Segment) ->
-               <<_:Offset/binary-unit:64,
-                 _:Align/bits,
-                 Value:Size/TypeSpec,
-                 _/bits>> = Segment,
-               get_value(ValueType, Value)
-                   ).
-
-?READ_VALUE(uint64, 64, integer-unsigned-little);
-?READ_VALUE(uint32, 32, integer-unsigned-little);
-?READ_VALUE(uint16, 16, integer-unsigned-little);
-?READ_VALUE(uint8, 8, integer-unsigned-little);
-?READ_VALUE(int64, 64, integer-signed-little);
-?READ_VALUE(int32, 32, integer-signed-little);
-?READ_VALUE(int16, 16, integer-signed-little);
-?READ_VALUE(int8, 8, integer-signed-little);
-?READ_VALUE(bool, 1, bits);
-?READ_VALUE(float32, 32, float-little);
-?READ_VALUE(float64, 64, float-little).
-
-%% convert read value to erlang
-get_value(bool, <<0:1>>) -> false;
-get_value(bool, <<1:1>>) -> true;
-get_value(_, Value) -> Value.
 
 
 %% Pointer field helpers
@@ -196,7 +168,7 @@ read_list(#ptr{ type={list, Type} },
              || O <- Offsets];
         Offsets ->
             S = ptr_segment(0, all, Obj),
-            [read_value(Type, O, A, S)
+            [ecapnp_val:get(Type, O, A, 0, S)
              || {O, A} <- Offsets]
     end.
 

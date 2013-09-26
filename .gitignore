@@ -8,3 +8,4 @@ ebin/
 erlang.mk
 bin/test.capnp.hrl
 test/
+logs/

@@ -83,11 +83,11 @@ set_data(#data{ type={union, Fields} }=D, Value, Object) ->
     end;
 
 %% Value field
-set_data(#data{ type=Type, align=Align }, Value, Object) ->
+set_data(#data{ type=Type, align=Align, default=Default }, Value, Object) ->
     update(
       data_offset(0, Object),
-      set_value(Value, Type, 0, Align,
-                data_segment(0, 1 + (Align div 64), Object)),
+      ecapnp_val:set(Type, Value, 0, Align, Default,
+                     data_segment(0, 1 + (Align div 64), Object)),
       Object).
 
 %% List field
@@ -128,35 +128,8 @@ set_group(#group{ id=TypeId }, Value, Object) ->
     {ok, T} = lookup(TypeId, Object),
     field(T#struct.union_field, Value, Object).
 
-%% Data field helpers
--define(SET_VALUE(ValueType, Size, TypeSpec),
-        set_value(Value, ValueType, Offset, Align, Segment) ->
-               <<Pre:Offset/binary-unit:64,
-                 PreV:Align/bits,
-                 _:Size/TypeSpec,
-                 Post/bits>> = Segment,
-               <<Pre/binary, PreV/bits, Value:Size/TypeSpec, Post/bits>>
-                   ).
 
-?SET_VALUE(uint64, 64, integer-unsigned-little);
-?SET_VALUE(uint32, 32, integer-unsigned-little);
-?SET_VALUE(uint16, 16, integer-unsigned-little);
-?SET_VALUE(uint8, 8, integer-unsigned-little);
-?SET_VALUE(int64, 64, integer-signed-little);
-?SET_VALUE(int32, 32, integer-signed-little);
-?SET_VALUE(int16, 16, integer-signed-little);
-?SET_VALUE(int8, 8, integer-signed-little);
-?SET_VALUE(bool, 1, bits);
-?SET_VALUE(float32, 32, float-little);
-?SET_VALUE(float64, 64, float-little).
-%% set_value(Text, text, Offset, Count, Segment) 
-%%   when is_binary(Text), Count > 0 ->
-%%     TextLen = Count - 1,
-%%     <<Pre:Offset/binary-unit:64,
-%%       _:Count/binary,
-%%       Post/binary>> = Segment,
-%%     <<Pre/binary, Text:TextLen/binary, 0:8/integer, Post/binary>>.
-
+%% Helpers
 write_list(#ptr{type={list, Type}}=Ptr, Value, Obj) ->
     Count = list_length(Value),
     {ListSize, ESize, EType} =
@@ -209,7 +182,7 @@ write_list(#ptr{type={list, Type}}=Ptr, Value, Obj) ->
                     update(
                       SegmentOffset,
                       iolist_to_binary(
-                        [set_value(V, EType, 0, 0, <<0:BitSize/integer>>)
+                        [ecapnp_val:set(EType, V, 0, 0, 0, <<0:BitSize/integer>>)
                          || V <- Value]),
                       Obj)
             end

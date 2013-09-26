@@ -8,7 +8,10 @@ main([File, Case, Test]) ->
     {ok, Message} = ecapnp_message:read(Data),
     run_test(Case, Test, Message);
 main([Case, Test]) ->
-    run_test(Case, Test, undefined).
+    run_test(Case, Test, undefined);
+main(Args) ->
+    io:format(standard_error, "ecapnp_test unknown args: ~p~n", [Args]),
+    halt(127).
 
 run_test(Case, Test, Message) when is_list(Case) ->
     try
@@ -18,12 +21,25 @@ run_test(Case, Test, Message) when is_list(Case) ->
             io:format(standard_error, "ecapnp_test error: ~p:~p ~p~n", [Class, Error, erlang:get_stacktrace()])
     end;
 
-run_test(decode, simpleTest, Msg) ->
+run_test(decode, Test, Message) ->
+    decode(Test, Message);
+run_test(encode, Test, undefined) ->
+    io:setopts([{encoding, unicode}]),
+    io:put_chars( ecapnp_message:write(encode(Test)) );
+run_test(Action, Test, _) ->
+    not_implemented(Action, Test).
+
+not_implemented(Action, Test) ->
+    io:format(standard_error, "Unknown test: ~p ~p.~n", [Action, Test]),
+    halt(127).
+
+
+decode(simpleTest, Msg) ->
     {ok, Root} = test(root, 'SimpleTest', Msg),
     io:format("(int = ~b, msg = \"~s\")~n",
               [test(get, int, Root), test(get, msg, Root)]);
 
-run_test(decode, textListTypeTest, Msg) ->
+decode(textListTypeTest, Msg) ->
     {ok, Root} = test(root, 'ListTest', Msg),
     io:format("(textList = [~s])~n",
               [string:join(
@@ -32,13 +48,16 @@ run_test(decode, textListTypeTest, Msg) ->
                  ", ")]
              );
 
-run_test(encode, Test, undefined) ->
-    io:setopts([{encoding, unicode}]),
-    io:put_chars( ecapnp_message:write(encode(Test)) );
+decode(uInt8DefaultValueTest, Msg) ->
+    {ok, Root} = test(root, 'TestDefaults', Msg),
+    dbg:tracer(), dbg:p(all,call),dbg:tpl(ecapnp_get, binary_xor, []),
+    io:format("(uInt8Field = ~b)~n",
+              [test(get, uInt8Field, Root)]);
 
-run_test(Action, Test, _) ->
-    io:format(standard_error, "Test ~p-~p not implemented.~n", [Action, Test]).
+decode(Test, _) ->
+    not_implemented(decode, Test).
 
+    
 encode(simpleTest) ->
     {ok, Root} = test(root, 'SimpleTest'),
     ok = test(set, int, 1234567890, Root),
@@ -48,4 +67,12 @@ encode(simpleTest) ->
 encode(textListTypeTest) ->
     {ok, Root} = test(root, 'ListTest'),
     ok = test(set, textList, [<<"foo">>, <<"bar">>, <<"baz">>], Root),
-    Root.
+    Root;
+
+encode(uInt8DefaultValueTest) ->
+    {ok, Root} = test(root, 'TestDefaults'),
+    ok = test(set, uInt8Field, 0, Root),
+    Root;
+
+encode(Test) ->
+    not_implemented(encode, Test).
