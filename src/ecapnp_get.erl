@@ -32,17 +32,18 @@
 
 root(Type, Schema, Segments) ->
     {ok, RootType} = lookup(Type, Schema),
-    {ok, ecapnp_obj:from_ptr(
-           0, 0, RootType,
-           ecapnp_data:new(
+    Data = ecapnp_data:new(
              #msg{
                 schema=Schema,
                 alloc=[size(S) || S <- Segments],
                 data=Segments
-               }))
-    }.
+               }),
+    {ok, ecapnp_obj:from_ref(
+           ecapnp_ref:get(0, 0, Data),
+           RootType )}.
 
 %% Lookup field value in object
+%% deprecated versions
 field(Field, Object)
   when is_record(Field, data) ->
     get_data(Field, Object);
@@ -53,7 +54,12 @@ field(Field, Object)
   when is_record(Field, group) ->
     get_group(Field, Object);
 field(none, _) ->
-    none.
+    none;
+
+%% NEW version
+field(FieldName, Object) ->
+    {ok, Field} = ecapnp_obj:field(FieldName, Object),
+    read_field(Field, )
 
 
 
@@ -152,16 +158,50 @@ read_list(#ptr{ type=text },
     <<Text:TextLen/binary, _/binary>> =
         ptr_segment(Offset, 1 + (TextLen div 8), Obj),
     Text;
+read_list(#ptr{ type=data },
+          #list_ptr{ offset=Offset,
+                     count=Count,
+                     size=8,
+                     object=Obj }) ->
+    <<Data:Count/binary, _/binary>> =
+        ptr_segment(Offset, 1 + (Count div 8), Obj),
+    Data;
+read_list(#ptr{ type=object },
+          #list_ptr{ object=Obj }=ListPtr) ->
+    case get_offset_list(ListPtr) of
+        {DSize, PSize, Offsets} ->
+            [read_struct(
+               #ptr{ type=object },
+               #struct_ptr{
+                 offset=O,
+                 dsize=DSize,
+                 psize=PSize,
+                 object=Obj })
+             || O <- Offsets];
+        {ptrs, Offsets} ->
+            [read_ptr( #ptr{ type=object, idx=O }, Obj)
+             || O <- Offsets];
+        Offsets ->
+            Size = ListPtr#list_ptr.size,
+            S = ptr_segment(0, all, Obj),
+            [begin
+                 <<_:O/binary-unit:64,
+                   _:A/bits,
+                   Data:Size/bits, _/bits>> = S,
+                 Data
+             end || {O, A} <- Offsets]
+    end;
 read_list(#ptr{ type={list, Type} },
           #list_ptr{ object=Obj }=ListPtr) ->
     case get_offset_list(ListPtr) of
         {DSize, PSize, Offsets} ->
-            [ecapnp_obj:get(
-               Type,
-               [{offset, O},
-                {dsize, DSize},
-                {psize, PSize},
-                {copy, Obj}])
+            [read_struct(
+               #ptr{ type=Type },
+               #struct_ptr{
+                 offset=O,
+                 dsize=DSize,
+                 psize=PSize,
+                 object=Obj })
              || O <- Offsets];
         {ptrs, Offsets} ->
             [read_ptr( #ptr{ type=Type, idx=O }, Obj)
@@ -172,7 +212,10 @@ read_list(#ptr{ type={list, Type} },
              || {O, A} <- Offsets]
     end.
 
+
 get_offset_list(#list_ptr{ count=0 }) -> [];
+get_offset_list(#list_ptr{ count=Count, size=0 }) ->
+    lists:duplicate(0, Count);
 get_offset_list(#list_ptr{ offset=Offset,
                            size=composite, 
                            count=TotalWordCount,

@@ -1,11 +1,10 @@
 PROJECT = ecapnp
 
-#DEPS_DIR = $(CURDIR)/test
-
 #TEST_DEPS = capnp_test
 dep_capnp_test = git://github.com/kaos/capnp_test.git
 
-#test%: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
+test%: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
+test%: ERLC_OPTS += -DEUNIT_NOAUTO
 
 CT_SUITES = eunit
 
@@ -21,7 +20,10 @@ erlang.mk:
 include/schema.capnp.hrl: /usr/local/include/capnp/schema.capnp
 	capnpc -oerl:$(dir $@) --src-prefix=$(dir $<) $<
 
-.PHONY: capnp_test
+.PHONY: check capnp_test
+# alias tests to check
+check: tests
+
 capnp_test: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
 capnp_test: test-schema build-test-deps
 

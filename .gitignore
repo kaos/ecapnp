@@ -7,5 +7,4 @@ ebin/
 *.dump
 erlang.mk
 bin/test.capnp.hrl
-test/
 logs/

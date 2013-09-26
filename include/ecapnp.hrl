@@ -1,5 +1,5 @@
 
-%% Schema meta data types
+%% Schema meta data types, to be renamed to schema_file
 
 -record(schema, {
           node :: schema_node(),
@@ -24,7 +24,9 @@
           id=0 :: integer()
          }).
 
-%% Node types
+%% Schema Node types, to be renamed with a schema_ prefix
+
+%% TODO: turn the node vs schema node types inside out, so they are the same way that the ref's are in relation to the ref kind.
 
 -record(node, {
           name :: atom(),
@@ -69,29 +71,61 @@
 -type object_field() :: #data{} | #ptr{}.
 -type object_fields() :: list({atom(), object_field()}).
 -type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
--type value() :: number() | list(value()) | {binary(), list(binary())} | null | undefined.
+-type value() :: number() | boolean() | list(value()) | {binary(), list(binary())} | null | undefined.
 
 
 %% Runtime data
 
+-record(ref, {
+          segment :: segment_id(),
+          pos=0 :: integer(),
+          offset=0 :: integer(),
+          kind=null :: ref_kind(),
+          data :: pid()
+         }).
+
+-record(struct_ref, {
+          dsize=0 :: integer(),
+          psize=0 :: integer()
+         }).
+
+-record(list_ref, {
+          size=empty :: element_size(),
+          count=0 :: integer()
+         }).
+
+-record(far_ref, {
+          segment=0 :: integer(),
+          double_far=false :: boolean()
+         }).
 
 -record(object, {
+          ref :: #ref{},
           type :: schema_node(),
+          union_value :: {atom(), term()} | undefined | none,
+          
+
+          %% deprecated fields, to go away
           segment_id=0 :: integer(),
           doffset=0 :: integer(),
           dsize=0 :: integer(),
           poffset=0 :: integer(),
           psize=0 :: integer(),
-          union_value :: {atom(), term()} | undefined,
           data :: pid()
          }).
 
-%% For internal use
+%% For internal use, deprecated
 -record(struct_ptr, { offset, dsize, psize, object }).
 -record(list_ptr, { offset, size, count, object }).
 
+%% Internal message struct for the data server
 -record(msg, {
           schema :: #schema{},
           alloc = [] :: list(integer()),
           data = [] :: list(binary())
          }).
+
+
+-type ref_kind() :: null | #struct_ref{} | #list_ref{} | #far_ref{}.
+-type segment_id() :: integer().
+

@@ -46,6 +46,12 @@ lookup(Type, Types)
        is_list(Types) ->
     keyfind(Type, #node.id, Types);
 
+lookup(Type, Data) when is_pid(Data) ->
+    case ecapnp_data:get_type(Type, Data) of
+        false -> lookup(Type, null);
+        T -> {ok, T}
+    end;
+
 lookup(Type, #object{ data=Pid }) ->
     case ecapnp_data:get_type(Type, Pid) of
         false -> lookup(Type, null);

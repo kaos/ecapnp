@@ -117,7 +117,7 @@ new_state(#msg{ schema=Schema }=Msg) ->
 ?list_type(const);
 list_types([T|Ts], Acc) ->
     list_types(Ts, list_types(T, Acc));
-list_types([], Acc) -> Acc.
+list_types(_, Acc) -> Acc.
 -undef(list_types).
 -undef(list_type).
 

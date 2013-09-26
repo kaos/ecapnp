@@ -213,7 +213,7 @@ compile_node(file, Node) ->
 compile_node({struct, Struct}, Node) ->
     {Fields, Union} = lists:partition(
                         fun (F) ->
-                                0 == schema(get, discriminantValue, F)
+                                16#ffff == schema(get, discriminantValue, F)
                         end,
                         schema(get, fields, Struct)),
     #struct{ node = Node,

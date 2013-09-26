@@ -17,6 +17,9 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
+%% NEW API
+-export([from_ref/2, field/2]).
+
 -export([get/2, from_ptr/4, alloc/2, segment_id/1, 
          segment/3, update/3, set_type/2,
          data_segment/3, ptr_segment/3, size/1,
@@ -33,6 +36,19 @@
 %% API functions
 %% ===================================================================
 
+from_ref(#ref{ kind=Kind }=Ref, Type)
+  when is_record(Kind, struct_ref); Kind == null ->
+    init(#object{ ref=Ref }, Type).
+
+field(FieldName, #object{ type=Node }) ->
+    field(FieldName, Node);
+field(FieldName, #struct{ fields=Fields }) ->
+    find_field(FieldName, Fields).
+
+
+
+
+    
 from_ptr(SegmentId, Offset, Type, #object{ data=Pid }) ->
     from_ptr(SegmentId, Offset, Type, Pid);
 from_ptr(SegmentId, Offset, Type, Pid) ->
@@ -165,6 +181,16 @@ element_size(inlineComposite) -> 7.
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+
+init(Obj, Type) ->
+    Obj#object{ type=Type }.
+
+find_field(FieldName, [{FieldName, FieldType}|_]) -> FieldType;
+find_field(FieldName, [_|Fields]) -> find_field(FieldName, Fields);
+find_field(FieldName, []) -> throw({unknown_field, FieldName}).
+
+
+
 
 data_size(#struct{ dsize=DSize }) -> DSize;
 data_size(object) -> undefined.
