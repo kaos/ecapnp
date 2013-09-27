@@ -17,8 +17,11 @@
 -module(ecapnp_ref).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/3, get/4, read_struct_data/3, read_struct_ptr/2,
+-export([get/3, get/4, 
+         read_struct_data/3, read_struct_ptr/2,
+         read_struct_data/4, read_struct_ptr/3,
          read_list/1, read_text/1, read_data/1,
+         read_list/2, read_text/2, read_data/2,
          follow_far/1]).
 
 -include("ecapnp.hrl").
@@ -36,29 +39,37 @@ get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
                  ecapnp_data:get_segment(SegmentId, Pos, 1, Data),
                  Data, FollowFar).
 
-read_struct_data(_, Len, #ref{ kind=null }) -> <<0:Len/integer>>;
-read_struct_data(Align, Len, #ref{ kind=#struct_ref{ dsize=DSize }}=Ref) ->
+read_struct_data(Align, Len, Ref) ->
+    read_struct_data(Align, Len, Ref, <<0:Len/integer>>).
+read_struct_data(_, Len, #ref{ kind=null }, Default)
+  when Len == size(Default) -> Default;
+read_struct_data(Align, Len,
+                 #ref{ kind=#struct_ref{ dsize=DSize }}=Ref,
+                 Default) ->
     if Align + Len < DSize * 64 ->
             <<_:Align/bits, Value:Len/bits, _/bits>>
                 = get_segment(Ref, 1 + ((Align + Len - 1) div 64)),
             Value;
-       true -> <<0:Len/integer>>
+       true -> Default
     end.
 
-read_struct_ptr(_, #ref{ kind=null }) -> #ref{};
+read_struct_ptr(Idx, Ref) -> read_struct_ptr(Idx, Ref, #ref{}).
+read_struct_ptr(_, #ref{ kind=null }, Default) -> Default;
 read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
                            offset=Offset, data=Data,
                            kind=#struct_ref{
-                                   dsize=DSize, psize=PSize } }) ->
+                                   dsize=DSize, psize=PSize } },
+                Default) ->
     if Idx >= 0 andalso Idx < PSize ->
             get(SegmentId, Pos + 1 + Offset + DSize + Idx, Data);
-       true -> #ref{}
+       true -> Default
     end.
 
-read_list(#ref{ kind=null }) -> [];
-read_list(#ref{ kind=#list_ref{ count=0 } }) -> [];
+read_list(Ref) -> read_list(Ref, []).
+read_list(#ref{ kind=null }, Default) -> Default;
+read_list(#ref{ kind=#list_ref{ count=0 } }, Default) -> Default;
 read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
-                kind=#list_ref{ size=Size, count=Count } }) ->
+                kind=#list_ref{ size=Size, count=Count } }, _) ->
     TagOffset = Pos + 1 + Offset,
     if Size == inlineComposite ->
             #ref{ offset=Len }=Tag = get(SegmentId, TagOffset, Data),
@@ -84,13 +95,16 @@ read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
             read_list_elements(ElementSize, List, Count, [])
     end.
 
-read_text(#ref{ kind=null }) -> <<>>;
-read_text(#ref{ kind=#list_ref{ count=0 } }) -> <<>>;
-read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref) ->
+read_text(Ref) -> read_text(Ref, <<>>).
+read_text(#ref{ kind=null }, Default) -> Default;
+read_text(#ref{ kind=#list_ref{ count=0 } }, Default) -> Default;
+read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
     binary_part(get_segment(Ref, 1 + ((Count - 2) div 8)), 0, Count - 1).
 
-read_data(#ref{ kind=#list_ref{ count=0 } }) -> <<>>;
-read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref) ->
+read_data(Ref) -> read_data(Ref, <<>>).
+read_data(#ref{ kind=null }, Default) -> Default;
+read_data(#ref{ kind=#list_ref{ count=0 } }, Default) -> Default;
+read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
     binary_part(get_segment(Ref, 1 + ((Count - 1) div 8)), 0, Count).
 
 follow_far(#ref{ offset=Offset, data=Data,

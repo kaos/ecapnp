@@ -32,12 +32,21 @@ root_test() ->
                 type=T }, Root).
 
 field_test() ->
-    Msg = [<<0,0,0,0, 1,0,2,0,
-             0:64/integer,
-             0:64/integer,
-             0:64/integer
+    Msg = [<<0,0,0,0, 1,0,2,0, %% struct, 1 word data, 2 pointers
+             %% data
+             0:16/integer, %% union tag
+             0:7/integer, %% padding
+             1:1/integer, %% boolField
+             0:8/integer, %% padding
+             0:32/integer, %% intField
+             %% pointers
+             0:64/integer, %% union tag 0: foo, 1: bar
+             0:64/integer %% structField
            >>],
     {ok, Root} = ecapnp_get:root('Test', test_schema(), Msg),
-    ?assertEqual( 12345, ecapnp_get:field(intField, Root)).
+    ?assertEqual(false, ecapnp_get:field(boolField, Root)),
+    ?assertEqual(12345, ecapnp_get:field(intField, Root)),
+    ?assertEqual({foo, <<"foo">>}, ecapnp_get:union(Root)).
+
 
 -endif.

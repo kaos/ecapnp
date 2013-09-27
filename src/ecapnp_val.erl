@@ -17,7 +17,7 @@
 -module(ecapnp_val).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([set/6, get/5]).
+-export([set/2, set/3, get/2, get/3, size/1]).
 
 -include("ecapnp.hrl").
 
@@ -26,11 +26,22 @@
 %% API functions
 %% ===================================================================
 
-set(ValueType, Value, Offset, Align, Default, Segment) ->
-    value(set, {{ValueType, Value}, Offset, Align, Default, Segment}).
+set(ValueType, Value) -> set(ValueType, Value, 0).
+set(ValueType, Value, Default) ->
+    value(set, {ValueType, 
+                to_value(ValueType, Value),
+                to_value(ValueType, Default)}).
 
-get(ValueType, Offset, Align, Default, Segment) ->
-    value(get, {ValueType, Offset, Align, Default, Segment}).
+get(ValueType, Data) -> get(ValueType, Data, 0).
+get(ValueType, Data, Default) ->
+    from_value(ValueType,
+               value(get, {ValueType,
+                           Data,
+                           to_value(ValueType, Default)
+                          })).
+
+size(ValueType) ->
+    value(size, ValueType).
 
 
 %% ===================================================================
@@ -38,40 +49,22 @@ get(ValueType, Offset, Align, Default, Segment) ->
 %% ===================================================================
 
 -define(DEFINE_TYPE(ValueType, Size, TypeSpec, ),
-        value(get, {ValueType, Offset, Align, Default, Segment}) ->
-               BinOffset = Offset + (Align div 64),
-               BinAlign = Align rem 64,
-               Len = ((BinAlign + Size) + 7) div 8,
-
-               <<_:BinOffset/binary-unit:64,
-                 Bin:Len/binary, _/binary>> = Segment,
-
-               DefaultValue = to_value(ValueType, Default),
-               DefaultPadLen = (Len * 8) - (BinAlign + Size),
-
-               <<_:BinAlign/bits,
-                 Value:Size/TypeSpec, _/bits>>
-                   = apply_default(Bin,
-                                   <<0:BinAlign/integer,
-                                     DefaultValue:Size/TypeSpec,
-                                     0:DefaultPadLen/integer>>),
-
-               from_value(ValueType, Value);
-
-            value(set, {{ValueType, Value}, Offset, Align, Default, Segment}) ->
-               <<Pre:Offset/binary-unit:64,
-                 PreV:Align/bits,
-                 _:Size/TypeSpec,
-                 Post/bits>> = Segment,
-
-               DefaultValue = to_value(ValueType, Default),
-               Value1 = to_value(ValueType, Value),
+        value(size, ValueType) -> Size;
+        value(get, {ValueType, Data, Default}) ->
                PadSize = 7 - ((Size + 7) rem 8),
-               <<_:PadSize/bits, BinValue/bits>>
+               <<Value:Size/TypeSpec, _/bits>>
                    = apply_default(
-                       <<0:PadSize/integer, Value1:Size/TypeSpec>>,
-                       <<0:PadSize/integer, DefaultValue:Size/TypeSpec>>),
-               <<Pre/binary, PreV/bits, BinValue/bits, Post/bits>>
+                       <<Data/bits, 0:PadSize/integer>>,
+                       <<Default:Size/TypeSpec, 0:PadSize/integer>>),
+               Value;
+
+            value(set, {ValueType, Value, Default}) ->
+               PadSize = 7 - ((Size + 7) rem 8),
+               <<Data:Size/bits, _/bits>>
+                   = apply_default(
+                       <<Value:Size/TypeSpec, 0:PadSize/integer>>,
+                       <<Default:Size/TypeSpec, 0:PadSize/integer>>),
+               Data
                    ).
 
 ?DEFINE_TYPE(uint64, 64, integer-unsigned-little);

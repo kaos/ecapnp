@@ -19,11 +19,16 @@
 -include_lib("eunit/include/eunit.hrl").
 
 get_test() ->
-    ?assertEqual(true, ecapnp_val:get(bool, 0, 7, false, <<1:64/integer-little>>)),
-    ?assertEqual(true, ecapnp_val:get(bool, 0, 0, true, <<0:64/integer-little>>)).
+    ?assertEqual(false, ecapnp_val:get(bool, <<0:1>>, false)),
+    ?assertEqual(true, ecapnp_val:get(bool, <<1:1>>, false)),
+    ?assertEqual(true, ecapnp_val:get(bool, <<0:1>>, true)),
+    ?assertEqual(false, ecapnp_val:get(bool, <<1:1>>, true)).
 
 set_test() ->
-    ?assertEqual(<<1:64/integer-little>>, ecapnp_val:set(bool, true, 0, 7, false, <<0:64/integer-little>>)),
-    ?assertEqual(<<-2:64/integer-little>>, ecapnp_val:set(bool, true, 0, 7, true, <<-1:64/integer-little>>)).
+    ?assertEqual(<<0:1>>, ecapnp_val:set(bool, false, false)),
+    ?assertEqual(<<1:1>>, ecapnp_val:set(bool, true, false)),
+    ?assertEqual(<<1:1>>, ecapnp_val:set(bool, false, true)),
+    ?assertEqual(<<0:1>>, ecapnp_val:set(bool, true, true)).
+
 
 -endif.
