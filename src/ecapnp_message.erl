@@ -30,7 +30,7 @@ read(Data)
   when is_binary(Data) ->
     read_message(Data).
 
-write(#object{ data=Pid }) ->
+write(#object{ ref=#ref{ data=Pid } }) ->
     write_message(ecapnp_data:get_message(Pid)).
 
 read_file(Filename) ->

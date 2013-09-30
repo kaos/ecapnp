@@ -15,16 +15,13 @@
 %%  
 
 -module(ecapnp_get_tests).
--ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
--include("include/ecapnp.hrl").
--import(ecapnp_test_utils, [test_schema/0]).
-
+-include("test/test.capnp.hrl").
 
 root_test() ->
     Msg = [<<0,0,0,0, 2,0,3,0>>],
-    {ok, Root} = ecapnp_get:root('Test', test_schema(), Msg),
-    {ok, T} = ecapnp_schema:lookup('Test', test_schema()),
+    {ok, Root} = ecapnp_get:root('Test', test(schema), Msg),
+    {ok, T} = ecapnp_schema:lookup('Test', test(schema)),
     Data = (Root#object.ref)#ref.data,
     ?assertEqual(
        #object{ ref=#ref{ segment=0, pos=0, offset=0, data=Data,
@@ -32,21 +29,34 @@ root_test() ->
                 type=T }, Root).
 
 field_test() ->
-    Msg = [<<0,0,0,0, 1,0,2,0, %% struct, 1 word data, 2 pointers
-             %% data
-             0:16/integer, %% union tag
-             0:7/integer, %% padding
-             1:1/integer, %% boolField
-             0:8/integer, %% padding
-             0:32/integer, %% intField
-             %% pointers
-             0:64/integer, %% union tag 0: foo, 1: bar
-             0:64/integer %% structField
-           >>],
-    {ok, Root} = ecapnp_get:root('Test', test_schema(), Msg),
-    ?assertEqual(false, ecapnp_get:field(boolField, Root)),
-    ?assertEqual(12345, ecapnp_get:field(intField, Root)),
-    ?assertEqual({foo, <<"foo">>}, ecapnp_get:union(Root)).
+    AllDefaults = [<<0,0,0,0, 1,0,2,0, %% struct, 2 word data, 4 pointers
+                     %% data
+                     0: 8/integer, %% intField
+                     0: 8/integer, %% groupField.a / boolField
+                     0:16/integer, %% union tag
+                     0: 8/integer, %% groupField.b
+                     0: 8/integer, %% groupField.c
 
+                     0: 1/integer, %% opts.bool
+                     0:15/integer, %% padding
+                     0:16/integer, %% opts union tag
 
--endif.
+                     0:16/integer, %% meta.id
+
+                     %% pointers
+                     0:64/integer, %% textField
+                     0:64/integer, %% opts 0:text, 1:data, 2:object
+                     0:64/integer, %% meta.tag
+                     0:64/integer  %% meta.data
+                   >>],
+    {ok, Root} = test(root, 'Test', AllDefaults),
+    ?assertEqual(33, test(get, intField, Root)),
+    ?assertEqual(<<"test">>, test(get, textField, Root)),
+    ?assertEqual({boolField, false}, test(get, Root)),
+    Grp = test(get, opts, Root),
+    ?assertEqual({bool, false}, test(get, Grp)),
+    Meta = test(get, meta, Root),
+    ?assertEqual(0, test(get, id, Meta)),
+    ?assertEqual(<<>>, test(get, tag, Meta)), %% need tests for the compiler. should default text not be null?
+    ?assertEqual(<<"1234">>, test(get, data, Meta)).
+

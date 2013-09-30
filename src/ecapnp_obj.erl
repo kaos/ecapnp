@@ -183,7 +183,8 @@ field(FieldName, #struct{ fields=Fields }) ->
 %% ===================================================================
 
 init(Obj, Type) ->
-    Obj#object{ type=Type }.
+    {ok, T} = ecapnp_schema:lookup(Type, Obj),
+    Obj#object{ type=T }.
 
 find_field(FieldName, [{FieldName, FieldType}|_]) -> FieldType;
 find_field(FieldName, [_|Fields]) -> find_field(FieldName, Fields);

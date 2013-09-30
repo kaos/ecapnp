@@ -8,6 +8,6 @@
                   kernel,
                   stdlib
                  ]},
-  {modules, [ecapnp]},
+  {modules, []},
   {env, []}
  ]}.

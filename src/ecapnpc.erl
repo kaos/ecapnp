@@ -273,9 +273,13 @@ data_field({Type, Size}, Offset, Default) ->
 ptr_field(Type, Index, Default) ->
     #ptr{ type=Type, idx=Index, default=default_value(Type, Default) }.
 
-default_value(Type, #object{ type=#node{ name='Value' } }=Object) ->
+default_value(Type, #object{type=#struct{node=#node{name='Value'}}}=Object) ->
     default_value(Type, schema(get, Object));
-default_value({struct, _Type}, {struct, #object{ dsize=DSize, psize=_PSize }=Object}) ->
+default_value(
+  {struct, _Type},
+  {struct, #object{ ref=#ref{
+                           kind=#struct_ref{ dsize=DSize, psize=_PSize }
+                          }}=Object}) ->
     {ecapnp_obj:data_segment(0, DSize, Object), []}; %% todo: get list of pointer data..
 default_value({Type, _}, {Type, Value}) -> Value;
 default_value(Type, {Type, Value}) -> Value;
@@ -314,10 +318,13 @@ list_field_type(List) ->
 
 link_node(Id, NodeName, Nodes) ->
     {Node, Schema} = proplists:get_value(Id, Nodes),
-    NestedNodes = [begin
-                       Name = binary_to_atom(schema(get, name, N), latin1),
-                       link_node(schema(get, id, N), Name, Nodes)
-                   end || N <- schema(get, nestedNodes, Node)],
+    NestedNodes = case schema(get, nestedNodes, Node) of
+                      null -> [];
+                      Ns -> [begin
+                                 Name = binary_to_atom(schema(get, name, N), latin1),
+                                 link_node(schema(get, id, N), Name, Nodes)
+                             end || N <- Ns]
+                  end,
     Groups = case schema(get, Node) of
                  {struct, O} ->
                      lists:foldl(

@@ -46,7 +46,7 @@ read_struct_data(_, Len, #ref{ kind=null }, Default)
 read_struct_data(Align, Len,
                  #ref{ kind=#struct_ref{ dsize=DSize }}=Ref,
                  Default) ->
-    if Align + Len < DSize * 64 ->
+    if Align + Len =< DSize * 64 ->
             <<_:Align/bits, Value:Len/bits, _/bits>>
                 = get_segment(Ref, 1 + ((Align + Len - 1) div 64)),
             Value;

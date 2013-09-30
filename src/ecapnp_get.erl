@@ -31,16 +31,13 @@
 %% ===================================================================
 
 root(Type, Schema, Segments) ->
-    {ok, RootType} = ecapnp_schema:lookup(Type, Schema),
     Data = ecapnp_data:new(
              #msg{
                 schema=Schema,
                 alloc=[size(S) || S <- Segments],
                 data=Segments
                }),
-    {ok, ecapnp_obj:from_ref(
-           ecapnp_ref:get(0, 0, Data),
-           RootType )}.
+    {ok, ecapnp_obj:from_ref(ecapnp_ref:get(0, 0, Data), Type)}.
 
 %% Lookup field value in object
 %% deprecated versions
@@ -92,11 +89,13 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
               ecapnp_ref:read_struct_data(Align, Size, StructRef),
               Default)
     end;
-read_field(#ptr{ type=Type, idx=Idx, default=Default }, StructRef) ->
-    Ref = if StructRef#ref.pos >= 0 ->
-                  ecapnp_ref:read_struct_ptr(Idx, StructRef);
-             true -> StructRef
-          end,
+read_field(#ptr{ idx=Idx }=Ptr, StructRef) ->
+    Ref = ecapnp_ref:read_struct_ptr(Idx, StructRef),
+    read_ptr(Ptr, Ref);
+read_field(#group{ id=Type }, Ref) ->
+    ecapnp_obj:from_ref(Ref, Type).
+
+read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
     case Type of
         text -> ecapnp_ref:read_text(Ref, Default);
         data -> ecapnp_ref:read_data(Ref, Default);
@@ -106,15 +105,13 @@ read_field(#ptr{ type=Type, idx=Idx, default=Default }, StructRef) ->
             end;
         {struct, StructType} ->
             if Ref#ref.kind == null -> Default;
-               true ->
-                    {ok, T} = ecapnp_schema:lookup(StructType),
-                    ecapnp_obj:from_ref(Ref, T)
+               true -> ecapnp_obj:from_ref(Ref, StructType)
             end;
         {list, ElementType} ->
             case ecapnp_ref:read_list(Ref, undefined) of
                 undefined -> Default;
                 Refs when is_record(hd(Refs), ref) ->
-                    [read_field(#ptr{ type=ElementType }, R)
+                    [read_ptr(#ptr{ type=ElementType }, R)
                      || R <- Refs];
                 Values ->
                     [ecapnp_val:get(Type, Data)

@@ -19,7 +19,7 @@
 
 -export([get_root/3, get/1, get/2]).
 -export([set_root/2, set/3]).
--export([type/1, type/2]).
+%-export([type/1, type/2]).
 
 -include("ecapnp.hrl").
 
@@ -38,15 +38,13 @@ set_root(Type, Schema)
        is_record(Schema, schema) ->
     ecapnp_set:root(Type, Schema).
 
-get(#object{ union_value=Value }) ->
-    Value.
+get(Object)
+  when is_record(Object, object) ->
+    ecapnp_get:union(Object).
 
 get(Field, Object)
   when is_atom(Field), is_record(Object, object) ->
-    ecapnp_get:field(
-      lookup_field(Field, Object),
-      Object
-     ).
+    ecapnp_get:field(Field, Object).
 
 set(Field, Value, Object)
   when is_atom(Field), is_record(Object, object) ->

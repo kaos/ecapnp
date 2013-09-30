@@ -101,17 +101,17 @@
 
 -record(object, {
           ref :: #ref{},
-          type :: schema_node(),
-          union_value :: {atom(), term()} | undefined | none,
+          type :: schema_type(),
+          union_value :: {atom(), term()} | undefined | none
           
 
           %% deprecated fields, to go away
-          segment_id=0 :: integer(),
-          doffset=0 :: integer(),
-          dsize=0 :: integer(),
-          poffset=0 :: integer(),
-          psize=0 :: integer(),
-          data :: pid()
+          %% segment_id=0 :: integer(),
+          %% doffset=0 :: integer(),
+          %% dsize=0 :: integer(),
+          %% poffset=0 :: integer(),
+          %% psize=0 :: integer(),
+          %% data :: pid()
          }).
 
 %% For internal use, deprecated

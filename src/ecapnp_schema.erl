@@ -52,7 +52,9 @@ lookup(Type, Data) when is_pid(Data) ->
         T -> {ok, T}
     end;
 
-lookup(Type, #object{ data=Pid }) ->
+lookup(Type, #object{ ref=Ref }) ->
+    lookup(Type, Ref);
+lookup(Type, #ref{ data=Pid }) ->
     case ecapnp_data:get_type(Type, Pid) of
         false -> lookup(Type, null);
         T -> {ok, T}
