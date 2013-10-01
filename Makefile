@@ -3,12 +3,12 @@ PROJECT = ecapnp
 #TEST_DEPS = capnp_test
 dep_capnp_test = git://github.com/kaos/capnp_test.git
 
-%/build-tests: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
-%/build-tests: ERLC_OPTS += -DEUNIT_NOAUTO
+# test%: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
+test%: ERLC_OPTS += -DEUNIT_NOAUTO
 
 CT_SUITES = eunit
 
-TRACK_SOURCE_DEPENDENCIES = yes
+#TRACK_SOURCE_DEPENDENCIES = yes
 
 include erlang.mk
 

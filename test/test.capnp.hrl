@@ -28,7 +28,7 @@ test(schema) ->
       [#struct{
          node=#node{ %% 0xfa556038e27b336d
            name='Test', id=18038429679936549741, source= <<"test/test.capnp:Test">> },
-         dsize=2, psize=4, esize=inlineComposite,
+         dsize=2, psize=5, esize=inlineComposite,
          union_field=#data{ align=16, type=
            {union,
              [{boolField,
@@ -47,13 +47,16 @@ test(schema) ->
             {opts,
              #group{ id=9356761420570873088 }},
             {meta,
-             #group{ id=12292473172826227401 }}
+             #group{ id=12292473172826227401 }},
+            {structField,
+             #ptr{ type={struct,15091335337902283752}, idx=4,
+                   default= null }}
            ],
          types=
            [#struct{
               node=#node{ %% 0xaa97a338ed5382c9
                 name=meta, id=12292473172826227401, source= <<"test/test.capnp:Test.meta">> },
-              dsize=2, psize=4, esize=inlineComposite,
+              dsize=2, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
                 [{id,
@@ -69,12 +72,12 @@ test(schema) ->
             #struct{
               node=#node{ %% 0x81d9e4f01134cd00
                 name=opts, id=9356761420570873088, source= <<"test/test.capnp:Test.opts">> },
-              dsize=2, psize=4, esize=inlineComposite,
+              dsize=2, psize=5, esize=inlineComposite,
               union_field=#data{ align=64, type=
                 {union,
                   [{bool,
                     #data{ type=bool, align=55,
-                           default= false }},
+                           default= true }},
                    {text,
                     #ptr{ type=text, idx=1,
                           default= <<>> }},
@@ -88,7 +91,7 @@ test(schema) ->
             #struct{
               node=#node{ %% 0xaebc820562fc74b7
                 name=groupField, id=12591081617868223671, source= <<"test/test.capnp:Test.groupField">> },
-              dsize=2, psize=4, esize=inlineComposite,
+              dsize=2, psize=5, esize=inlineComposite,
               union_field=none,
               fields=
                 [{a,
@@ -101,5 +104,18 @@ test(schema) ->
                   #data{ type=int8, align=40,
                          default= 0 }}
                 ]}
+           ]},
+       #struct{
+         node=#node{ %% 0xd16f318851f71be8
+           name='Simple', id=15091335337902283752, source= <<"test/test.capnp:Simple">> },
+         dsize=1, psize=1, esize=inlineComposite,
+         union_field=none,
+         fields=
+           [{message,
+             #ptr{ type=text, idx=0,
+                   default= <<"simple message">> }},
+            {value,
+             #data{ type=uint32, align=0,
+                    default= 123 }}
            ]}
       ]}.

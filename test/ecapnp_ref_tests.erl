@@ -104,4 +104,17 @@ follow_far_test() ->
              kind=#struct_ref{ dsize=0, psize=1 } },
        ecapnp_ref:get(2, 0, Data)).
 
+copy_test() ->
+    Bin = <<0,0,0,0, 2,0,2,0,
+            1234:32/integer, 5678:32/integer,
+            8765:32/integer, 4321:32/integer,
+            0:64/integer,
+            1,0,0,0, 106,0,0,0,
+            "Hello World!", 0,
+            0:24/integer
+          >>,
+    Data = data([Bin]),
+    Ref = ecapnp_ref:get(0, 0, Data),
+    ?assertEqual(Bin, ecapnp_ref:copy(Ref)).
+
 -endif.

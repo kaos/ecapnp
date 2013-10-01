@@ -35,5 +35,19 @@ field_test() ->
        #data{ type=uint32, align=32, default=12345 },
        ecapnp_obj:field(intField, #object{ type=T })).
 
+copy_test() ->
+    Bin = <<0,0,0,0, 2,0,2,0,
+            1234:32/integer, 5678:32/integer,
+            8765:32/integer, 4321:32/integer,
+            0:64/integer,
+            1,0,0,0, 106,0,0,0,
+            "Hello World!", 0,
+            0:24/integer
+          >>,
+    Data = data([Bin]),
+    Ref = ecapnp_ref:get(0, 0, Data),
+    Obj = ecapnp_obj:from_ref(Ref, object),
+    ?assertEqual(#object{ type=object, ref=Ref }, Obj),
+    ?assertEqual(Bin, ecapnp_obj:copy(Obj)).
 
 -endif.

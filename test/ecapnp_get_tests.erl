@@ -47,16 +47,20 @@ field_test() ->
                      0:64/integer, %% textField
                      0:64/integer, %% opts 0:text, 1:data, 2:object
                      0:64/integer, %% meta.tag
-                     0:64/integer  %% meta.data
+                     0:64/integer, %% meta.data
+                     0:64/integer  %% structField
                    >>],
     {ok, Root} = test(root, 'Test', AllDefaults),
     ?assertEqual(33, test(get, intField, Root)),
     ?assertEqual(<<"test">>, test(get, textField, Root)),
     ?assertEqual({boolField, false}, test(get, Root)),
     Grp = test(get, opts, Root),
-    ?assertEqual({bool, false}, test(get, Grp)),
+    ?assertEqual({bool, true}, test(get, Grp)),
     Meta = test(get, meta, Root),
     ?assertEqual(0, test(get, id, Meta)),
-    ?assertEqual(<<>>, test(get, tag, Meta)), %% need tests for the compiler. should default text not be null?
-    ?assertEqual(<<"1234">>, test(get, data, Meta)).
+    ?assertEqual(<<>>, test(get, tag, Meta)),
+    ?assertEqual(<<"1234">>, test(get, data, Meta)),
+    Struct = test(get, structField, Root),
+    ?assertEqual(<<"simple message">>, test(get, message, Struct)),
+    ?assertEqual(123, test(get, value, Struct)).
 

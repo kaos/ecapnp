@@ -89,7 +89,14 @@ data_state(State)
 data_state(Message)
   when is_record(Message, msg) ->
     data_state(new_state(Message));
-data_state({Schema, MsgSize}) ->
+data_state({Pid, Data}) when is_pid(Pid), is_binary(Data) ->
+    Msg = get_message(Pid),
+    data_state(Msg#msg{
+                 alloc=[size(Data)],
+                 data=[Data]
+                });
+data_state({Schema, MsgSize})
+  when is_record(Schema, schema), is_integer(MsgSize) ->
     data_state(new_state(#msg{ 
                             schema=Schema, 
                             alloc=[0],

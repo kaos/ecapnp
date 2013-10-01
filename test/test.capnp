@@ -1,8 +1,9 @@
-# test/test.capnp
+# test.capnp
 @0xe87e0317861d75a1;
-struct Test @0xfa556038e27b336d {  # 16 bytes, 4 ptrs
+struct Test @0xfa556038e27b336d {  # 16 bytes, 5 ptrs
   intField @0 :UInt8 = 33;  # bits[0, 8)
   textField @1 :Text = "test";  # ptr[0]
+  structField @13 :Simple;  # ptr[4]
   union {  # tag bits [16, 32)
     boolField @2 :Bool;  # bits[8, 9), union tag = 0
     groupField :group {  # union tag = 1
@@ -13,7 +14,7 @@ struct Test @0xfa556038e27b336d {  # 16 bytes, 4 ptrs
   }
   opts :group {
     union {  # tag bits [64, 80)
-      bool @6 :Bool;  # bits[48, 49), union tag = 0
+      bool @6 :Bool = true;  # bits[48, 49), union tag = 0
       text @7 :Text;  # ptr[1], union tag = 1
       data @8 :Data;  # ptr[1], union tag = 2
       object @9 :Object;  # ptr[1], union tag = 3
@@ -24,4 +25,8 @@ struct Test @0xfa556038e27b336d {  # 16 bytes, 4 ptrs
     tag @11 :Text;  # ptr[2]
     data @12 :Data = "1234";  # ptr[3]
   }
+}
+struct Simple @0xd16f318851f71be8 {  # 8 bytes, 1 ptrs
+  message @0 :Text = "simple message";  # ptr[0]
+  value @1 :UInt32 = 123;  # bits[0, 32)
 }

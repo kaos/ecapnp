@@ -17,18 +17,8 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
-%% NEW API
--export([from_ref/2, field/2]).
+-export([from_ref/2, from_data/2, field/2, copy/1]).
 
-%% -export([get/2, from_ptr/4, alloc/2, segment_id/1, 
-%%          segment/3, update/3, set_type/2,
-%%          data_segment/3, ptr_segment/3, size/1,
-%%          data_offset/2, ptr_offset/2, segment_offset_ptr/3,
-%%          ptr_type/2, create_ptr/1, create_ptr/2, list_size/2,
-%%          element_size/1]).
-
--import(ecapnp_schema, [lookup/2]).
-%% -import(ecapnp_data, [get_segment/4]).
 -include("ecapnp.hrl").
 
 
@@ -40,12 +30,17 @@ from_ref(#ref{ kind=Kind }=Ref, Type)
   when is_record(Kind, struct_ref); Kind == null ->
     init(#object{ ref=Ref }, Type).
 
+from_data(Data, Type) ->
+    Ref = ecapnp_ref:get(0, 0, ecapnp_data:new(Data)),
+    from_ref(Ref, Type).
+
 field(FieldName, #object{ type=Node }) ->
     field(FieldName, Node);
 field(FieldName, #struct{ fields=Fields }) ->
     find_field(FieldName, Fields).
 
-
+copy(#object{ ref=Ref }) ->
+    ecapnp_ref:copy(Ref).
 
 
     

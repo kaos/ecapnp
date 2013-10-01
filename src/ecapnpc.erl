@@ -275,12 +275,8 @@ ptr_field(Type, Index, Default) ->
 
 default_value(Type, #object{type=#struct{node=#node{name='Value'}}}=Object) ->
     default_value(Type, schema(get, Object));
-default_value(
-  {struct, _Type},
-  {struct, #object{ ref=#ref{
-                           kind=#struct_ref{ dsize=DSize, psize=_PSize }
-                          }}=Object}) ->
-    {ecapnp_obj:data_segment(0, DSize, Object), []}; %% todo: get list of pointer data..
+default_value({struct, _Type}, {struct, Object}) ->
+    ecapnp_obj:copy(Object);
 default_value({Type, _}, {Type, Value}) -> Value;
 default_value(Type, {Type, Value}) -> Value;
 default_value(Type, Value) -> throw({value_type_mismatch, Type, Value}).

@@ -17,7 +17,7 @@
 -module(ecapnp_ref).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/3, get/4, 
+-export([get/3, get/4, copy/1,
          read_struct_data/3, read_struct_ptr/2,
          read_struct_data/4, read_struct_ptr/3,
          read_list/1, read_text/1, read_data/1,
@@ -53,7 +53,7 @@ read_struct_data(Align, Len,
        true -> Default
     end.
 
-read_struct_ptr(Idx, Ref) -> read_struct_ptr(Idx, Ref, #ref{}).
+read_struct_ptr(Idx, Ref) -> read_struct_ptr(Idx, Ref, null_ref(Ref)).
 read_struct_ptr(_, #ref{ kind=null }, Default) -> Default;
 read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
                            offset=Offset, data=Data,
@@ -117,10 +117,18 @@ follow_far(#ref{ offset=Offset, data=Data,
        true -> Pad
     end.
 
+copy(Ref) ->
+    iolist_to_binary(
+      lists:reverse(
+        copy(Ref, [])
+       )).
+
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+
+null_ref(#ref{ data=Data }) -> #ref{ data=Data }.
 
 ptr_type(0, 0) -> null;
 ptr_type(Offset, _) -> 
@@ -196,3 +204,71 @@ read_list_element_bits(_, -1, Count, Rest, Acc) ->
 read_list_element_bits(Bits, Left, Count, Rest, Acc) ->
     <<Next:Left/bits, Bit:1/bits>> = Bits,
     read_list_element_bits(Next, Left - 1, Count - 1, Rest, [Bit|Acc]).
+
+copy(#ref{ kind=null }, Acc) -> [<<0:64/integer>>|Acc];
+copy(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }=Ref, Acc) ->
+    StructData = read_struct_data(0, DSize * 64, Ref),
+    StructPtrs = [copy(read_struct_ptr(Idx, Ref), [])
+                  || Idx <- lists:seq(0, PSize - 1)],
+    [[create_ptr(Ref), StructData,
+      update_offsets(StructPtrs, length(StructPtrs) - 1, [], [])]
+     |Acc];
+copy(#ref{ kind=#list_ref{ size=Size } }=Ref, Acc) ->
+    Ptr = create_ptr(Ref),
+    case Size of
+        inlineComposite ->
+            #ref{ offset=Len }=Tag
+                = get(Ref#ref.segment,
+                      Ref#ref.pos + Ref#ref.offset + 1,
+                      Ref#ref.data),
+            [[Ptr, create_ptr(Len, Tag),
+              [copy(Elem) || Elem <- read_list(Ref)]]
+             |Acc];
+        pointer ->
+            [[Ptr, [copy(Elem) || Elem <- read_list(Ref)]]|Acc];
+        _ ->
+            Count = (Ref#ref.kind)#list_ref.count,
+            ElementSize = list_element_size(Size),
+            List = get_segment(Ref, 1 + ((ElementSize * Count - 1) div 64)),
+            [[Ptr, List]|Acc]
+    end.
+
+update_offsets([], _, AccPtrs, AccData) ->
+    [lists:reverse(AccPtrs), lists:reverse(AccData)];
+update_offsets([[[Ptr|Data]]|Ptrs], Offset, AccPtrs, AccData) ->
+    update_offsets(
+      Ptrs,
+      Offset + iolist_size(Data) - 1,
+      [ptr_offset(Ptr, Offset)|AccPtrs],
+      [Data|AccData]);
+update_offsets([Other|Ptrs], Offset, AccPtrs, AccData) ->
+    update_offsets(Ptrs, Offset - 1, [Other|AccPtrs], AccData).
+
+
+ptr_offset(<<_:6/bits, Kind:2/integer, _:24/bits, Data/binary>>, Offset) ->
+    OffsetAndKind = (Offset bsl 2) bor Kind,
+    <<OffsetAndKind:32/integer-signed-little, Data/binary>>.
+
+create_ptr(Ptr) -> create_ptr(0, Ptr).
+create_ptr(_Offset, #ref{ pos=-1 }) -> <<>>;
+create_ptr(Offset, #ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }) ->
+    Off = (Offset bsl 2),
+    <<Off:32/integer-signed-little,
+      DSize:16/integer-little,
+      PSize:16/integer-little>>;
+create_ptr(Offset, #ref{ kind=#list_ref{ size=Size, count=Count } }) ->
+    Off = (Offset bsl 2) + 1,
+    Sz = (Count bsl 3) + element_size(Size),
+    <<Off:32/integer-little,
+      Sz:32/integer-little>>.
+
+%% element size encoded value
+element_size(empty) -> 0;
+element_size(bit) -> 1;
+element_size(byte) -> 2;
+element_size(twoBytes) -> 3;
+element_size(fourBytes) -> 4;
+element_size(eightBytes) -> 5;
+element_size(pointer) -> 6;
+element_size(inlineComposite) -> 7.
+
