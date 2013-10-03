@@ -117,4 +117,30 @@ copy_test() ->
     Ref = ecapnp_ref:get(0, 0, Data),
     ?assertEqual(Bin, ecapnp_ref:copy(Ref)).
 
+alloc_test() ->
+    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
+    Ref = ecapnp_ref:alloc(0, 5, Data),
+    ?assertEqual(
+      #ref{ segment=0, pos=0, offset=0, data=Data, kind=null},
+      Ref),
+    #msg{ alloc=[A], data=[D]} = ecapnp_data:get_message(Data),
+    ?assertEqual(5, A),
+    ?assertEqual(<<0:10/integer-unit:64>>, D).
+
+set_test() ->
+    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
+    Kind = #struct_ref{ dsize=3, psize=4 },
+    Ref = ecapnp_ref:set(Kind, ecapnp_ref:alloc(0, 5, Data)),
+    ?assertEqual(
+      #ref{ segment=0, pos=0, offset=0, data=Data,
+            kind=Kind},
+      Ref),
+    #msg{ alloc=[A], data=[D]} = ecapnp_data:get_message(Data),
+    ?assertEqual(5, A),
+    ?assertEqual(<<0:32/integer,
+                   3:16/integer-little,
+                   4:16/integer-little,
+                   0:9/integer-unit:64>>,
+                 D).
+
 -endif.

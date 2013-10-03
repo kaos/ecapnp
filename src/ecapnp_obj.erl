@@ -18,7 +18,8 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([from_ref/2, from_data/2, field/2, copy/1,
-         to_struct/2, to_list/2, to_text/1, to_data/1]).
+         to_struct/2, to_list/2, to_text/1, to_data/1,
+         alloc/3]).
 
 -include("ecapnp.hrl").
 
@@ -61,6 +62,16 @@ to_text(#object{ ref=#ref{ kind=Kind }=Ref})
 to_data(#object{ ref=#ref{ kind=Kind }=Ref})
   when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data(data, Ref, <<>>).
+
+alloc(Type, SegmentId, Data) ->
+    {ok, T} = ecapnp_schema:lookup(Type, Data),
+    Ref = ecapnp_ref:alloc(
+            #struct_ref{
+               dsize=ecapnp_schema:data_size(T),
+               psize=ecapnp_schema:ptrs_size(T)
+              },
+            SegmentId, 1 + ecapnp_schema:size_of(T), Data),
+    #object{ ref=Ref, type=T }.
 
 
 %% ===================================================================

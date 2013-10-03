@@ -14,21 +14,18 @@
 %%   limitations under the License.
 %%  
 
--module(eunit_SUITE).
+-module(ecapnp_set_tests).
 -ifdef(TEST).
--export([all/0, run_eunit/1]).
+-include_lib("eunit/include/eunit.hrl").
+-include("test/test.capnp.hrl").
 
-all() ->
-    [run_eunit].
-
-run_eunit(_Config) ->
-    case eunit:test(
-           [ecapnp_val, ecapnp_ref, ecapnp_obj, ecapnp_get,
-            ecapnp_set
-           ])
-    of 
-        ok -> ok;
-        Error -> ct:fail("eunit:test(...) == ~p.", [Error])
-    end.
+root_test() ->
+    {ok, Root} = ecapnp_set:root('Test', test(schema)),
+    #msg{ alloc=[Alloc], data=[<<Data:64/binary-unit:9, _/binary>>]} = ecapnp_data:get_message((Root#object.ref)#ref.data),
+    ?assertEqual(9, Alloc),
+    ?assertEqual(
+       <<0:32/integer-little, 2:16/integer-little,
+         6:16/integer-little, 0:64/integer-unit:8>>,
+      Data).
 
 -endif.

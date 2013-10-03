@@ -29,11 +29,11 @@ root_test() ->
                 type=T }, Root).
 
 field_defaults_test() ->
-    Msg= [<<0,0,0,0, 2,0,4,0, %% struct, 2 word data, 4 pointers
+    Msg= [<<0,0,0,0, 2,0,6,0, %% struct, 2 word data, 6 pointers
             %% data
             0:64/integer-unit:2,
             %% pointers
-            0:64/integer-unit:4
+            0:64/integer-unit:6
           >>],
     check_default_values(Msg),
     check_default_values([<<0:64/integer>>]).
@@ -56,16 +56,16 @@ check_default_values(Msg) ->
     ?assertEqual(333, test(get, defaultValue, Struct)).
 
 field_values_test() ->
-    Msg = [<<0,0,0,0, 2,0,5,0, %% struct, 2 word data, 5 pointers
+    Msg = [<<0,0,0,0, 2,0,6,0, %% struct, 2 word data, 6 pointers
              %% data
              33: 8/integer-little, %% intField
-             0: 8/integer-little, %% groupField.a / boolField
+             0: 8/integer-little, %% tag 0: boolField, 1: groupField.a
              1:16/integer-little, %% union tag
              %% 32
-             55: 8/integer-little, %% groupField.b
-             22: 8/integer-little, %% groupField.c
+             55: 8/integer-little, %% tag 1: groupField.b
+             22: 8/integer-little, %% tag 1: groupField.c
 
-             0: 1/integer-little, %% opts.bool
+             0: 1/integer-little, %% opts tag 0: bool
              0:15/integer-little, %% padding
              %% 64
              3:16/integer-little, %% opts union tag
@@ -76,16 +76,19 @@ field_values_test() ->
 
              %% pointers
              1:32/integer-little, 2:32/integer-little, %% textField
-             %% opts 2:object
-             12:32/integer-little,
+             %% opts tag 1: text, 2: data, 3: object
+             16:32/integer-little,
              1:16/integer-little,
              2:16/integer-little,
+
              0:64/integer-little, %% meta.tag
              0:64/integer-little, %% meta.data
              %% structField (offset -1, 0 data 0 ptrs), effectively a null ptr
              %% but doesn't use the default values defined for this field
              -4:32/integer-little, 0:32/integer-little,
-             %% opts.object data
+             0:64/integer-little, %% meta.struct
+
+             %% opts.object data (Simple struct)
              222:32/integer-little-unsigned, %% value
              0:32/integer-little-unsigned, %% defaultValue
              0:64/integer-little, %% message

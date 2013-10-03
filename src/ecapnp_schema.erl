@@ -17,7 +17,8 @@
 -module(ecapnp_schema).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([type_of/1, lookup/2]).
+-export([type_of/1, lookup/2, size_of/1, size_of/2,
+         data_size/1, ptrs_size/1]).
 
 -include("ecapnp.hrl").
 
@@ -81,7 +82,16 @@ lookup(Type, null) ->
 type_of(#object{ type=#node{ id=Type }}=Obj) ->
     lookup(Type, Obj).
 
-    
+size_of(Type, Store) ->    
+    {ok, T} = lookup(Type, Store),
+    size_of(T).
+
+size_of(#struct{ dsize=DSize, psize=PSize }) -> DSize + PSize.
+
+data_size(#struct{ dsize=Size }) -> Size.
+ptrs_size(#struct{ psize=Size }) -> Size.
+
+
 %% ===================================================================
 %% internal functions
 %% ===================================================================

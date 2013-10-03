@@ -17,7 +17,8 @@
 -module(ecapnp_ref).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/3, get/4, copy/1,
+-export([get/3, get/4, copy/1, alloc/3, alloc/4,
+         set/2,
          read_struct_data/3, read_struct_ptr/2,
          read_struct_data/4, read_struct_ptr/3,
          read_list/1, read_text/1, read_data/1,
@@ -30,6 +31,17 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
+
+alloc(SegmentId, Size, Data) ->
+    {Id, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
+    #ref{ segment=Id, pos=Pos, data=Data }.
+
+alloc(Kind, SegmentId, Size, Data) ->
+    set(Kind, alloc(SegmentId, Size, Data)).
+
+set(Kind, Ref0) ->
+    Ref = Ref0#ref{ kind=Kind },
+    ok = write(Ref), Ref.
 
 get(SegmentId, Pos, Data) when is_pid(Data) ->
     get(SegmentId, Pos, Data, true).
@@ -158,12 +170,15 @@ get_segment(#ref{ segment=SegmentId, pos=Pos,
                   offset=Offset, data=Data }, Len) ->
     ecapnp_data:get_segment(SegmentId, Pos + 1 + Offset, Len, Data).
 
-read_segment(SegmentId, Pos, Segment, Data, FollowFar) ->
+read_segment(SegmentId, Pos, Segment, Data, FollowFar)
+  when size(Segment) == 8 ->
     Ref = read_ref(Segment),
     case {FollowFar, Ref#ref.kind} of
         {true, #far_ref{}} -> follow_far(Ref#ref{ data=Data });
         _ -> Ref#ref{ segment=SegmentId, pos=Pos, data=Data }
-    end.
+    end;
+read_segment(SegmentId, _, _, Data, _) ->
+    #ref{ segment=SegmentId, pos=-1, data=Data }.
 
 read_ref(Segment) ->
     <<OffsetAndKind:32/integer-signed-little,
@@ -271,3 +286,10 @@ element_size(eightBytes) -> 5;
 element_size(pointer) -> 6;
 element_size(inlineComposite) -> 7.
 
+
+write(#ref{ segment=SegmentId, pos=Pos,
+            offset=Offset, data=Data }=Ref) ->
+    ecapnp_data:update_segment(
+      {SegmentId, Pos},
+      create_ptr(Offset, Ref),
+      Data).
