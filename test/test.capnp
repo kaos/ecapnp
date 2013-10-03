@@ -24,9 +24,12 @@ struct Test @0xfa556038e27b336d {  # 16 bytes, 5 ptrs
     id @10 :UInt16;  # bits[80, 96)
     tag @11 :Text;  # ptr[2]
     data @12 :Data = "1234";  # ptr[3]
+    struct @14 :Simple = (message = "overriden default message", defaultValue = 321);
   }
 }
 struct Simple @0xd16f318851f71be8 {  # 8 bytes, 1 ptrs
-  message @0 :Text = "simple message";  # ptr[0]
-  value @1 :UInt32 = 123;  # bits[0, 32)
+  simpleMessage @2 :Text = "simple message";  # ptr[0]
+  message @0 :Text = "default message";  # ptr[0]
+  value @1 :UInt32 = 222;  # bits[0, 32)
+  defaultValue @3 :UInt32 = 333;  # bits[0, 32)
 }

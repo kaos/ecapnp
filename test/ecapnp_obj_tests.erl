@@ -50,4 +50,22 @@ copy_test() ->
     ?assertEqual(#object{ type=object, ref=Ref }, Obj),
     ?assertEqual(Bin, ecapnp_obj:copy(Obj)).
 
+object_test() ->
+    Data = data([]),
+
+    NullRef = #ref{ data=Data },
+    NullObj = ecapnp_obj:from_ref(NullRef, object),
+
+    ListRef = #ref{ kind=#list_ref{}, data=Data },
+    ListObj = ecapnp_obj:from_ref(ListRef, object),
+
+    {ok, T} = ecapnp_schema:lookup('Test', NullRef), 
+    ?assertEqual(
+      #object{ type=T, ref=NullRef },
+      ecapnp_obj:to_struct('Test', NullObj)),
+
+    ?assertEqual([], ecapnp_obj:to_list('Simple', ListObj)),
+    ?assertEqual(<<>>, ecapnp_obj:to_text(ListObj)),
+    ?assertEqual(<<>>, ecapnp_obj:to_data(ListObj)).
+
 -endif.

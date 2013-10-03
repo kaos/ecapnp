@@ -17,7 +17,7 @@
 -module(ecapnp_get).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/3, field/2, union/1]).
+-export([root/3, field/2, union/1, ref_data/3]).
 
 -include("ecapnp.hrl").
 
@@ -45,6 +45,11 @@ union(#object{ type=#struct{ union_field=none }}=Object) ->
     throw({no_unnamed_union_in_object, Object});
 union(#object{ ref=Ref, type=#struct{ union_field=Union }}) ->
     read_field(Union, Ref).
+
+ref_data(Type, #object{ ref=Ref }, Default) ->
+    ref_data(Type, Ref, Default);
+ref_data(Type, Ref, Default) ->
+    read_ptr(#ptr{ type=Type, default=Default }, Ref).
 
 
 %% ===================================================================
@@ -96,18 +101,25 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
     end.
 
 read_obj(#ref{ kind=null, data=Data }, Type, Default0) ->
-    Default = case Default0 of
-                  null ->
-                      case ecapnp_schema:lookup(Type, Data) of
-                          {ok, #struct{ dsize=DSize, psize=PSize }} ->
-                              <<0:32/integer,
-                                DSize:16/integer-unsigned-little,
-                                PSize:16/integer-unsigned-little,
-                                0:DSize/integer-unit:64,
-                                0:PSize/integer-unit:64>>
-                      end;
-                  _ -> Default0
+    Default = if Default0 == null, Type /= object ->
+                      {ok, #struct{
+                              dsize=DSize,
+                              psize=PSize
+                             }} = ecapnp_schema:lookup(Type, Data),
+                      <<0:32/integer,
+                        DSize:16/integer-unsigned-little,
+                        PSize:16/integer-unsigned-little,
+                        0:DSize/integer-unit:64,
+                        0:PSize/integer-unit:64>>;
+                 is_atom(Default0) ->
+                      <<0:64/integer>>;
+                 true ->
+                      Default0
               end,
-    ecapnp_obj:from_data({Data, Default}, Type);
+    if is_binary(Default) ->
+            ecapnp_obj:from_data({Data, Default}, Type);
+       true ->
+            Default
+    end;
 read_obj(Ref, Type, _) ->
     ecapnp_obj:from_ref(Ref, Type).

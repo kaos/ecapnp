@@ -167,11 +167,11 @@ export_item(#annotation{ node=Node }, Out, Indent) ->
     Out(["#annotation{ %% NYI..~n~*snode=", I, ""]),
     export_item(Node, Out, I),
     Out(["}"]);
-export_item(#data{ type={union, L}, align=A }, Out, Indent) ->
+export_item(#data{ type={union, L}, align=A, default=D }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#data{ align=~p, type=~n~*s"
+    Out(["#data{ align=~p, default= ~p, type=~n~*s"
          "{union,~n~*s[",
-         A, I, "", I + 2, ""]),
+         A, D, I, "", I + 2, ""]),
     export_items(L, Out, {first, I + 3}),
     Out(["~n~*s]} }", I, ""]);
 export_item(#data{ type=T, align=A, default=D }, Out, Indent) ->
@@ -275,8 +275,13 @@ ptr_field(Type, Index, Default) ->
 
 default_value(Type, #object{type=#struct{node=#node{name='Value'}}}=Object) ->
     default_value(Type, schema(get, Object));
-default_value({struct, _Type}, {struct, Object}) ->
+default_value(Type, {_, Object})
+  when (Type == object
+        orelse (is_tuple(Type) andalso element(1, Type) == struct)),
+       is_record(Object, object) ->
     ecapnp_obj:copy(Object);
+default_value({list, Type}, {list, Value}) ->
+    ecapnp_obj:to_list(Type, Value);
 default_value({Type, _}, {Type, Value}) -> Value;
 default_value(Type, {Type, Value}) -> Value;
 default_value(Type, Value) -> throw({value_type_mismatch, Type, Value}).
@@ -314,13 +319,10 @@ list_field_type(List) ->
 
 link_node(Id, NodeName, Nodes) ->
     {Node, Schema} = proplists:get_value(Id, Nodes),
-    NestedNodes = case schema(get, nestedNodes, Node) of
-                      null -> [];
-                      Ns -> [begin
-                                 Name = binary_to_atom(schema(get, name, N), latin1),
-                                 link_node(schema(get, id, N), Name, Nodes)
-                             end || N <- Ns]
-                  end,
+    NestedNodes = [begin
+                       Name = binary_to_atom(schema(get, name, N), latin1),
+                       link_node(schema(get, id, N), Name, Nodes)
+                   end || N <- schema(get, nestedNodes, Node)],
     Groups = case schema(get, Node) of
                  {struct, O} ->
                      lists:foldl(

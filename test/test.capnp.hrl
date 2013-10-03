@@ -28,8 +28,8 @@ test(schema) ->
       [#struct{
          node=#node{ %% 0xfa556038e27b336d
            name='Test', id=18038429679936549741, source= <<"test/test.capnp:Test">> },
-         dsize=2, psize=5, esize=inlineComposite,
-         union_field=#data{ align=16, type=
+         dsize=2, psize=6, esize=inlineComposite,
+         union_field=#data{ align=16, default= 0, type=
            {union,
              [{boolField,
                #data{ type=bool, align=15,
@@ -50,13 +50,13 @@ test(schema) ->
              #group{ id=12292473172826227401 }},
             {structField,
              #ptr{ type={struct,15091335337902283752}, idx=4,
-                   default= null }}
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ],
          types=
            [#struct{
               node=#node{ %% 0xaa97a338ed5382c9
                 name=meta, id=12292473172826227401, source= <<"test/test.capnp:Test.meta">> },
-              dsize=2, psize=5, esize=inlineComposite,
+              dsize=2, psize=6, esize=inlineComposite,
               union_field=none,
               fields=
                 [{id,
@@ -67,13 +67,20 @@ test(schema) ->
                         default= <<>> }},
                  {data,
                   #ptr{ type=data, idx=3,
-                        default= <<"1234">> }}
+                        default= <<"1234">> }},
+                 {struct,
+                  #ptr{ type={struct,15091335337902283752}, idx=5,
+                        default= <<0,0,0,0,1,0,2,0,0,0,0,0,12,0,0,0,5,0,0,0,
+                                   210,0,0,0,0,0,0,0,0,0,0,0,111,118,101,114,
+                                   114,105,100,101,110,32,100,101,102,97,117,
+                                   108,116,32,109,101,115,115,97,103,101,0,0,0,
+                                   0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0x81d9e4f01134cd00
                 name=opts, id=9356761420570873088, source= <<"test/test.capnp:Test.opts">> },
-              dsize=2, psize=5, esize=inlineComposite,
-              union_field=#data{ align=64, type=
+              dsize=2, psize=6, esize=inlineComposite,
+              union_field=#data{ align=64, default= 0, type=
                 {union,
                   [{bool,
                     #data{ type=bool, align=55,
@@ -83,15 +90,15 @@ test(schema) ->
                           default= <<>> }},
                    {data,
                     #ptr{ type=data, idx=1,
-                          default= null }},
+                          default= <<>> }},
                    {object,
                     #ptr{ type=object, idx=1,
-                          default= null }}
+                          default= <<0,0,0,0,0,0,0,0>> }}
                 ]} }},
             #struct{
               node=#node{ %% 0xaebc820562fc74b7
                 name=groupField, id=12591081617868223671, source= <<"test/test.capnp:Test.groupField">> },
-              dsize=2, psize=5, esize=inlineComposite,
+              dsize=2, psize=6, esize=inlineComposite,
               union_field=none,
               fields=
                 [{a,
@@ -108,14 +115,20 @@ test(schema) ->
        #struct{
          node=#node{ %% 0xd16f318851f71be8
            name='Simple', id=15091335337902283752, source= <<"test/test.capnp:Simple">> },
-         dsize=1, psize=1, esize=inlineComposite,
+         dsize=1, psize=2, esize=inlineComposite,
          union_field=none,
          fields=
            [{message,
              #ptr{ type=text, idx=0,
-                   default= <<"simple message">> }},
+                   default= <<"default message">> }},
             {value,
              #data{ type=uint32, align=0,
-                    default= 123 }}
+                    default= 222 }},
+            {simpleMessage,
+             #ptr{ type=text, idx=1,
+                   default= <<"simple message">> }},
+            {defaultValue,
+             #data{ type=uint32, align=32,
+                    default= 333 }}
            ]}
       ]}.

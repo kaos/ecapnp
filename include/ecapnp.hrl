@@ -71,7 +71,7 @@
 -type object_field() :: #data{} | #ptr{}.
 -type object_fields() :: list({atom(), object_field()}).
 -type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
--type value() :: number() | boolean() | list(value()) | {binary(), list(binary())} | null | undefined.
+-type value() :: number() | boolean() | list(value()) | binary() | undefined.
 
 
 %% Runtime data
@@ -101,8 +101,7 @@
 
 -record(object, {
           ref :: #ref{},
-          type :: schema_type(),
-          union_value :: {atom(), term()} | undefined | none
+          type=object :: schema_type() | object
          }).
 
 %% For internal use, deprecated

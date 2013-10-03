@@ -41,8 +41,7 @@ get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
 
 read_struct_data(Align, Len, Ref) ->
     read_struct_data(Align, Len, Ref, <<0:Len/integer>>).
-read_struct_data(_, Len, #ref{ kind=null }, Default)
-  when Len == size(Default) -> Default;
+read_struct_data(_, _, #ref{ kind=null }, Default) -> Default;
 read_struct_data(Align, Len,
                  #ref{ kind=#struct_ref{ dsize=DSize }}=Ref,
                  Default) ->
@@ -66,8 +65,7 @@ read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
     end.
 
 read_list(Ref) -> read_list(Ref, []).
-read_list(#ref{ kind=null }, Default) -> Default;
-read_list(#ref{ kind=#list_ref{ count=0 } }, Default) -> Default;
+read_list(#ref{ kind=#list_ref{ count=0 } }, _) -> [];
 read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                 kind=#list_ref{ size=Size, count=Count } }, _) ->
     TagOffset = Pos + 1 + Offset,
@@ -93,19 +91,20 @@ read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                      1 + ((ElementSize * Count - 1) div 64),
                      Data),
             read_list_elements(ElementSize, List, Count, [])
-    end.
+    end;
+read_list(_, Default) -> Default.
 
 read_text(Ref) -> read_text(Ref, <<>>).
-read_text(#ref{ kind=null }, Default) -> Default;
-read_text(#ref{ kind=#list_ref{ count=0 } }, Default) -> Default;
+read_text(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
-    binary_part(get_segment(Ref, 1 + ((Count - 2) div 8)), 0, Count - 1).
+    binary_part(get_segment(Ref, 1 + ((Count - 2) div 8)), 0, Count - 1);
+read_text(_, Default) -> Default.
 
 read_data(Ref) -> read_data(Ref, <<>>).
-read_data(#ref{ kind=null }, Default) -> Default;
-read_data(#ref{ kind=#list_ref{ count=0 } }, Default) -> Default;
+read_data(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
-    binary_part(get_segment(Ref, 1 + ((Count - 1) div 8)), 0, Count).
+    binary_part(get_segment(Ref, 1 + ((Count - 1) div 8)), 0, Count);
+read_data(_, Default) -> Default.
 
 follow_far(#ref{ offset=Offset, data=Data,
                  kind=#far_ref{ segment=SegmentId, double_far=Double } }) ->
