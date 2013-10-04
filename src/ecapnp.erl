@@ -48,29 +48,26 @@ get(Field, Object)
 
 set(Field, Value, Object)
   when is_atom(Field), is_record(Object, object) ->
-    ecapnp_set:field( 
-      lookup_field(Field, Object),
-      Value, Object
-     ).
+    ecapnp_set:field(Field, Value, Object).
 
-type(#object{ type=T }) ->
-    T.
+%% type(#object{ type=T }) ->
+%%     T.
 
-type(name, Object) ->
-    (type(Object))#node.name;
-type(id, Object) ->
-    (type(Object))#node.id;
-type(schema, Object) ->
-    {ok, Schema} = ecapnp_schema:type_of(Object),
-    Schema.
+%% type(name, Object) ->
+%%     (type(Object))#node.name;
+%% type(id, Object) ->
+%%     (type(Object))#node.id;
+%% type(schema, Object) ->
+%%     {ok, Schema} = ecapnp_schema:type_of(Object),
+%%     Schema.
 
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
 
-lookup_field(Name, Object) ->
-    proplists:get_value(
-      Name,
-      (type(schema, Object))#struct.fields,
-      {unknown_field, Name}).
+%% lookup_field(Name, Object) ->
+%%     proplists:get_value(
+%%       Name,
+%%       (type(schema, Object))#struct.fields,
+%%       {unknown_field, Name}).

@@ -18,11 +18,11 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([get/3, get/4, copy/1, alloc/3, alloc/4,
-         set/2,
          read_struct_data/3, read_struct_ptr/2,
          read_struct_data/4, read_struct_ptr/3,
          read_list/1, read_text/1, read_data/1,
          read_list/2, read_text/2, read_data/2,
+         set/2, write_struct_data/4,
          follow_far/1]).
 
 -include("ecapnp.hrl").
@@ -59,7 +59,7 @@ read_struct_data(Align, Len,
                  Default) ->
     if Align + Len =< DSize * 64 ->
             <<_:Align/bits, Value:Len/bits, _/bits>>
-                = get_segment(Ref, 1 + ((Align + Len - 1) div 64)),
+                = get_segment(1 + ((Align + Len - 1) div 64), Ref),
             Value;
        true -> Default
     end.
@@ -104,19 +104,26 @@ read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                      Data),
             read_list_elements(ElementSize, List, Count, [])
     end;
-read_list(_, Default) -> Default.
+read_list(#ref{ kind=null }, Default) -> Default.
 
 read_text(Ref) -> read_text(Ref, <<>>).
 read_text(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
-    binary_part(get_segment(Ref, 1 + ((Count - 2) div 8)), 0, Count - 1);
-read_text(_, Default) -> Default.
+    binary_part(get_segment(1 + ((Count - 2) div 8), Ref), 0, Count - 1);
+read_text(#ref{ kind=null }, Default) -> Default.
 
 read_data(Ref) -> read_data(Ref, <<>>).
 read_data(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
-    binary_part(get_segment(Ref, 1 + ((Count - 1) div 8)), 0, Count);
-read_data(_, Default) -> Default.
+    binary_part(get_segment(1 + ((Count - 1) div 8), Ref), 0, Count);
+read_data(#ref{ kind=null }, Default) -> Default.
+
+write_struct_data(Align, Len, Value,
+                  #ref{ kind=#struct_ref{ dsize=DSize } }=Ref)
+  when Align + Len =< DSize * 64 ->
+    <<Pre:Align/bits, _:Len/bits, Post/bits>>
+        = get_segment(1 + ((Align + Len - 1) div 64), Ref),
+    set_segment(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref).
 
 follow_far(#ref{ offset=Offset, data=Data,
                  kind=#far_ref{ segment=SegmentId, double_far=Double } }) ->
@@ -166,9 +173,20 @@ list_element_size(fourBytes) -> 32;
 list_element_size(eightBytes) -> 64;
 list_element_size(inlineComposite) -> undefined.
 
-get_segment(#ref{ segment=SegmentId, pos=Pos,
-                  offset=Offset, data=Data }, Len) ->
+get_segment(Len, #ref{ segment=SegmentId, pos=Pos,
+                       offset=Offset, data=Data }) ->
     ecapnp_data:get_segment(SegmentId, Pos + 1 + Offset, Len, Data).
+
+set_segment(Value, #ref{ segment=SegmentId, pos=Pos,
+                         offset=Offset, data=Data }) ->
+    ecapnp_data:update_segment({SegmentId, Pos + 1 + Offset}, Value, Data).
+
+write(#ref{ segment=SegmentId, pos=Pos,
+            offset=Offset, data=Data }=Ref) ->
+    ecapnp_data:update_segment(
+      {SegmentId, Pos},
+      create_ptr(Offset, Ref),
+      Data).
 
 read_segment(SegmentId, Pos, Segment, Data, FollowFar)
   when size(Segment) == 8 ->
@@ -243,7 +261,7 @@ copy(#ref{ kind=#list_ref{ size=Size } }=Ref, Acc) ->
         _ ->
             Count = (Ref#ref.kind)#list_ref.count,
             ElementSize = list_element_size(Size),
-            List = get_segment(Ref, 1 + ((ElementSize * Count - 1) div 64)),
+            List = get_segment(1 + ((ElementSize * Count - 1) div 64), Ref),
             [[Ptr, List]|Acc]
     end.
 
@@ -285,11 +303,3 @@ element_size(fourBytes) -> 4;
 element_size(eightBytes) -> 5;
 element_size(pointer) -> 6;
 element_size(inlineComposite) -> 7.
-
-
-write(#ref{ segment=SegmentId, pos=Pos,
-            offset=Offset, data=Data }=Ref) ->
-    ecapnp_data:update_segment(
-      {SegmentId, Pos},
-      create_ptr(Offset, Ref),
-      Data).

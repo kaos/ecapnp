@@ -143,4 +143,15 @@ set_test() ->
                    0:9/integer-unit:64>>,
                  D).
 
+write_struct_data_test() ->
+    Data = ecapnp_data:new(#msg{ data = [<<0,0,0,0, 1,0, 0,0,  0:64/integer>>] }),
+    Ref = ecapnp_ref:get(0, 0, Data),
+    ok = ecapnp_ref:write_struct_data(32, 16, <<5, 6>>, Ref),
+    #msg{ data=[Bin] } = ecapnp_data:get_message(Data),
+    ?assertEqual(
+       <<0:32/integer, 1:32/integer-little,
+         0:32/integer, 5, 6, 0, 0>>,
+       Bin).
+
+
 -endif.

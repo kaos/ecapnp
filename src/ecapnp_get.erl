@@ -62,14 +62,18 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
             {ok, #enum{ values=Values }}
                 = ecapnp_schema:lookup(EnumType, StructRef),
             Tag = read_field(D#data{ type=uint16 }, StructRef),
-            lists:nth(Tag + 1, Values);
+            case lists:keyfind(Tag, 1, Values) of
+                {Tag, Value} -> Value;
+                false -> Tag
+            end;
         {union, Fields} ->
             Tag = read_field(D#data{ type=uint16 }, StructRef),
-            {FieldName, Field} = lists:nth(Tag + 1, Fields),
-            if Field == void -> FieldName;
-               true -> {FieldName, read_field(Field, StructRef)}
+            case lists:keyfind(Tag, 1, Fields) of
+                {Tag, FieldName, void} -> FieldName;
+                {Tag, FieldName, Field} ->
+                    {FieldName, read_field(Field, StructRef)}
             end;
-        _ ->
+        Type ->
             Size = ecapnp_val:size(Type),
             ecapnp_val:get(
               Type, 

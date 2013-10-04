@@ -1,6 +1,6 @@
-# test.capnp
+# test/test.capnp
 @0xe87e0317861d75a1;
-struct Test @0xfa556038e27b336d {  # 16 bytes, 5 ptrs
+struct Test @0xfa556038e27b336d {  # 16 bytes, 6 ptrs
   intField @0 :UInt8 = 33;  # bits[0, 8)
   textField @1 :Text = "test";  # ptr[0]
   structField @13 :Simple;  # ptr[4]
@@ -24,12 +24,12 @@ struct Test @0xfa556038e27b336d {  # 16 bytes, 5 ptrs
     id @10 :UInt16;  # bits[80, 96)
     tag @11 :Text;  # ptr[2]
     data @12 :Data = "1234";  # ptr[3]
-    struct @14 :Simple = (message = "overriden default message", defaultValue = 321);
+    struct @14 :Simple = (message = "overriden default message", defaultValue = 321);  # ptr[5]
   }
 }
-struct Simple @0xd16f318851f71be8 {  # 8 bytes, 1 ptrs
-  simpleMessage @2 :Text = "simple message";  # ptr[0]
+struct Simple @0xd16f318851f71be8 {  # 8 bytes, 2 ptrs
+  simpleMessage @2 :Text = "simple message";  # ptr[1]
   message @0 :Text = "default message";  # ptr[0]
   value @1 :UInt32 = 222;  # bits[0, 32)
-  defaultValue @3 :UInt32 = 333;  # bits[0, 32)
+  defaultValue @3 :UInt32 = 333;  # bits[32, 64)
 }

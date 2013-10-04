@@ -28,4 +28,24 @@ root_test() ->
          6:16/integer-little, 0:64/integer-unit:8>>,
       Data).
 
+data_field_test() ->
+    {ok, Root} = ecapnp_set:root('Test', test(schema)),
+    ok = test(set, intField, 0, Root),
+    #msg{ alloc=[Alloc], data=[<<Data:64/binary-unit:9, _/binary>>]} = ecapnp_data:get_message((Root#object.ref)#ref.data),
+    ?assertEqual(9, Alloc),
+    ?assertEqual(
+       <<0:32/integer-little, 2:16/integer-little, 6:16/integer-little, 
+         %% data
+         33: 8/integer-little, %% intField
+         
+         0:24/integer-little,
+         0:32/integer-little,
+
+         0:64/integer-little,
+
+         %% pointers
+         0:64/integer-unit:6
+       >>,
+      Data).
+    
 -endif.

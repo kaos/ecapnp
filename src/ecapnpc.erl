@@ -222,20 +222,15 @@ compile_node({struct, Struct}, Node) ->
              esize = schema(get, preferredListEncoding, Struct),
              fields = [compile_struct_field(M)
                        || M <- Fields],
-             union_field = case schema(get, discriminantCount, Struct) of
-                               0 -> none;
-                               _ -> data_field(
-                                      {{union,
-                                        [compile_struct_field(F) || F <- Union]}, 16},
-                                      schema(get, discriminantOffset, Struct), {union, 0})
-                           end
+             union_field = compile_union(Union, Struct)
            };
 compile_node({enum, Enum}, Node) ->
+    Enumerants = [binary_to_atom(schema(get, name, E), latin1) 
+                  || E <- schema(get, enumerants, Enum)],
     #enum{ node = Node,
-           values =
-               [binary_to_atom(schema(get, name, E), latin1) 
-                || E <- schema(get, enumerants, Enum)]
-         };
+           values = lists:zip(
+                      lists:seq(0, length(Enumerants) - 1),
+                      Enumerants)};
 compile_node({interface, _Interface}, Node) ->
     #interface{ node = Node };
 compile_node({const, _Const}, Node) ->
@@ -253,6 +248,23 @@ compile_struct_field_type({slot, Field}) ->
     compile_field(Field);
 compile_struct_field_type({group, Group}) ->
     #group{ id=schema(get, typeId, Group) }.
+
+compile_union(Union, Struct) ->
+    case schema(get, discriminantCount, Struct) of
+        0 -> none;
+        _ ->
+            UnionFields = lists:zip(
+                            lists:seq(0, length(Union) - 1),
+                            Union),
+            data_field(
+              {{union,
+                [begin
+                     {N, T} = compile_struct_field(F),
+                     {I, N, T}
+                 end || {I, F} <- UnionFields]}, 16},
+              schema(get, discriminantOffset, Struct),
+              {union, 0})
+    end.
 
 compile_field(Field) ->
     Offset = schema(get, offset, Field),

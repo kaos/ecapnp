@@ -56,7 +56,7 @@ object_test() ->
     NullRef = #ref{ data=Data },
     NullObj = ecapnp_obj:from_ref(NullRef, object),
 
-    ListRef = #ref{ kind=#list_ref{}, data=Data },
+    ListRef = #ref{ kind=#list_ref{ size=byte }, data=Data },
     ListObj = ecapnp_obj:from_ref(ListRef, object),
 
     {ok, T} = ecapnp_schema:lookup('Test', NullRef), 

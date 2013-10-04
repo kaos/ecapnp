@@ -31,11 +31,8 @@ test(schema) ->
          dsize=2, psize=6, esize=inlineComposite,
          union_field=#data{ align=16, default= 0, type=
            {union,
-             [{boolField,
-               #data{ type=bool, align=15,
-                      default= false }},
-              {groupField,
-               #group{ id=12591081617868223671 }}
+             [{0,boolField,{data,bool,15,false}},
+              {1,groupField,{group,12591081617868223671}}
            ]} },
          fields=
            [{intField,
@@ -82,18 +79,10 @@ test(schema) ->
               dsize=2, psize=6, esize=inlineComposite,
               union_field=#data{ align=64, default= 0, type=
                 {union,
-                  [{bool,
-                    #data{ type=bool, align=55,
-                           default= true }},
-                   {text,
-                    #ptr{ type=text, idx=1,
-                          default= <<>> }},
-                   {data,
-                    #ptr{ type=data, idx=1,
-                          default= <<>> }},
-                   {object,
-                    #ptr{ type=object, idx=1,
-                          default= <<0,0,0,0,0,0,0,0>> }}
+                  [{0,bool,{data,bool,55,true}},
+                   {1,text,{ptr,text,1,<<>>}},
+                   {2,data,{ptr,data,1,<<>>}},
+                   {3,object,{ptr,object,1,<<0,0,0,0,0,0,0,0>>}}
                 ]} }},
             #struct{
               node=#node{ %% 0xaebc820562fc74b7
