@@ -119,5 +119,18 @@ test(schema) ->
             {defaultValue,
              #data{ type=uint32, align=32,
                     default= 333 }}
+           ]},
+       #struct{
+         node=#node{ %% 0xed15f6a91b7977a6
+           name='ListTest', id=17083831967670695846, source= <<"test/test.capnp:ListTest">> },
+         dsize=0, psize=2, esize=inlineComposite,
+         union_field=none,
+         fields=
+           [{listInts,
+             #ptr{ type={list,int32}, idx=0,
+                   default= [456,789,-123] }},
+            {listAny,
+             #ptr{ type=object, idx=1,
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ]}
       ]}.

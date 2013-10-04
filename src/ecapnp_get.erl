@@ -101,7 +101,7 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
                     [read_ptr(#ptr{ type=ElementType }, R)
                      || R <- Refs];
                 Values ->
-                    [ecapnp_val:get(Type, Data)
+                    [ecapnp_val:get(ElementType, Data)
                      || Data <- Values]
             end
     end.

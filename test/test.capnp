@@ -33,3 +33,7 @@ struct Simple @0xd16f318851f71be8 {  # 8 bytes, 2 ptrs
   value @1 :UInt32 = 222;  # bits[0, 32)
   defaultValue @3 :UInt32 = 333;  # bits[32, 64)
 }
+struct ListTest @0xed15f6a91b7977a6 {  # 0 bytes, 2 ptrs
+  listInts @0 :List(Int32) = [456, 789, -123];  # ptr[0]
+  listAny @1 :Object;  # ptr[1]
+}

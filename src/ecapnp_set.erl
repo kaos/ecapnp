@@ -70,15 +70,46 @@ set_field(#data{ type=Type, align=Align, default=Default }=D,
               StructRef)
     end;
 
-set_field(#ptr{ idx=Idx, type=Type }, Value, StructRef) ->
-    write_ptr(Type, Value, ecapnp_ref:ptr(Idx, StructRef), StructRef).
-
-write_ptr(text, Value, Ptr, Ref) ->
-    ecapnp_ref:write_text(Value, Ptr, Ref);
-write_ptr(data, Value, Ptr, Ref) ->
-    ecapnp_ref:write_data(Value, Ptr, Ref).
-%% write_ptr({list, Type}, Value, Ptr, Ref) ->    
-%%     ecapnp_ref:write_list(#list_ref{}, Ptr, Ref)
+set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
+    case Type of
+        text -> ecapnp_ref:write_text(
+                  Value,
+                  ecapnp_ref:ptr(Idx, StructRef),
+                  StructRef);
+        data -> ecapnp_ref:write_data(
+                 Value,
+                 ecapnp_ref:ptr(Idx, StructRef),
+                 StructRef);
+        object -> {uhoh, nyi};
+        {list, ElementType} ->
+            if is_integer(Value) ->
+                    ecapnp_ref:alloc_list(
+                      Idx,
+                      #list_ref{
+                         size=list_element_size(ElementType, StructRef),
+                         count=Value },
+                      StructRef);
+               is_tuple(Value), size(Value) == 2 -> %% {Idx, Value}
+                    ElementValue =
+                        case list_element_size(ElementType, StructRef) of
+                            inlineComposite -> ugh;
+                            pointer -> hmm;
+                            _ -> ecapnp_val:set(ElementType, 
+                                                element(2, Value),
+                                                0)
+                        end,
+                    ecapnp_ref:write_list(
+                      Idx,
+                      element(1, Value),
+                      ElementValue,
+                      StructRef);
+               is_list(Value) -> %% [Value...]
+                    [set_field(Ptr, V, StructRef)
+                     || V <- lists:zip(
+                               lists:seq(0, length(Value) - 1),
+                               Value)]
+            end
+    end.
 
 
 union_tag({FieldName, Value}, [{Tag, FieldName, FieldType}|_]) ->
@@ -94,4 +125,20 @@ union_tag(Value, [_|Fields]) ->
 
 default(void) -> void;
 default(FieldType) -> {FieldType, undefined}.
+
+list_element_size({list, _}, _) -> pointer;
+list_element_size(Type, Ref) ->
+    case ecapnp_schema:lookup(Type, Ref) of
+        {ok, object} -> pointer;
+        {ok, #struct{ esize=Size }} -> Size;
+        {ok, _} -> twoBytes; %% enum & union
+        _ -> list_element_size(ecapnp_val:size(Type))
+    end.
+
+list_element_size(0) -> empty;
+list_element_size(1) -> bit;
+list_element_size(8) -> byte;
+list_element_size(16) -> twoBytes;
+list_element_size(32) -> fourBytes;
+list_element_size(64) -> eightBytes.
 

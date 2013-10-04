@@ -48,7 +48,7 @@ data_field_test() ->
        >>,
       Data).
 
-ptr_field_test() ->    
+text_field_test() ->    
     {ok, Root} = ecapnp_set:root('Test', test(schema)),
     ok = test(set, textField, <<"test data">>, Root),
     #msg{ alloc=[Alloc], data=[<<Data:64/binary-unit:11, _/binary>>]} = ecapnp_data:get_message((Root#object.ref)#ref.data),
@@ -70,6 +70,29 @@ ptr_field_test() ->
          %% textField data
          "test data", 0,
          0:8/integer-unit:6
+       >>,
+      Data).
+
+list_field_test() ->    
+    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
+    ok = test(set, listInts, 3, Root),
+    ok = test(set, listInts, {1, 222}, Root),
+    ok = test(set, listInts, {0, 111}, Root),
+    ok = test(set, listInts, {2, -333}, Root),
+    #msg{ alloc=[Alloc], data=[<<Data:64/binary-unit:6, _/binary>>]} = ecapnp_data:get_message((Root#object.ref)#ref.data),
+    ?assertEqual(5, Alloc),
+    ?assertEqual(
+       <<0,0,0,0, 0,0,2,0, %% struct ref off 0, 0 data, 2 ptrs
+         %% pointers
+         5,0,0,0,28,0,0,0, %% listInts: off 1, 3 elems a 4 bytes
+         0:64/integer-little, %% listAny: null
+
+         111:32/integer-little,
+         222:32/integer-little,
+         -333:32/integer-little,
+         0:32/integer-little, %% padding
+
+         0:64/integer-little %% unallocated
        >>,
       Data).
 
