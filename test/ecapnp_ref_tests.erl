@@ -153,5 +153,37 @@ write_struct_data_test() ->
          0:32/integer, 5, 6, 0, 0>>,
        Bin).
 
+write_struct_ptr_test() ->
+    Data = ecapnp_data:new(#msg{ data = [<<0,0,0,0, 0,0, 1,0,  1,2,3,4, 5,6,7,8>>] }),
+    Ref = ecapnp_ref:get(0, 0, Data),
+    Ptr = ecapnp_ref:read_struct_ptr(0, Ref),
+    ok = ecapnp_ref:write_struct_ptr(Ptr#ref{ kind=null }, Ref),
+    #msg{ data=[Bin] } = ecapnp_data:get_message(Data),
+    ?assertEqual(
+       <<0:32/integer, 0, 0, 1, 0,
+         0:32/integer, 0, 0, 0, 0>>,
+       Bin).
+
+write_struct_list_test() ->    
+    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
+    Kind = #struct_ref{ dsize=1, psize=2 },
+    Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
+    ok = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
+    ok = ecapnp_ref:write_list(0, 0, <<1:1>>, Ref),
+    ok = ecapnp_ref:write_list(0, 2, <<0:1>>, Ref),
+    ok = ecapnp_ref:write_list(0, 1, <<1:1>>, Ref),
+    ok = ecapnp_ref:write_list(0, 4, <<1:1>>, Ref),
+    #msg{ alloc=[A], data=[Bin] } = ecapnp_data:get_message(Data),
+    ?assertEqual(5, A),
+    ?assertEqual(
+       <<0,0,0,0, 1,0, 2,0,
+         0:64/integer, %% data
+         5,0,0,0, 65,0,0,0, %% list ptr (0)
+         0:64/integer, %% ptr (1)
+         2#00010011, %% 8 bits
+         0:56/integer, %% padding
+         0:64/integer-unit:5 %% unallocated data
+       >>, Bin).
+
 
 -endif.

@@ -47,5 +47,31 @@ data_field_test() ->
          0:64/integer-unit:6
        >>,
       Data).
+
+ptr_field_test() ->    
+    {ok, Root} = ecapnp_set:root('Test', test(schema)),
+    ok = test(set, textField, <<"test data">>, Root),
+    #msg{ alloc=[Alloc], data=[<<Data:64/binary-unit:11, _/binary>>]} = ecapnp_data:get_message((Root#object.ref)#ref.data),
+    ?assertEqual(11, Alloc),
+    ?assertEqual(
+       <<0:32/integer-little, 2:16/integer-little, 6:16/integer-little, 
+         %% data
+         0: 8/integer-little, %% intField
+         
+         0:24/integer-little,
+         0:32/integer-little,
+
+         0:64/integer-little,
+
+         %% pointers
+         21,0,0,0, 82,0,0,0, %% textField ptr
+         0:64/integer-unit:5,
+
+         %% textField data
+         "test data", 0,
+         0:8/integer-unit:6
+       >>,
+      Data).
+
     
 -endif.

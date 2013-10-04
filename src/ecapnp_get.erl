@@ -17,7 +17,7 @@
 -module(ecapnp_get).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/3, field/2, union/1, ref_data/3]).
+-export([root/3, field/2, union/1, ref_data/2, ref_data/3]).
 
 -include("ecapnp.hrl").
 
@@ -36,15 +36,17 @@ root(Type, Schema, Segments) ->
            Type)}.
 
 %% Lookup field value in object
-field(FieldName, Object) ->
-    read_field(
-      ecapnp_obj:field(FieldName, Object),
-      Object#object.ref).
+field(FieldName, #object{ ref=Ref }=Object)
+  when is_atom(FieldName) ->
+    read_field(ecapnp_obj:field(FieldName, Object), Ref).
 
 union(#object{ type=#struct{ union_field=none }}=Object) ->
     throw({no_unnamed_union_in_object, Object});
 union(#object{ ref=Ref, type=#struct{ union_field=Union }}) ->
     read_field(Union, Ref).
+
+ref_data(Ptr, Ref) ->
+    read_ptr(Ptr, Ref).
 
 ref_data(Type, #object{ ref=Ref }, Default) ->
     ref_data(Type, Ref, Default);
