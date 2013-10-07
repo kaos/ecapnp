@@ -293,7 +293,11 @@ default_value(Type, {_, Object})
        is_record(Object, object) ->
     ecapnp_obj:copy(Object);
 default_value({list, Type}, {list, Value}) ->
-    ecapnp_obj:to_list(Type, Value);
+    case ecapnp_obj:to_list(Type, Value) of
+        Objs when is_record(hd(Objs), object) ->
+            [ecapnp_obj:copy(Obj) || Obj <- Objs];
+        List -> List
+    end;
 default_value({Type, _}, {Type, Value}) -> Value;
 default_value(Type, {Type, Value}) -> Value;
 default_value(Type, Value) -> throw({value_type_mismatch, Type, Value}).

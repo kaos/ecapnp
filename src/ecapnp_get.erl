@@ -96,7 +96,14 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
         {struct, StructType} -> read_obj(Ref, StructType, Default);
         {list, ElementType} ->
             case ecapnp_ref:read_list(Ref, undefined) of
-                undefined -> Default;
+                undefined ->
+                    Null = ecapnp_ref:null_ref(Ref),
+                    if is_binary(hd(Default)) ->
+                            [read_ptr(#ptr{ type=ElementType, default=D },
+                                      Null) || D <- Default];
+                       true ->
+                            Default
+                    end;
                 Refs when is_record(hd(Refs), ref) ->
                     [read_ptr(#ptr{ type=ElementType }, R)
                      || R <- Refs];

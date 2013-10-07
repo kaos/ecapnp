@@ -19,7 +19,7 @@
 
 -export([get/3, get/4, set/2, copy/1, ptr/2,
          alloc/3, alloc/4, alloc_list/3,
-         alloc_data/1, follow_far/1,
+         alloc_data/1, follow_far/1, null_ref/1,
          read_struct_data/3, read_struct_ptr/2,
          read_struct_data/4, read_struct_ptr/3,
          read_list/1, read_text/1, read_data/1,
@@ -194,12 +194,12 @@ copy(Ref) ->
         copy(Ref, [])
        )).
 
+null_ref(#ref{ data=Data }) -> #ref{ data=Data }.
+
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-
-null_ref(#ref{ data=Data }) -> #ref{ data=Data }.
 
 ref_data_size(#ref{ kind=null }) -> 0;
 ref_data_size(#ref{ kind=#list_ref{ size=Size, count=Count }}) -> 

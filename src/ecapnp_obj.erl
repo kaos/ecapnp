@@ -58,7 +58,10 @@ copy(#object{ ref=Ref }) ->
 
 to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
   when is_record(Kind, struct_ref); Kind == null ->
-    {ok, T} = ecapnp_schema:lookup(Type, Object),
+    T = case ecapnp_schema:lookup(Type, Object) of
+            {ok, FoundType} -> FoundType;
+            _ -> object
+        end,
     Object#object{ type=T }.
 
 to_list(Type, #object{ ref=#ref{ kind=Kind }=Ref})
