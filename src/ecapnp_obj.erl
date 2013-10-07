@@ -28,7 +28,7 @@
 %% API functions
 %% ===================================================================
 
-alloc(Type, SegmentId, Data) ->
+alloc(Type, SegmentId, Data) when is_pid(Data) ->
     {ok, T} = ecapnp_schema:lookup(Type, Data),
     Ref = ecapnp_ref:alloc(
             #struct_ref{

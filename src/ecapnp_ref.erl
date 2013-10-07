@@ -19,7 +19,7 @@
 
 -export([get/3, get/4, set/2, copy/1, ptr/2,
          alloc/3, alloc/4, alloc_list/3,
-         follow_far/1,
+         alloc_data/1, follow_far/1,
          read_struct_data/3, read_struct_ptr/2,
          read_struct_data/4, read_struct_ptr/3,
          read_list/1, read_text/1, read_data/1,
@@ -155,18 +155,15 @@ write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
                                      count=Count
                                     } })).
 
-alloc_list(Idx, #list_ref{ size=Size, count=Count }=Kind,
-           #ref{ segment=SegmentId, data=Data }=Ref) ->
-    Ptr = ptr(Idx, Ref),
-    Len = case list_element_size(Size) of
-              %% TODO: support inlineComposite: undefined -> Count + 1;
-              Bits -> Count * Bits
-          end,
-    {Seg, Pos} = ecapnp_data:alloc(SegmentId,
-                                   1 + ((Len - 1) div 64),
-                                   Data),
+alloc_data(#ref{ segment=SegmentId, data=Data }=Ref) ->
+    Size = ref_data_size(Ref),
+    {Seg, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     Seg = SegmentId, %% TODO: support far ptrs
-    write( update_offset(Pos, Ptr#ref{ kind=Kind }) ).
+    write( update_offset(Pos, Ref) ).
+
+alloc_list(Idx, Kind, Ref) ->
+    Ptr = ptr(Idx, Ref),
+    alloc_data(Ptr#ref{ kind=Kind }).
 
 write_list(Idx, ElementIdx, Value, Ref) ->
     #ref{ kind=#list_ref{ size=Size, count=_Count }}=Ptr
@@ -204,6 +201,15 @@ copy(Ref) ->
 
 null_ref(#ref{ data=Data }) -> #ref{ data=Data }.
 
+ref_data_size(#ref{ kind=null }) -> 0;
+ref_data_size(#ref{ kind=#list_ref{ size=Size, count=Count }}) -> 
+    case list_element_size(Size) of
+        inlineComposite -> Count + 1;
+        Bits -> 1 + (((Count * Bits) - 1) div 64)
+    end;
+ref_data_size(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize }}) -> 
+    DSize + PSize.
+
 ptr_type(0, 0) -> null;
 ptr_type(Offset, _) -> 
     ptr_type(Offset band 3).
@@ -227,7 +233,7 @@ list_element_size(byte) -> 8;
 list_element_size(twoBytes) -> 16;
 list_element_size(fourBytes) -> 32;
 list_element_size(eightBytes) -> 64;
-list_element_size(inlineComposite) -> undefined.
+list_element_size(inlineComposite) -> inlineComposite.
 
 get_segment(Len, #ref{ segment=SegmentId, pos=Pos,
                        offset=Offset, data=Data }) ->

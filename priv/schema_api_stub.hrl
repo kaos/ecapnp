@@ -8,12 +8,20 @@ _name_(set, Field, Value, Object) ->
 _name_(root, Type, Message) ->
     ecapnp:get_root(Type, _name_(schema), Message);
 _name_(get, Field, Object) ->
-    ecapnp:get(Field, Object).
+    ecapnp:get(Field, Object);
+_name_(TypeCast, Type, Object)
+  when TypeCast == to_struct;
+       TypeCast == to_list ->
+    ecapnp_obj:TypeCast(Type, Object).
 
 %% _name_/2
 _name_(root, Type) ->
     ecapnp:set_root(Type, _name_(schema));
 _name_(get, Object) ->
-    ecapnp:get(Object).
+    ecapnp:get(Object);
+_name_(TypeCast, Object)
+  when TypeCast == to_text;
+       TypeCast == to_data ->
+    ecapnp_obj:TypeCast(Object).
 
 %% _name_/1

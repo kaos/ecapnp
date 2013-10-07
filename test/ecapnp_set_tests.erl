@@ -114,5 +114,26 @@ object_field_test() ->
        >>,
       Data).
 
-    
+object_as_struct_test() ->
+    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
+    {ok, Obj} = test(set, listAny, 'Simple', Root),
+    ok = test(set, simpleMessage, <<"object text">>, Obj),
+    #msg{ alloc=[Alloc], data=[<<Data:64/binary-unit:8, _/binary>>]} = ecapnp_data:get_message((Root#object.ref)#ref.data),
+    ?assertEqual(8, Alloc),
+    ?assertEqual(
+       <<0,0,0,0, 0,0,2,0, %% struct ref off 0, 0 data, 2 ptrs
+         %% pointers
+         0:64/integer-little, %% listInts: null
+         0,0,0,0, 1,0,2,0, %% listAny: 'Simple' struct
+
+         0:64/integer-little, %% data
+         0:64/integer-little, %% message
+         1,0,0,0, 98,0,0,0, %% ref to 12 bytes of text
+
+         "object text", 0,
+         0:32/integer-little %% padding
+       >>,
+      Data).
+
+
 -endif.

@@ -83,7 +83,13 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
         object ->
             case Value of
                 {ObjType, ObjValue} ->
-                    set_field(Ptr#ptr{ type=ObjType }, ObjValue, StructRef)
+                    set_field(Ptr#ptr{ type=ObjType }, ObjValue, StructRef);
+                ObjType ->
+                    ObjRef = ecapnp_schema:set_ref_to(
+                               ObjType,
+                               ecapnp_ref:ptr(Idx, StructRef)),
+                    {ecapnp_ref:alloc_data(ObjRef),
+                     ecapnp_obj:from_ref(ObjRef, ObjType)}
             end;
         {list, ElementType} ->
             if is_integer(Value) ->

@@ -18,7 +18,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([type_of/1, lookup/2, size_of/1, size_of/2,
-         data_size/1, ptrs_size/1]).
+         data_size/1, ptrs_size/1, set_ref_to/2]).
 
 -include("ecapnp.hrl").
 
@@ -91,6 +91,11 @@ size_of(#struct{ dsize=DSize, psize=PSize }) -> DSize + PSize.
 data_size(#struct{ dsize=Size }) -> Size.
 ptrs_size(#struct{ psize=Size }) -> Size.
 
+set_ref_to(Type, Ref) ->
+    case lookup(Type, Ref) of
+        {ok, #struct{ dsize=DSize, psize=PSize }} ->
+            Ref#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }
+    end.
 
 %% ===================================================================
 %% internal functions

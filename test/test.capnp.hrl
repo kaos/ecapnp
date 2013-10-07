@@ -10,13 +10,21 @@ test(set, Field, Value, Object) ->
 test(root, Type, Message) ->
     ecapnp:get_root(Type, test(schema), Message);
 test(get, Field, Object) ->
-    ecapnp:get(Field, Object).
+    ecapnp:get(Field, Object);
+test(TypeCast, Type, Object)
+  when TypeCast == to_struct;
+       TypeCast == to_list ->
+    ecapnp_obj:TypeCast(Type, Object).
 
 %% test/2
 test(root, Type) ->
     ecapnp:set_root(Type, test(schema));
 test(get, Object) ->
-    ecapnp:get(Object).
+    ecapnp:get(Object);
+test(TypeCast, Object)
+  when TypeCast == to_text;
+       TypeCast == to_data ->
+    ecapnp_obj:TypeCast(Object).
 
 %% test/1
 
