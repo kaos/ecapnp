@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module ecapnp_ref</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module ecapnp_ref</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#alloc-4">alloc/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#alloc_data-1">alloc_data/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#alloc_list-3">alloc_list/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#follow_far-1">follow_far/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get-3">get/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get-4">get/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#null_ref-1">null_ref/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#ptr-2">ptr/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_data-1">read_data/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_data-2">read_data/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_list-1">read_list/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_list-2">read_list/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_struct_data-3">read_struct_data/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_struct_data-4">read_struct_data/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_struct_ptr-2">read_struct_ptr/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_struct_ptr-3">read_struct_ptr/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_text-1">read_text/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#read_text-2">read_text/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#set-2">set/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#write_data-3">write_data/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#write_list-4">write_list/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#write_struct_data-4">write_struct_data/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#write_struct_ptr-2">write_struct_ptr/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#write_text-3">write_text/3</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="alloc-3">alloc/3</a></h3>
+<div class="spec">
+<p><tt>alloc(SegmentId, Size, Data) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="alloc-4">alloc/4</a></h3>
+<div class="spec">
+<p><tt>alloc(Kind, SegmentId, Size, Data) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="alloc_data-1">alloc_data/1</a></h3>
+<div class="spec">
+<p><tt>alloc_data(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="alloc_list-3">alloc_list/3</a></h3>
+<div class="spec">
+<p><tt>alloc_list(Idx, Kind, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="copy-1">copy/1</a></h3>
+<div class="spec">
+<p><tt>copy(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="follow_far-1">follow_far/1</a></h3>
+<div class="spec">
+<p><tt>follow_far(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get-3">get/3</a></h3>
+<div class="spec">
+<p><tt>get(SegmentId, Pos, Data) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get-4">get/4</a></h3>
+<div class="spec">
+<p><tt>get(SegmentId, Pos, Data, FollowFar) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="null_ref-1">null_ref/1</a></h3>
+<div class="spec">
+<p><tt>null_ref(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="ptr-2">ptr/2</a></h3>
+<div class="spec">
+<p><tt>ptr(Idx, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_data-1">read_data/1</a></h3>
+<div class="spec">
+<p><tt>read_data(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_data-2">read_data/2</a></h3>
+<div class="spec">
+<p><tt>read_data(Ref, Default) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_list-1">read_list/1</a></h3>
+<div class="spec">
+<p><tt>read_list(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_list-2">read_list/2</a></h3>
+<div class="spec">
+<p><tt>read_list(Ref, Default) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_struct_data-3">read_struct_data/3</a></h3>
+<div class="spec">
+<p><tt>read_struct_data(Align, Len, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_struct_data-4">read_struct_data/4</a></h3>
+<div class="spec">
+<p><tt>read_struct_data(Align, Len, Ref, Default) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_struct_ptr-2">read_struct_ptr/2</a></h3>
+<div class="spec">
+<p><tt>read_struct_ptr(Idx, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_struct_ptr-3">read_struct_ptr/3</a></h3>
+<div class="spec">
+<p><tt>read_struct_ptr(Idx, Ref, Default) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_text-1">read_text/1</a></h3>
+<div class="spec">
+<p><tt>read_text(Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="read_text-2">read_text/2</a></h3>
+<div class="spec">
+<p><tt>read_text(Ref, Default) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="set-2">set/2</a></h3>
+<div class="spec">
+<p><tt>set(Kind, Ref0) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="write_data-3">write_data/3</a></h3>
+<div class="spec">
+<p><tt>write_data(Data, Ptr, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="write_list-4">write_list/4</a></h3>
+<div class="spec">
+<p><tt>write_list(Idx, ElementIdx, Value, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="write_struct_data-4">write_struct_data/4</a></h3>
+<div class="spec">
+<p><tt>write_struct_data(Align, Len, Value, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="write_struct_ptr-2">write_struct_ptr/2</a></h3>
+<div class="spec">
+<p><tt>write_struct_ptr(Ptr, Ref) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="write_text-3">write_text/3</a></h3>
+<div class="spec">
+<p><tt>write_text(Text, Ptr, Ref) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Oct 8 2013, 11:45:31.</i></p>
+</body>
+</html>

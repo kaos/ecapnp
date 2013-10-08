@@ -1,0 +1,4 @@
+{application,ecapnp}.
+{packages,[]}.
+{modules,[ecapnp,ecapnp_data,ecapnp_get,ecapnp_message,ecapnp_obj,ecapnp_ref,
+          ecapnp_schema,ecapnp_serialize,ecapnp_set,ecapnp_val,ecapnpc]}.
