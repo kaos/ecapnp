@@ -10,58 +10,144 @@
 <hr>
 
 <h1>Module ecapnpc</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>The Erlang Cap'n Proto Compiler plugin.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>The Erlang Cap'n Proto Compiler plugin.</p>
+ 
+  <p>This module takes a <a href="http://kentonv.github.io/capnproto/otherlang.html#how_to_write_compiler_plugins"><code>CodeGeneratorRequest</code></a>  
+message and compiles the requested schema files into Erlang header  
+files.</p>
+ 
+  <p>Thus, a <code>my_schema.capnp</code> will be compiled to
+  <code>my_schema.capnp.hrl</code>, implementing <code>my_schema/N</code> functions for
+  reading and writing Cap'n Proto messages using <code>my_schema</code>.</p>
+ 
+ 
+  <h3><a name="Schema_functions">Schema functions</a></h3>
+ 
+  The schema functions implemented in a compiled schema header file are:
+  <dl>
+    <dt><code>fun((root, <a href="#type-schema_type">schema_type()</a>, <a href="#type-message">message()</a>) -&gt; {ok, <a href="#type-object">object()</a>})</code></dt>
+    <dd>Get a reference to the root object in message.</dd>
+ 
+    <dt><code>fun((root, <a href="#type-schema_type">schema_type()</a>) -&gt; {ok, <a href="#type-object">object()</a>})</code></dt>
+    <dd>Set root object type for a new message.</dd>
+ 
+    <dt><code>fun((get, <a href="#type-field_name">field_name()</a>, <a href="#type-object">object()</a>) -&gt; <a href="#type-field_value">field_value()</a>)</code></dt>
+    <dd>Read object field value.</dd>
+ 
+    <dt><code>fun((get, <a href="#type-object">object()</a>) -&gt; <a href="#type-field_name">field_name()</a> | {<a href="#type-field_name">field_name()</a>, <a href="#type-field_value">field_value()</a>})</code></dt>
+    <dd>Read unnamed union value of object.</dd>
+ 
+    <dt><code>fun((set, <a href="#type-field_name">field_name()</a>, <a href="#type-field_value">field_value()</a>, <a href="#type-object">object()</a>) -&gt; ok)</code></dt>
+    <dd>Write value to object field.</dd>
+ 
+    <dt><code>fun((to_struct, <a href="#type-schema_type">schema_type()</a>, <a href="#type-object">object()</a>) -&gt; <a href="#type-object">object()</a>)</code></dt>
+    <dd>Type cast object to another struct type.</dd>
+ 
+    <dt><code>fun((to_list, <a href="#type-schema_type">schema_type()</a>, <a href="#type-object">object()</a>) -&gt; list())</code></dt>
+    <dd>Type cast object to list.</dd>
+ 
+    <dt><code>fun((to_text | to_data, <a href="#type-object">object()</a>) -&gt; binary())</code></dt>
+    <dd>Type cast object to text or data.</dd>
+ 
+    <dt><code>fun((schema) -&gt; <a href="#type-schema">schema()</a>)</code></dt>
+    <dd>Get the compiled schema definition.</dd>
+  </dl>
+ 
+  Where <code>fun</code> is named after the basename of the schema file (refer
+  to the <code>my_schema.capnp</code> example in the <a href="#Description">Description</a> section).
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
+<p><tt>field_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-message">message()</a></h3>
+<p><tt>message() = [binary()]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
+<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
+<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
+<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
+<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema">schema()</a></h3>
+<p><tt>schema() = #schema{node = undefined | <a href="#type-schema_node">schema_node()</a>, types = <a href="#type-node_types">node_types()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#compile_data-1">compile_data/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#compile_file-1">compile_file/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#compile_message-1">compile_message/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#schema-1">schema/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#schema-2">schema/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#schema-3">schema/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#schema-4">schema/4</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#compile_data-1">compile_data/1</a></td><td>Compile the <code>CodeGeneratorRequest</code> message (unpacked) in
+  <code>Data</code>.</td></tr>
+<tr><td valign="top"><a href="#compile_file-1">compile_file/1</a></td><td>Read a <code>CodeGeneratorRequest</code> message (unpacked) from
+  <code>FileName</code> and compile it.</td></tr>
+<tr><td valign="top"><a href="#compile_message-1">compile_message/1</a></td><td>Compile the <code>CodeGeneratorRequest</code> message.</td></tr>
+<tr><td valign="top"><a href="#schema-0">schema/0</a></td><td>The Cap'n Proto compile schema.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="compile_data-1">compile_data/1</a></h3>
 <div class="spec">
-<p><tt>compile_data(Data) -&gt; any()</tt></p>
-</div>
+<p><tt>compile_data(Data::binary()) -&gt; ok</tt><br></p>
+</div><p>Compile the <code>CodeGeneratorRequest</code> message (unpacked) in
+  <code>Data</code>.</p>
 
 <h3 class="function"><a name="compile_file-1">compile_file/1</a></h3>
 <div class="spec">
-<p><tt>compile_file(FileName) -&gt; any()</tt></p>
-</div>
+<p><tt>compile_file(FileName::<a href="file.html#type-name_all">file:name_all()</a>) -&gt; ok</tt><br></p>
+</div><p>Read a <code>CodeGeneratorRequest</code> message (unpacked) from
+  <code>FileName</code> and compile it.</p>
 
 <h3 class="function"><a name="compile_message-1">compile_message/1</a></h3>
 <div class="spec">
-<p><tt>compile_message(Message) -&gt; any()</tt></p>
-</div>
+<p><tt>compile_message(Message::<a href="#type-message">message()</a>) -&gt; ok</tt><br></p>
+</div><p>Compile the <code>CodeGeneratorRequest</code> message. The <code>Message</code>
+  argument holds the raw segments data to process, no futher
+  processing on the message itself will be carried out prior to the
+  compilation step.</p>
 
-<h3 class="function"><a name="schema-1">schema/1</a></h3>
+<h3 class="function"><a name="schema-0">schema/0</a></h3>
 <div class="spec">
-<p><tt>schema(X1) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="schema-2">schema/2</a></h3>
-<div class="spec">
-<p><tt>schema(X1, Type) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="schema-3">schema/3</a></h3>
-<div class="spec">
-<p><tt>schema(X1, Type, Message) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="schema-4">schema/4</a></h3>
-<div class="spec">
-<p><tt>schema(X1, Field, Value, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>schema() -&gt; <a href="#type-schema">schema()</a></tt><br></p>
+</div><p>The Cap'n Proto compile schema.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 8 2013, 11:45:31.</i></p>
+<p><i>Generated by EDoc, Oct 8 2013, 22:03:39.</i></p>
 </body>
 </html>
