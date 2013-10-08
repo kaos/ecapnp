@@ -295,7 +295,8 @@ default_value(Type, {_, Object})
 default_value({list, Type}, {list, Value}) ->
     case ecapnp_obj:to_list(Type, Value) of
         Objs when is_record(hd(Objs), object) ->
-            [ecapnp_obj:copy(Obj) || Obj <- Objs];
+            ecapnp_obj:copy(Value);
+            %[ecapnp_obj:copy(Obj) || Obj <- Objs];
         List -> List
     end;
 default_value({Type, _}, {Type, Value}) -> Value;

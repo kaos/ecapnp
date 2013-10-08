@@ -117,6 +117,37 @@ copy_test() ->
     Ref = ecapnp_ref:get(0, 0, Data),
     ?assertEqual(Bin, ecapnp_ref:copy(Ref)).
 
+copy_struct_list_test() ->
+    Bin = <<1,0,0,0, 39,0,0,0,
+            8,0,0,0, 1,0,1,0,
+            1,2,3,4, 5,6,7,8,
+            9,0,0,0, 34,0,0,0,
+            0:64/integer-little-unit:2,
+            "foo", 0,0:32/integer-little
+          >>,
+    Data = data([Bin]),
+    Ref = ecapnp_ref:get(0, 0, Data),
+    ?assertEqual(Bin, ecapnp_ref:copy(Ref)).
+
+copy_struct_list2_test() ->
+    Bin = <<1,0,0,0, 55,0,0,0,
+            8,0,0,0, 1,0,2,0,
+
+            1,2,3,4, 5,6,7,8,
+            17,0,0,0, 34,0,0,0,
+            0:64/integer-little,
+
+            8,7,6,5, 4,3,2,1,
+            9,0,0,0, 34,0,0,0,
+            0:64/integer-little,
+
+            "foo", 0,0:32/integer-little,
+            "bar", 0,0:32/integer-little
+          >>,
+    Data = data([Bin]),
+    Ref = ecapnp_ref:get(0, 0, Data),
+    ?assertEqual(Bin, ecapnp_ref:copy(Ref)).
+
 alloc_test() ->
     Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
     Ref = ecapnp_ref:alloc(0, 5, Data),
@@ -168,7 +199,7 @@ write_struct_list_test() ->
     Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
     Kind = #struct_ref{ dsize=1, psize=2 },
     Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
-    ok = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
+    {ok, _ListRef} = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
     ok = ecapnp_ref:write_list(0, 0, <<1:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 2, <<0:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 1, <<1:1>>, Ref),

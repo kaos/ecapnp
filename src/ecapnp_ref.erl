@@ -53,10 +53,12 @@ get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
                  ecapnp_data:get_segment(SegmentId, Pos, 1, Data),
                  Data, FollowFar).
 
-ptr(Idx, #ref{ segment=SegmentId, pos=Pos, data=Data,
+ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                kind=#struct_ref{ dsize=DSize, psize=PSize } })
   when Idx >= 0, Idx < PSize ->
-    #ref{ segment=SegmentId, pos=Pos + 1 + DSize + Idx, data=Data }.
+    #ref{ segment=SegmentId,
+          pos=Pos + 1 + Offset + DSize + Idx,
+          data=Data }.
 
 read_struct_data(Align, Len, Ref) ->
     read_struct_data(Align, Len, Ref, <<0:Len/integer>>).
@@ -155,15 +157,17 @@ write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
                                      count=Count
                                     } })).
 
-alloc_data(#ref{ segment=SegmentId, data=Data }=Ref) ->
-    Size = ref_data_size(Ref),
+alloc_data(#ref{ segment=SegmentId, data=Data }=Ref0) ->
+    Size = ref_data_size(Ref0),
     {Seg, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     Seg = SegmentId, %% TODO: support far ptrs
-    write( update_offset(Pos, Ref) ).
+    Ref = update_offset(Pos, Ref0),
+    ok = write(Ref),
+    Ref.
 
 alloc_list(Idx, Kind, Ref) ->
     Ptr = ptr(Idx, Ref),
-    alloc_data(Ptr#ref{ kind=Kind }).
+    {ok, alloc_data(Ptr#ref{ kind=Kind })}.
 
 write_list(Idx, ElementIdx, Value, Ref) ->
     #ref{ kind=#list_ref{ size=Size, count=_Count }}=Ptr
@@ -176,7 +180,7 @@ write_list(Idx, ElementIdx, Value, Ref) ->
     <<Pre:Align/bits, _:Len/bits, Post/bits>>
         = get_segment(1 + ((Align + Len - 1) div 64), Ptr),
     set_segment(<<Pre/bits, Value:Len/bits, Post/bits>>, Ptr).
-                           
+
 
 follow_far(#ref{ offset=Offset, data=Data,
                  kind=#far_ref{ segment=SegmentId, double_far=Double } }) ->
@@ -190,9 +194,7 @@ follow_far(#ref{ offset=Offset, data=Data,
 
 copy(Ref) ->
     iolist_to_binary(
-      lists:reverse(
-        copy(Ref, [])
-       )).
+      flatten_ref_copy(copy_ref(Ref))).
 
 null_ref(#ref{ data=Data }) -> #ref{ data=Data }.
 
@@ -260,19 +262,9 @@ check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
     ok.
 
 
-%% move_ptr(Idx, Ptr, #ref{ segment=SegmentId, pos=Pos,
-%%                          offset=Offset, data=Data }) ->
-%%     Ptr#ref{ segment=SegmentId, pos=Pos + 1 + Offset + Idx,
-%%              offset=undefined, data=Data }.
-
 update_offset(Target, #ref{ pos=Pos }=Ref) ->
     Ref#ref{ offset=Target - Pos - 1 }.
 
-
-
-%% data_ref(Data) when is_list(Data) -> #ref{ kind=#list_ref{} };
-%% data_ref(Data) when is_binary(Data) -> #ref{ kind=#list_ref{ size=byte, count=size(Data) } }.
-%% ?? data_ref(Data) when is_record(Data, ref) -> #ref{ kind=#struct_ref{} }.
 
 read_segment(SegmentId, Pos, Segment, Data, FollowFar)
   when size(Segment) == 8 ->
@@ -323,51 +315,73 @@ read_list_element_bits(Bits, Left, Count, Rest, Acc) ->
     <<Next:Left/bits, Bit:1/bits>> = Bits,
     read_list_element_bits(Next, Left - 1, Count - 1, Rest, [Bit|Acc]).
 
-copy(#ref{ kind=null }, Acc) -> [<<0:64/integer>>|Acc];
-copy(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }=Ref, Acc) ->
+copy_ref(#ref{ kind=null }=Ref) -> {Ref, 0, []};
+copy_ref(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }=Ref) ->
     StructData = read_struct_data(0, DSize * 64, Ref),
-    StructPtrs = [copy(read_struct_ptr(Idx, Ref), [])
+    StructPtrs = [copy_ref(read_struct_ptr(Idx, Ref))
                   || Idx <- lists:seq(0, PSize - 1)],
-    [[create_ptr(Ref), StructData,
-      update_offsets(StructPtrs, length(StructPtrs) - 1, [], [])]
-     |Acc];
-copy(#ref{ kind=#list_ref{ size=Size } }=Ref, Acc) ->
-    Ptr = create_ptr(Ref),
+    Size = if Ref#ref.pos >= 0 ->
+                   DSize + PSize;
+              true -> 0
+           end,
+    {Ref, Size, [StructData|StructPtrs]};
+copy_ref(#ref{ kind=#list_ref{ size=Size, count=Count } }=Ref) ->
     case Size of
         inlineComposite ->
-            #ref{ offset=Len }=Tag
-                = get(Ref#ref.segment,
+            Tag = get(Ref#ref.segment,
                       Ref#ref.pos + Ref#ref.offset + 1,
                       Ref#ref.data),
-            [[Ptr, create_ptr(Len, Tag),
-              [copy(Elem) || Elem <- read_list(Ref)]]
-             |Acc];
+            {Ref, Count + 1, [create_ptr(Tag#ref.offset, Tag)
+                              |[copy_ref(Elem)
+                                || Elem <- read_list(Ref)]]};
         pointer ->
-            [[Ptr, [copy(Elem) || Elem <- read_list(Ref)]]|Acc];
+            {Ref, Count, [copy_ref(Elem) || Elem <- read_list(Ref)]};
         _ ->
-            Count = (Ref#ref.kind)#list_ref.count,
             ElementSize = list_element_size(Size),
-            List = get_segment(1 + ((ElementSize * Count - 1) div 64), Ref),
-            [[Ptr, List]|Acc]
+            Len = 1 + (((ElementSize * Count) - 1) div 64),
+            {Ref, Len, [get_segment(Len, Ref)]}
     end.
 
-update_offsets([], _, AccPtrs, AccData) ->
-    [lists:reverse(AccPtrs), lists:reverse(AccData)];
-update_offsets([[[Ptr|Data]]|Ptrs], Offset, AccPtrs, AccData) ->
-    update_offsets(
-      Ptrs,
-      Offset + iolist_size(Data) - 1,
-      [ptr_offset(Ptr, Offset)|AccPtrs],
-      [Data|AccData]);
-update_offsets([Other|Ptrs], Offset, AccPtrs, AccData) ->
-    update_offsets(Ptrs, Offset - 1, [Other|AccPtrs], AccData).
+flatten_ref_copy({Ref, Len, Copy}) ->
+    [create_ptr(0, Ref), flatten_copy(Copy, Len - 1)].
+
+flatten_copy(Copy, Offset) ->
+    case lists:mapfoldl(
+           fun(Bin, {RefData, Pad}) when is_binary(Bin) ->
+                   {Bin, {RefData, Pad - (size(Bin) div 8)}};
+              ({Ref, Len, Data}, {RefData, Pad}) ->
+                   Ptr = create_ptr(Pad, Ref),
+                   {Ptr, {[Data|RefData], Pad - (size(Ptr) div 8) + Len}}
+           end,
+           {[], Offset}, Copy) of
+        {Data, {[], _}} -> Data;
+        {Data, {RefData, Padding}} ->
+            [Data|flatten_copy(
+                    lists:flatten(
+                      lists:reverse(RefData)),
+                    Padding)]
+    end.
 
 
-ptr_offset(<<_:6/bits, Kind:2/integer, _:24/bits, Data/binary>>, Offset) ->
-    OffsetAndKind = (Offset bsl 2) bor Kind,
-    <<OffsetAndKind:32/integer-signed-little, Data/binary>>.
+%% update_offsets([], _, AccPtrs, AccData) ->
+%%     [lists:reverse(AccPtrs), lists:reverse(AccData)];
+%% update_offsets([[[Ptr|Data]]|Ptrs], Offset, AccPtrs, AccData) ->
+%%     update_offsets(
+%%       Ptrs,
+%%       Offset + iolist_size(Data) - 1,
+%%       [ptr_offset(Ptr, Offset)|AccPtrs],
+%%       [Data|AccData]);
+%% update_offsets([Other|Ptrs], Offset, AccPtrs, AccData) ->
+%%     update_offsets(Ptrs, Offset - 1, [Other|AccPtrs], AccData).
 
-create_ptr(Ptr) -> create_ptr(0, Ptr).
+
+%% ptr_offset(<<_:6/bits, Kind:2/integer, _:24/bits, Data/binary>>, Offset) ->
+%%     OffsetAndKind = (Offset bsl 2) bor Kind,
+%%     <<OffsetAndKind:32/integer-signed-little, Data/binary>>;
+%% ptr_offset(<<>>, _) -> <<>>.
+
+
+%% create_ptr(Ptr) -> create_ptr(0, Ptr).
 create_ptr(_Offset, #ref{ pos=-1 }) -> <<>>;
 create_ptr(_Offset, null) -> <<0:64/integer>>;
 create_ptr(Offset, #ref{ kind=Kind }) -> create_ptr(Offset, Kind);

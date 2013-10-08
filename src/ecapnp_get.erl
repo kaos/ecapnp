@@ -97,10 +97,10 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
         {list, ElementType} ->
             case ecapnp_ref:read_list(Ref, undefined) of
                 undefined ->
-                    Null = ecapnp_ref:null_ref(Ref),
-                    if is_binary(hd(Default)) ->
-                            [read_ptr(#ptr{ type=ElementType, default=D },
-                                      Null) || D <- Default];
+                    if is_binary(Default) ->
+                            ecapnp_obj:from_data(
+                              {Ref#ref.data, Default},
+                              Type);
                        true ->
                             Default
                     end;

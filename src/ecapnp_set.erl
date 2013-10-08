@@ -77,28 +77,28 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                   ecapnp_ref:ptr(Idx, StructRef),
                   StructRef);
         data -> ecapnp_ref:write_data(
-                 Value,
-                 ecapnp_ref:ptr(Idx, StructRef),
-                 StructRef);
+                  Value,
+                  ecapnp_ref:ptr(Idx, StructRef),
+                  StructRef);
         object ->
             case Value of
                 {ObjType, ObjValue} ->
                     set_field(Ptr#ptr{ type=ObjType }, ObjValue, StructRef);
                 ObjType ->
-                    ObjRef = ecapnp_schema:set_ref_to(
-                               ObjType,
-                               ecapnp_ref:ptr(Idx, StructRef)),
-                    {ecapnp_ref:alloc_data(ObjRef),
-                     ecapnp_obj:from_ref(ObjRef, ObjType)}
+                    ObjRef = ecapnp_ref:alloc_data(
+                               ecapnp_schema:set_ref_to(
+                                 ObjType, ecapnp_ref:ptr(
+                                            Idx, StructRef))),
+                    {ok, ecapnp_obj:from_ref(ObjRef, ObjType)}
             end;
         {list, ElementType} ->
             if is_integer(Value) ->
-                    ecapnp_ref:alloc_list(
-                      Idx,
-                      #list_ref{
-                         size=list_element_size(ElementType, StructRef),
-                         count=Value },
-                      StructRef);
+                    {ok, ecapnp_ref:alloc_list(
+                           Idx,
+                           #list_ref{
+                              size=list_element_size(ElementType, StructRef),
+                              count=Value },
+                           StructRef)};
                is_tuple(Value), size(Value) == 2 -> %% {Idx, Value}
                     ElementValue =
                         case list_element_size(ElementType, StructRef) of

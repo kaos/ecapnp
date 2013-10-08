@@ -118,3 +118,14 @@ field_values_test() ->
     ?assertEqual(<<"default message">>, test(get, message, Struct)),
     ?assertEqual(222, test(get, value, Struct)),
     ?assertEqual(333, test(get, defaultValue, Struct)).
+
+
+default_list_test() ->
+    {ok, Root} = test(root, 'ListTest', [<<0:64/integer>>]),
+    ?assertEqual([456, 789, -123], test(get, listInts, Root)),
+    ?assertEqual([], ecapnp_obj:to_list(bool, test(get, listAny, Root))),
+    [Obj1, Obj2] = test(get, listSimples, Root),
+    [?assertEqual(E, test(get, F, O))
+     || {O, T} <- [{Obj1, [{value, 1}, {message, <<"first">>}]},
+                   {Obj2, [{value, 2}, {message, <<"second">>}]}],
+        {F, E} <- T].
