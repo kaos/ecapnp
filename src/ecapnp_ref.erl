@@ -362,26 +362,6 @@ flatten_copy(Copy, Offset) ->
                     Padding)]
     end.
 
-
-%% update_offsets([], _, AccPtrs, AccData) ->
-%%     [lists:reverse(AccPtrs), lists:reverse(AccData)];
-%% update_offsets([[[Ptr|Data]]|Ptrs], Offset, AccPtrs, AccData) ->
-%%     update_offsets(
-%%       Ptrs,
-%%       Offset + iolist_size(Data) - 1,
-%%       [ptr_offset(Ptr, Offset)|AccPtrs],
-%%       [Data|AccData]);
-%% update_offsets([Other|Ptrs], Offset, AccPtrs, AccData) ->
-%%     update_offsets(Ptrs, Offset - 1, [Other|AccPtrs], AccData).
-
-
-%% ptr_offset(<<_:6/bits, Kind:2/integer, _:24/bits, Data/binary>>, Offset) ->
-%%     OffsetAndKind = (Offset bsl 2) bor Kind,
-%%     <<OffsetAndKind:32/integer-signed-little, Data/binary>>;
-%% ptr_offset(<<>>, _) -> <<>>.
-
-
-%% create_ptr(Ptr) -> create_ptr(0, Ptr).
 create_ptr(_Offset, #ref{ pos=-1 }) -> <<>>;
 create_ptr(_Offset, null) -> <<0:64/integer>>;
 create_ptr(Offset, #ref{ kind=Kind }) -> create_ptr(Offset, Kind);
