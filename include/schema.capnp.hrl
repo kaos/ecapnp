@@ -1,24 +1,53 @@
 %%% DO NOT EDIT, this file was generated.
 -include_lib("ecapnp/include/ecapnp.hrl").
--export([schema/1, schema/2, schema/3, schema/4]).
 
-%% schema/4
+-compile({nowarn_unused_function, schema/1}).
+-compile({nowarn_unused_function, schema/2}).
+-compile({nowarn_unused_function, schema/3}).
+-compile({nowarn_unused_function, schema/4}).
+
+%% Write value to object field.
+%% -spec schema(set, Field::atom(), Value::term(), Object::#object{}) -> ok.
 schema(set, Field, Value, Object) ->
     ecapnp:set(Field, Value, Object).
 
-%% schema/3
+%% Get a reference to the root object in message.
+%% -spec schema(root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::#object{}}.
 schema(root, Type, Message) ->
     ecapnp:get_root(Type, schema(schema), Message);
-schema(get, Field, Object) ->
-    ecapnp:get(Field, Object).
 
-%% schema/2
+%% Read object field value.
+%% -spec schema(get, Field::atom(), Object::#object{}) -> term().
+schema(get, Field, Object) ->
+    ecapnp:get(Field, Object);
+
+%% Type cast object to another struct or list.
+%% -spec schema(to_struct, Type::atom() | integer(), Object1::#object{}) -> Object2#object{}.
+%% -spec schema(to_list, Type::atom() | integer(), Object::#object{}) -> list().
+schema(TypeCast, Type, Object)
+  when TypeCast == to_struct;
+       TypeCast == to_list ->
+    ecapnp_obj:TypeCast(Type, Object).
+
+%% Set root type for a new message.
+%% -spec schema(root, Type::atom() | integer()) -> {ok, Root::#object{}}.
 schema(root, Type) ->
     ecapnp:set_root(Type, schema(schema));
-schema(get, Object) ->
-    ecapnp:get(Object).
 
-%% schema/1
+%% Read unnamed union value of object.
+%% -spec schema(get, Object::#object{}) -> Tag::atom() | {Tag::atom(), Value::term()}.
+schema(get, Object) ->
+    ecapnp:get(Object);
+
+%% Type cast object to text/data.
+%% -spec schema(to_text | to_data, Object::#object{}) -> binary().
+schema(TypeCast, Object)
+  when TypeCast == to_text;
+       TypeCast == to_data ->
+    ecapnp_obj:TypeCast(Object).
+
+%% Get the compiled schema.
+%% -spec schema(schema) -> #schema{}.
 
 schema(schema) ->
   #schema{

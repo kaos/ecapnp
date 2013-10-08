@@ -22,6 +22,8 @@
 %-export([type/1, type/2]).
 
 -include("ecapnp.hrl").
+%%-export_type([object/0, field_name/0, value/0]).
+
 
 %% ===================================================================
 %% API functions

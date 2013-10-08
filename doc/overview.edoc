@@ -1,0 +1,70 @@
+@copyright 2013, Andreas Stenius <kaos@astekk.se>
+@author Andreas Stenius <kaos@astekk.se> [http://blog.astekk.se]
+@title Overview of ecapnp: the Cap'n Proto library for Erlang
+@version {@version}
+@doc
+
+== Description ==
+
+The `ecapnp' library implements the a Cap'n Proto compiler plugin for
+compiling schema files to Erlang header files.
+
+The compiled schemas can then be included in any Erlang module to
+process Cap'n Proto messages.
+
+To invoke the {@link ecapnpc. Cap'n Proto Erlang compiler plugin}, it
+is convenient to use the `capnpc-erl' script like this:
+<pre>
+  <code>capnpc -oerl my_schema.capnp</code>
+</pre>
+
+This requires that `ecapnp/bin/ecapnpc-erl' is in your `$PATH', and
+that `ecapnp' is in your Erlang <a
+href="http://www.erlang.org/doc/man/code.html#id102620">libs path</a>
+(hint: use the `ERL_LIBS' environment variable).
+
+//TODO: See {@section Installation} for more details.
+
+
+== Schema ==
+
+The schema file, once compiled into an Erlang `.hrl'-file and included
+in a module, exports a set of functions matching the name of the
+schema for reading and writing Cap'n Proto messages.
+
+Typically, this is `schema(root, ...)' for getting a <a
+href="http://kentonv.github.io/capnproto/encoding.html#messages">root
+object</a>, `schema(get, Field, Object)' for reading and `schema(set,
+Field, Value, Object)' for writing; where `schema' is the name of the
+schema file.
+
+There are also functions for type casting references to lists (or
+text/data) or other structs (useful when reading fields of type
+`object').
+
+See {@link ecapnpc} for details on the compiled schema.
+
+
+== Project info ==
+<dl>
+  <dt>Project page</dt><dd>[http://ecapnp.astekk.se]</dd>
+  <dt>Source code</dt><dd>[http://github.com/kaos/ecapnp]</dd>
+  <dt>Cap'n Proto</dt>
+  <dd>
+    Home: [http://capnproto.com] <br/>
+    Code: [http://github.com/kentonv/capnproto]
+  </dd>
+  <dt>License</dt><dd>
+   <pre>Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.</pre>
+  </dd>
+</dl>

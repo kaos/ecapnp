@@ -3,7 +3,7 @@
 
 -record(schema, {
           node :: schema_node(),
-          types=[] :: schema_types()
+          types=[] :: node_types()
          }).
 
 %% Field types
@@ -29,8 +29,8 @@
 %% TODO: turn the node vs schema node types inside out, so they are the same way that the ref's are in relation to the ref kind.
 
 -record(node, {
-          name :: atom(),
-          id=0 :: integer(),
+          name :: type_name(),
+          id=0 :: type_id(),
           source = <<>> :: binary()
          }).
 
@@ -41,13 +41,13 @@
           esize=inlineComposite :: element_size(),
           union_field=none :: #data{} | none,
           fields=[] :: object_fields(),
-          types=[] :: schema_types()
+          types=[] :: node_types()
          }).
 
 -record(enum, {
           node :: schema_node(),
           values=[] :: list(),
-          types=[] :: schema_types()
+          types=[] :: node_types()
          }).
 
 -record(interface, {
@@ -64,14 +64,6 @@
 -record(annotation, {
           node :: schema_node()
          }).
-
--type schema_node() :: #node{}.
--type schema_type() :: #struct{} | #enum{} | #interface{} | #const{} | #annotation{}.
--type schema_types() :: list({atom(), schema_type()}).
--type object_field() :: #data{} | #ptr{}.
--type object_fields() :: list({atom(), object_field()}).
--type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
--type value() :: number() | boolean() | list(value()) | binary() | null.
 
 
 %% Runtime data
@@ -101,7 +93,7 @@
 
 -record(object, {
           ref :: #ref{},
-          type=object :: schema_type() | object
+          type=object :: node_type() | object
          }).
 
 %% For internal use, deprecated
@@ -110,12 +102,25 @@
 
 %% Internal message struct for the data server
 -record(msg, {
-          schema :: #schema{},
+          schema :: schema(),
           alloc = [] :: list(integer()),
-          data = [] :: list(binary())
+          data = [] :: message()
          }).
 
-
+-type schema() :: #schema{}.
+-type schema_node() :: #node{}.
+-type node_type() :: #struct{} | #enum{} | #interface{} | #const{} | #annotation{}.
+-type node_types() :: list({atom(), node_type()}).
+-type field_name() :: atom().
+-type field_value() :: value() | object().
+-type object() :: #object{}.
+-type object_field() :: #data{} | #ptr{}.
+-type object_fields() :: list({field_name(), object_field()}).
+-type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
+-type value() :: number() | boolean() | list(value()) | binary() | null.
 -type ref_kind() :: null | #struct_ref{} | #list_ref{} | #far_ref{}.
 -type segment_id() :: integer().
-
+-type message() :: list(binary()).
+-type type_name() :: atom().
+-type type_id() :: integer().
+-type schema_type() :: type_name() | type_id().
