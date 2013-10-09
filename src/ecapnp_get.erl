@@ -61,13 +61,8 @@ ref_data(Type, Ref, Default) ->
 read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
     case Type of
         {enum, EnumType} ->
-            {ok, #enum{ values=Values }}
-                = ecapnp_schema:lookup(EnumType, StructRef),
             Tag = read_field(D#data{ type=uint16 }, StructRef),
-            case lists:keyfind(Tag, 1, Values) of
-                {Tag, Value} -> Value;
-                false -> Tag
-            end;
+            get_enum_value(EnumType, Tag, StructRef);
         {union, Fields} ->
             Tag = read_field(D#data{ type=uint16 }, StructRef),
             case lists:keyfind(Tag, 1, Fields) of
@@ -108,8 +103,17 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
                     [read_ptr(#ptr{ type=ElementType }, R)
                      || R <- Refs];
                 Values ->
-                    [ecapnp_val:get(ElementType, Data)
-                     || Data <- Values]
+                    case ElementType of
+                        {enum, EnumType} ->
+                            [get_enum_value(
+                               EnumType,
+                              ecapnp_val:get(uint16, Data),
+                               Ref) 
+                             || Data <- Values];
+                        _ ->
+                            [ecapnp_val:get(ElementType, Data)
+                             || Data <- Values]
+                    end
             end
     end.
 
@@ -136,3 +140,10 @@ read_obj(#ref{ kind=null, data=Data }, Type, Default0) ->
     end;
 read_obj(Ref, Type, _) ->
     ecapnp_obj:from_ref(Ref, Type).
+
+get_enum_value(Type, Tag, Ref) ->
+    {ok, #enum{ values=Values }} = ecapnp_schema:lookup(Type, Ref),
+    case lists:keyfind(Tag, 1, Values) of
+        {Tag, Value} -> Value;
+        false -> Tag
+    end.

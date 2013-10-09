@@ -82,10 +82,10 @@ schema(schema) ->
                     default= 0 }},
             {nestedNodes,
              #ptr{ type={list,{struct,16050641862814319170}}, idx=1,
-                   default= [] }},
+                   default= <<0,0,0,0,0,0,0,0>> }},
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=2,
-                   default= [] }}
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ],
          types=
            [#struct{
@@ -168,7 +168,7 @@ schema(schema) ->
               fields=
                 [{methods,
                   #ptr{ type={list,{struct,10736806783679155584}}, idx=3,
-                        default= [] }}
+                        default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0xb54ab3364333f598
@@ -178,7 +178,7 @@ schema(schema) ->
               fields=
                 [{enumerants,
                   #ptr{ type={list,{struct,10919677598968879693}}, idx=3,
-                        default= [] }}
+                        default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0x9ea0b19b37fb4435
@@ -206,7 +206,7 @@ schema(schema) ->
                          default= 0 }},
                  {fields,
                   #ptr{ type={list,{struct,11145653318641710175}}, idx=3,
-                        default= [] }}
+                        default= <<0,0,0,0,0,0,0,0>> }}
                 ]}
            ]},
        #struct{
@@ -227,7 +227,7 @@ schema(schema) ->
                     default= 0 }},
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
-                   default= [] }},
+                   default= <<0,0,0,0,0,0,0,0>> }},
             {discriminantValue,
              #data{ type=uint16, align=16,
                     default= 65535 }},
@@ -285,7 +285,7 @@ schema(schema) ->
                     default= 0 }},
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
-                   default= [] }}
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ]},
        #struct{
          node=#node{ %% 0x9500cce23b334d80
@@ -301,7 +301,7 @@ schema(schema) ->
                     default= 0 }},
             {params,
              #ptr{ type={list,{struct,14681955158633610486}}, idx=1,
-                   default= [] }},
+                   default= <<0,0,0,0,0,0,0,0>> }},
             {requiredParamCount,
              #data{ type=uint16, align=16,
                     default= 0 }},
@@ -310,7 +310,7 @@ schema(schema) ->
                    default= <<0,0,0,0,0,0,0,0>> }},
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=3,
-                   default= [] }}
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ],
          types=
            [#struct{
@@ -330,7 +330,7 @@ schema(schema) ->
                         default= <<0,0,0,0,0,0,0,0>> }},
                  {annotations,
                   #ptr{ type={list,{struct,17422339044421236034}}, idx=3,
-                        default= [] }}
+                        default= <<0,0,0,0,0,0,0,0>> }}
                 ]}
            ]},
        #struct{
@@ -461,10 +461,10 @@ schema(schema) ->
          fields=
            [{nodes,
              #ptr{ type={list,{struct,16610026722781537303}}, idx=0,
-                   default= [] }},
+                   default= <<0,0,0,0,0,0,0,0>> }},
             {requestedFiles,
              #ptr{ type={list,{struct,14981803260258615394}}, idx=1,
-                   default= [] }}
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ],
          types=
            [#struct{
@@ -481,7 +481,7 @@ schema(schema) ->
                         default= <<>> }},
                  {imports,
                   #ptr{ type={list,{struct,12560611460656617445}}, idx=1,
-                        default= [] }}
+                        default= <<0,0,0,0,0,0,0,0>> }}
                 ],
               types=
                 [#struct{

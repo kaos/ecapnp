@@ -353,17 +353,13 @@ ptr_field(Type, Index, Default) ->
 
 default_value(Type, #object{type=#struct{node=#node{name='Value'}}}=Object) ->
     default_value(Type, schema(get, Object));
-default_value(Type, {_, Object})
-  when (Type == object
-        orelse (is_tuple(Type) andalso element(1, Type) == struct)),
-       is_record(Object, object) ->
-    ecapnp_obj:copy(Object);
-default_value({list, Type}, {list, Value}) ->
-    case ecapnp_obj:to_list(Type, Value) of
-        Objs when is_record(hd(Objs), object) ->
-            ecapnp_obj:copy(Value);
-            %[ecapnp_obj:copy(Obj) || Obj <- Objs];
-        List -> List
+default_value(Type, {_, Object}) when is_record(Object, object) ->
+    if Type == object
+       orelse element(1, Type) == struct
+       orelse is_tuple(element(2, Type)) ->
+            ecapnp_obj:copy(Object);
+       element(1, Type) == list ->
+            ecapnp_obj:to_list(element(2, Type), Object)
     end;
 default_value({Type, _}, {Type, Value}) -> Value;
 default_value(Type, {Type, Value}) -> Value;
