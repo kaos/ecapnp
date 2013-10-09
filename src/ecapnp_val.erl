@@ -48,7 +48,7 @@ size(ValueType) ->
 %% internal functions
 %% ===================================================================
 
--define(DEFINE_TYPE(ValueType, Size, TypeSpec, ),
+-define(DEFINE_TYPE(ValueType, Size, TypeSpec),
         value(size, ValueType) -> Size;
         value(get, {ValueType, Data, Default}) ->
                PadSize = 7 - ((Size + 7) rem 8),
@@ -76,15 +76,36 @@ size(ValueType) ->
 ?DEFINE_TYPE(int16, 16, integer-signed-little);
 ?DEFINE_TYPE(int8, 8, integer-signed-little);
 ?DEFINE_TYPE(bool, 1, bits);
-?DEFINE_TYPE(float32, 32, float-little);
-?DEFINE_TYPE(float64, 64, float-little).
+?DEFINE_TYPE(float32, 32, bits); %% actual float conversion is done in the
+?DEFINE_TYPE(float64, 64, bits); %% to_value/from_value functions.
+value(size, void) -> 0;
+value(_, {void, _, _}) -> void.
+
+-define(INF_NAN_32(N,S), <<0:16,1:1,N:1,0:6,S:1,127:7>>).
+-define(INF_NAN_64(N,S), <<0:48,15:4,N:1,0:3,S:1,127:7>>).
 
 from_value(bool, <<0:1>>) -> false;
 from_value(bool, <<1:1>>) -> true;
+from_value(float32, ?INF_NAN_32(1, _)) -> nan;
+from_value(float32, ?INF_NAN_32(0, 0)) -> inf;
+from_value(float32, ?INF_NAN_32(0, 1)) -> '-inf';
+from_value(float32, <<Value:32/float-little>>) -> Value;
+from_value(float64, ?INF_NAN_64(1, _)) -> nan;
+from_value(float64, ?INF_NAN_64(0, 0)) -> inf;
+from_value(float64, ?INF_NAN_64(0, 1)) -> '-inf';
+from_value(float64, <<Value:64/float-little>>) -> Value;
 from_value(_, Value) -> Value.
 
 to_value(bool, true) -> <<1:1>>;
 to_value(bool, _) -> <<0:1>>;
+to_value(float32, inf) -> ?INF_NAN_32(0, 0);
+to_value(float32, '-inf') -> ?INF_NAN_32(0, 1);
+to_value(float32, nan) -> ?INF_NAN_32(1, 0);
+to_value(float32, Value) -> <<Value:32/float-little>>;
+to_value(float64, inf) -> ?INF_NAN_64(0, 0);
+to_value(float64, '-inf') -> ?INF_NAN_64(0, 1);
+to_value(float64, nan) -> ?INF_NAN_64(1, 0);
+to_value(float64, Value) -> <<Value:64/float-little>>;
 to_value(_, Value) when is_number(Value) -> Value;
 to_value(_, _) -> 0.
 
