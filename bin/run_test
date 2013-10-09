@@ -2,6 +2,7 @@
 %% -*- mode: erlang -*-
 
 -include("test.capnp.hrl").
+-define(SKIP, 127).
 
 main([File, Case, Test]) ->
     {ok, Data} = file:read_file(File),
@@ -11,7 +12,7 @@ main([Case, Test]) ->
     run_test(Case, Test, undefined);
 main(Args) ->
     io:format(standard_error, "ecapnp_test unknown args: ~p~n", [Args]),
-    halt(127).
+    halt(?SKIP).
 
 run_test(Case, Test, Message) when is_list(Case) ->
     try
@@ -31,7 +32,7 @@ run_test(Action, Test, _) ->
 
 not_implemented(Action, Test) ->
     io:format(standard_error, "Unknown test: ~p ~p.~n", [Action, Test]),
-    halt(127).
+    halt(?SKIP).
 
 
 decode(simpleTest, Msg) ->
