@@ -80,8 +80,8 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
 read_field(#ptr{ idx=Idx }=Ptr, StructRef) ->
     Ref = ecapnp_ref:read_struct_ptr(Idx, StructRef),
     read_ptr(Ptr, Ref);
-read_field(#group{ id=Type }, Ref) ->
-    ecapnp_obj:from_ref(Ref, Type).
+read_field(#group{ id=Type }, StructRef) ->
+    ecapnp_obj:from_ref(StructRef, Type).
 
 read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
     case Type of

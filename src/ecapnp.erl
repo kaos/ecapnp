@@ -18,11 +18,9 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 
 -export([get_root/3, get/1, get/2]).
--export([set_root/2, set/3]).
-%-export([type/1, type/2]).
+-export([set_root/2, set/2, set/3]).
 
 -include("ecapnp.hrl").
-%%-export_type([object/0, field_name/0, value/0]).
 
 
 %% ===================================================================
@@ -48,28 +46,15 @@ get(Field, Object)
   when is_atom(Field), is_record(Object, object) ->
     ecapnp_get:field(Field, Object).
 
+set(Value, Object)
+  when is_record(Object, object) ->
+    ecapnp_set:union(Value, Object).
+
 set(Field, Value, Object)
   when is_atom(Field), is_record(Object, object) ->
     ecapnp_set:field(Field, Value, Object).
-
-%% type(#object{ type=T }) ->
-%%     T.
-
-%% type(name, Object) ->
-%%     (type(Object))#node.name;
-%% type(id, Object) ->
-%%     (type(Object))#node.id;
-%% type(schema, Object) ->
-%%     {ok, Schema} = ecapnp_schema:type_of(Object),
-%%     Schema.
 
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-
-%% lookup_field(Name, Object) ->
-%%     proplists:get_value(
-%%       Name,
-%%       (type(schema, Object))#struct.fields,
-%%       {unknown_field, Name}).

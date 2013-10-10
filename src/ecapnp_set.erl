@@ -17,7 +17,7 @@
 -module(ecapnp_set).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/2, field/3]).
+-export([root/2, field/3, union/2]).
 
 -include("ecapnp.hrl").
 
@@ -33,6 +33,11 @@ field(FieldName, Value, Object) ->
     set_field(
       ecapnp_obj:field(FieldName, Object),
       Value, Object#object.ref).
+
+union(_, #object{ type=#struct{ union_field=none }}=Object) ->
+    throw({no_unnamed_union_in_object, Object});
+union(Value, #object{ ref=Ref, type=#struct{ union_field=Union }}) ->
+    set_field(Union, Value, Ref).
 
 
 %% ===================================================================
@@ -121,7 +126,9 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                                lists:seq(0, length(Value) - 1),
                                Value)]
             end
-    end.
+    end;
+set_field(#group{ id=Type }, Value, StructRef) ->
+    union(Value, ecapnp_obj:from_ref(StructRef, Type)).
 
 
 union_tag({FieldName, Value}, [{Tag, FieldName, FieldType}|_]) ->
@@ -155,4 +162,3 @@ list_element_size(8) -> byte;
 list_element_size(16) -> twoBytes;
 list_element_size(32) -> fourBytes;
 list_element_size(64) -> eightBytes.
-

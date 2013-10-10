@@ -1,24 +1,53 @@
 %%% DO NOT EDIT, this file was generated.
 -include_lib("ecapnp/include/ecapnp.hrl").
--export([addressbook/1, addressbook/2, addressbook/3, addressbook/4]).
 
-%% addressbook/4
+-compile({nowarn_unused_function, addressbook/1}).
+-compile({nowarn_unused_function, addressbook/2}).
+-compile({nowarn_unused_function, addressbook/3}).
+-compile({nowarn_unused_function, addressbook/4}).
+
+%% Write value to object field.
+%% -spec addressbook(set, Field::atom(), Value::term(), Object::#object{}) -> ok.
 addressbook(set, Field, Value, Object) ->
     ecapnp:set(Field, Value, Object).
 
-%% addressbook/3
+%% Get a reference to the root object in message.
+%% -spec addressbook(root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::#object{}}.
 addressbook(root, Type, Message) ->
     ecapnp:get_root(Type, addressbook(schema), Message);
-addressbook(get, Field, Object) ->
-    ecapnp:get(Field, Object).
 
-%% addressbook/2
+%% Read object field value.
+%% -spec addressbook(get, Field::atom(), Object::#object{}) -> term().
+addressbook(get, Field, Object) ->
+    ecapnp:get(Field, Object);
+
+%% Type cast object to another struct or list.
+%% -spec addressbook(to_struct, Type::atom() | integer(), Object1::#object{}) -> Object2#object{}.
+%% -spec addressbook(to_list, Type::atom() | integer(), Object::#object{}) -> list().
+addressbook(TypeCast, Type, Object)
+  when TypeCast == to_struct;
+       TypeCast == to_list ->
+    ecapnp_obj:TypeCast(Type, Object).
+
+%% Set root type for a new message.
+%% -spec addressbook(root, Type::atom() | integer()) -> {ok, Root::#object{}}.
 addressbook(root, Type) ->
     ecapnp:set_root(Type, addressbook(schema));
-addressbook(get, Object) ->
-    ecapnp:get(Object).
 
-%% addressbook/1
+%% Read unnamed union value of object.
+%% -spec addressbook(get, Object::#object{}) -> Tag::atom() | {Tag::atom(), Value::term()}.
+addressbook(get, Object) ->
+    ecapnp:get(Object);
+
+%% Type cast object to text/data.
+%% -spec addressbook(to_text | to_data, Object::#object{}) -> binary().
+addressbook(TypeCast, Object)
+  when TypeCast == to_text;
+       TypeCast == to_data ->
+    ecapnp_obj:TypeCast(Object).
+
+%% Get the compiled schema.
+%% -spec addressbook(schema) -> #schema{}.
 
 addressbook(schema) ->
   #schema{
@@ -32,13 +61,17 @@ addressbook(schema) ->
          union_field=none,
          fields=
            [{id,
-             #data{ type=uint32, align=0 }},
+             #data{ type=uint32, align=0,
+                    default= 0 }},
             {name,
-             #ptr{ type=text, idx=0 }},
+             #ptr{ type=text, idx=0,
+                   default= <<>> }},
             {email,
-             #ptr{ type=text, idx=1 }},
+             #ptr{ type=text, idx=1,
+                   default= <<>> }},
             {phones,
-             #ptr{ type={list,{struct,9317543775882349264}}, idx=2 }},
+             #ptr{ type={list,{struct,9317543775882349264}}, idx=2,
+                   default= <<0,0,0,0,0,0,0,0>> }},
             {employment,
              #group{ id=13477914502553102653 }}
            ],
@@ -50,32 +83,36 @@ addressbook(schema) ->
               union_field=none,
               fields=
                 [{number,
-                  #ptr{ type=text, idx=0 }},
+                  #ptr{ type=text, idx=0,
+                        default= <<>> }},
                  {type,
-                  #data{ type={enum,10511609358742521391}, align=0 }}
+                  #data{ type={enum,10511609358742521391}, align=0,
+                         default= 0 }}
                 ],
               types=
                 [#enum{
                    node=#node{ %% 0x91e0bd04d585062f
                      name='Type', id=10511609358742521391, source= <<"addressbook.capnp:Person.PhoneNumber.Type">> },
                    values=
-                     [mobile,
-                      home,
-                      work
+                     [{0,mobile},
+                      {1,home},
+                      {2,work}
                      ]}
                 ]},
             #struct{
               node=#node{ %% 0xbb0b2bd4bdc3693d
                 name=employment, id=13477914502553102653, source= <<"addressbook.capnp:Person.employment">> },
               dsize=1, psize=4, esize=inlineComposite,
-              union_field=#data{ align=32, type=
+              union_field=#data{ align=32, default= 0, type=
                 {union,
-                  [{unemployed,void},
-                   {employer,
-                    #ptr{ type=text, idx=3 }},
-                   {school,
-                    #ptr{ type=text, idx=3 }},
-                   {selfEmployed,void}
+                  [{0,unemployed,void},
+                   {1,employer,
+                    #ptr{ type=text, idx=3,
+                          default= <<>> }},
+                   {2,school,
+                    #ptr{ type=text, idx=3,
+                          default= <<>> }},
+                   {3,selfEmployed,void}
                 ]} }}
            ]},
        #struct{
@@ -85,6 +122,7 @@ addressbook(schema) ->
          union_field=none,
          fields=
            [{people,
-             #ptr{ type={list,{struct,10988939875124296728}}, idx=0 }}
+             #ptr{ type={list,{struct,10988939875124296728}}, idx=0,
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ]}
       ]}.

@@ -9,6 +9,11 @@
 _name_(set, Field, Value, Object) ->
     ecapnp:set(Field, Value, Object).
 
+%% Write unnamed union value
+%% -spec _name_(set, {field_name(), field_value()}|field_name(), object()) -> ok.
+_name_(set, Value, Object) ->
+    ecapnp:set(Value, Object);
+
 %% Get a reference to the root object in message.
 %% -spec _name_(root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::#object{}}.
 _name_(root, Type, Message) ->
