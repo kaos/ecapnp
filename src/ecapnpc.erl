@@ -187,6 +187,12 @@ export_item({Tag, Type}, Out, Indent)
     Out(["{~p,~n~*s", Tag, I, ""]),
     export_item(Type, Out, I),
     Out(["}"]);
+export_item({Idx, Tag, Type}, Out, Indent)
+  when is_tuple(Type), is_atom(element(1, Type)) ->
+    I = Indent + 1,
+    Out(["{~p,~p,~n~*s", Idx, Tag, I, ""]),
+    export_item(Type, Out, I),
+    Out(["}"]);
 export_item(#node{ id=Id, source=Src, name=Name }, Out, Indent) ->
     I = Indent + 2,
     Out(["#node{ %% 0x~.16b~n~*s"

@@ -40,7 +40,8 @@ alloc(Type, SegmentId, Data) when is_pid(Data) ->
 
 from_ref(Ref, object) when is_record(Ref, ref) ->
     #object{ ref=Ref };
-from_ref(#ref{ kind=#list_ref{} }=Ref, {list, _}=Type) ->
+from_ref(#ref{ kind=Kind }=Ref, {list, _}=Type)
+  when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data(Type, Ref, []);
 from_ref(#ref{ kind=Kind }=Ref, Type)
   when is_record(Kind, struct_ref); Kind == null ->
