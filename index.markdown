@@ -8,7 +8,7 @@ About ecapnp
 
 Cap'n Proto library for Erlang.
 
-NOTICE: Not all schema features are yet implemented.
+NOTICE: Not all schema features are yet implemented. But it's getting closer..
 
 
 Prerequisites
@@ -52,8 +52,19 @@ This version packs/unpacks the messages, so it works the same as the
 C++ counterpart, and can be used interchangeably.
 
 
+Tests
+=====
+
+There are both unit tests and integration tests. The `eunit` tests are
+run using the Erlang Common Test Framework, started with the command:
+`make tests`. The integration kind of tests are provided and run by
+the [capnp_test](http://github.com/kaos/capnp_test) framework (which
+is a language agnostic test framework for Cap'n Proto compiler
+plugins), and is invoked with the command: `make check`.
+
+
 BUGS!!
-======
+------
 
 On *Windows* (should you be unfortunate enough to be on that platform)
 there is a rather bad design decision in Erlang to convert all `\r` to
