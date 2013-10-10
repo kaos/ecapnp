@@ -224,7 +224,7 @@ write_struct_list_test() ->
     Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
     Kind = #struct_ref{ dsize=1, psize=2 },
     Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
-    {ok, _ListRef} = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
+    _ListRef = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
     ok = ecapnp_ref:write_list(0, 0, <<1:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 2, <<0:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 1, <<1:1>>, Ref),
@@ -239,6 +239,30 @@ write_struct_list_test() ->
          2#00010011, %% 8 bits
          0:56/integer, %% padding
          0:64/integer-unit:5 %% unallocated data
+       >>, Bin).
+
+write_composite_list_test() ->
+    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 20}),
+    Kind = #struct_ref{ dsize=1, psize=2 },
+    Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
+    ListRef = ecapnp_ref:alloc_list(
+                0, #list_ref{ size=#struct_ref{ dsize=2, psize=0 }, count=2 },
+                Ref),
+    [Ref1, Ref2] = ecapnp_ref:read_list(ListRef),
+    ok = ecapnp_ref:write_struct_data(16, 32, <<1,2,3,4>>, Ref1),
+    ok = ecapnp_ref:write_struct_data(80, 32, <<5,6,7,8>>, Ref2),
+    #msg{ alloc=[A], data=[<<Bin:9/binary-unit:64, _/binary>>] } = ecapnp_data:get_message(Data),
+    ?assertEqual(9, A),
+    ?assertEqual(
+       <<0,0,0,0, 1,0, 2,0,
+         0:64/integer, %% data
+         5,0,0,0, 39,0,0,0, %% list, off 1, size 7, count 4
+         0:64/integer, %% ptr (1)
+         8,0,0,0, 2,0,0,0, %% tag, 2 elems a 2 words data 0 ptrs
+         0,0,1,2, 3,4,0,0,
+         0,0,0,0, 0,0,0,0,
+         0,0,0,0, 0,0,0,0,
+         0,0,5,6, 7,8,0,0
        >>, Bin).
 
 

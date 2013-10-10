@@ -165,18 +165,31 @@ alloc_data(#ref{ segment=SegmentId, data=Data }=Ref0) ->
     ok = write(Ref),
     Ref.
 
+alloc_list(Idx, #list_ref{ size=#struct_ref{ dsize=DSize, psize=PSize }=Tag,
+                           count=Count }=Kind,
+           Ref) ->
+    #ref{ pos=Pos, offset=Offset }=List
+        = alloc_list(Idx, Kind#list_ref{ size=inlineComposite,
+                                         count=Count * (DSize + PSize) },
+                     Ref),
+    write(List#ref{ pos=Pos + 1 + Offset, offset=Count, kind=Tag }),
+    List;
 alloc_list(Idx, Kind, Ref) ->
     Ptr = ptr(Idx, Ref),
-    {ok, alloc_data(Ptr#ref{ kind=Kind })}.
+    alloc_data(Ptr#ref{ kind=Kind }).
+
 
 write_list(Idx, ElementIdx, Value, Ref) ->
     #ref{ kind=#list_ref{ size=Size, count=_Count }}=Ptr
         = read_struct_ptr(Idx, Ref, undefined),
     Len = list_element_size(Size),
-    Align = round((if Size == bit ->
-                           8 * ((ElementIdx div 8)
-                                + ((7 - (ElementIdx rem 8)) / 8));
-                      true -> ElementIdx end) * Len),
+    Align = if Size == inlineComposite ->
+                    1 + (ElementIdx * Len);
+               Size == bit ->
+                    round((8 * ((ElementIdx div 8)
+                                + ((7 - (ElementIdx rem 8)) / 8))) * Len);
+               true -> ElementIdx * Len
+            end,
     <<Pre:Align/bits, _:Len/bits, Post/bits>>
         = get_segment(1 + ((Align + Len - 1) div 64), Ptr),
     set_segment(<<Pre/bits, Value:Len/bits, Post/bits>>, Ptr).

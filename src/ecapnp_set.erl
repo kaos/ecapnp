@@ -92,21 +92,23 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                     {ok, ecapnp_obj:from_ref(ObjRef, ObjType)}
             end;
         {list, ElementType} ->
-            if is_integer(Value) ->
-                    {ok, ecapnp_ref:alloc_list(
-                           Idx,
-                           #list_ref{
-                              size=list_element_size(ElementType, StructRef),
-                              count=Value },
-                           StructRef)};
+            if is_integer(Value) -> %% init list
+                    ecapnp_obj:from_ref(
+                      ecapnp_ref:alloc_list(
+                        Idx, #list_ref{
+                                size=list_element_size(ElementType, StructRef),
+                                count=Value },
+                        StructRef),
+                      Type);
                is_tuple(Value), size(Value) == 2 -> %% {Idx, Value}
                     ElementValue =
                         case list_element_size(ElementType, StructRef) of
-                            inlineComposite -> ugh;
+                            #struct_ref{} -> ugh;
                             pointer -> hmm;
-                            _ -> ecapnp_val:set(ElementType, 
-                                                element(2, Value),
-                                                0)
+                            _ -> ecapnp_val:set(
+                                   ElementType, 
+                                   element(2, Value),
+                                   0)
                         end,
                     ecapnp_ref:write_list(
                       Idx,
@@ -140,6 +142,8 @@ list_element_size({list, _}, _) -> pointer;
 list_element_size(Type, Ref) ->
     case ecapnp_schema:lookup(Type, Ref) of
         {ok, object} -> pointer;
+        {ok, #struct{ esize=inlineComposite, dsize=DSize, psize=PSize }} ->
+            #struct_ref{ dsize=DSize, psize=PSize };
         {ok, #struct{ esize=Size }} -> Size;
         {ok, _} -> twoBytes; %% enum & union
         _ -> list_element_size(ecapnp_val:size(Type))
