@@ -100,9 +100,9 @@ read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
             List = ecapnp_data:get_segment(
                      SegmentId, TagOffset, Count, Data),
             [read_segment(SegmentId, TagOffset + I,
-                          binary_part(List, I, 8),
+                          binary_part(List, I*8, 8),
                           Data, true)
-             || I <- lists:seq(0, (Count - 1) * 8, 8)];
+             || I <- lists:seq(0, (Count - 1))];
        Size == empty ->
             lists:duplicate(Count, <<>>);
        true ->

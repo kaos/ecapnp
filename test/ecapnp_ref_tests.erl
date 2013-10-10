@@ -57,6 +57,31 @@ read_composite_list_test() ->
               kind=#struct_ref{ dsize=1, psize=2 } }],
        ecapnp_ref:read_list(Ref)).
 
+read_pointer_list_test() ->
+    Data = ecapnp_data:new(
+             #msg{
+                data = [<<1,0,0,0, 22,0,0,0,
+                          5,0,0,0, 34,0,0,0,
+                          5,0,0,0, 34,0,0,0,
+                          102,111,111,0,0,0,0,0,
+                          98,97,114,0,0,0,0,0
+                        >>]}),
+    ListRef = ecapnp_ref:get(0, 0, Data),
+    ?assertEqual(
+       #ref{ segment=0, pos=0, offset=0, data=Data,
+             kind=#list_ref{ size=pointer, count=2 } },
+       ListRef),
+    List = ecapnp_ref:read_list(ListRef),
+    ?assertEqual(
+      [#ref{ segment=0, pos=1, offset=1, data=Data,
+             kind=#list_ref{ size=byte, count=4 } },
+       #ref{ segment=0, pos=2, offset=1, data=Data,
+             kind=#list_ref{ size=byte, count=4 } }],
+       List),
+    ?assertEqual(
+       [<<"foo">>, <<"bar">>],
+       [ecapnp_ref:read_text(R) || R <- List]).
+
 read_bool_list_test() ->
     Data = ecapnp_data:new(#msg{ data = [<<1,0,0,0, 81,0,0,0,
                                            129,3,0,0, 0,0,0,0

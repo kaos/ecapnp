@@ -1,8 +1,8 @@
 
--compile({nowarn_unused_function, schema/1}).
--compile({nowarn_unused_function, schema/2}).
--compile({nowarn_unused_function, schema/3}).
--compile({nowarn_unused_function, schema/4}).
+-compile({nowarn_unused_function, _name_/1}).
+-compile({nowarn_unused_function, _name_/2}).
+-compile({nowarn_unused_function, _name_/3}).
+-compile({nowarn_unused_function, _name_/4}).
 
 %% Write value to object field.
 %% -spec _name_(set, Field::atom(), Value::term(), Object::#object{}) -> ok.

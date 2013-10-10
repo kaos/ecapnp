@@ -5,8 +5,7 @@
 -define(SKIP, 127).
 
 main([File, Case, Test]) ->
-    {ok, Data} = file:read_file(File),
-    {ok, Message} = ecapnp_message:read(Data),
+    {ok, Message} = ecapnp_message:read_file(File),
     run_test(Case, Test, Message);
 main([Case, Test]) ->
     run_test(Case, Test, undefined);
