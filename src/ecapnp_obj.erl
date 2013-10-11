@@ -14,6 +14,12 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Everything object.
+%%
+%% Structs.. structs.. and more structs.
+
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -28,6 +34,8 @@
 %% API functions
 %% ===================================================================
 
+%% @doc Allocate data for a new object.
+-spec alloc(type_name(), segment_id(), pid()) -> object().
 alloc(Type, SegmentId, Data) when is_pid(Data) ->
     {ok, T} = ecapnp_schema:lookup(Type, Data),
     Ref = ecapnp_ref:alloc(
@@ -38,6 +46,8 @@ alloc(Type, SegmentId, Data) when is_pid(Data) ->
             SegmentId, 1 + ecapnp_schema:size_of(T), Data),
     #object{ ref=Ref, type=T }.
 
+%% @doc Get object (or list) from reference.
+-spec from_ref(#ref{}, type_name()) -> object() | list().
 from_ref(Ref, object) when is_record(Ref, ref) ->
     #object{ ref=Ref };
 from_ref(#ref{ kind=Kind }=Ref, {list, _}=Type)
@@ -47,18 +57,27 @@ from_ref(#ref{ kind=Kind }=Ref, Type)
   when is_record(Kind, struct_ref); Kind == null ->
     to_struct(Type, #object{ ref=Ref }).
 
+%% @doc Get object (or list) from data.
+%% @see from_ref/2
+-spec from_data(binary(), type_name()) -> object() | list().
 from_data(Data, Type) ->
     Ref = ecapnp_ref:get(0, 0, ecapnp_data:new(Data)),
     from_ref(Ref, Type).
 
+%% @doc Lookup field definition by name for object.
+-spec field(field_name(), object() | #struct{}) -> field_type().
 field(FieldName, #object{ type=Node }) ->
     field(FieldName, Node);
 field(FieldName, #struct{ fields=Fields }) ->
     find_field(FieldName, Fields).
 
+%% @doc Copy object recursively.
+-spec copy(object()) -> binary().
 copy(#object{ ref=Ref }) ->
     ecapnp_ref:copy(Ref).
 
+%% @doc Type cast object to another type of object.
+-spec to_struct(type_name(), object()) -> object().
 to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
   when is_record(Kind, struct_ref); Kind == null ->
     T = case ecapnp_schema:lookup(Type, Object) of
@@ -67,14 +86,23 @@ to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
         end,
     Object#object{ type=T }.
 
+%% @doc Type cast object to list of type.
+%% Object must be a reference to a list.
+-spec to_list(type_name(), object()) -> list().
 to_list(Type, #object{ ref=#ref{ kind=Kind }=Ref})
   when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data({list, Type}, Ref, []).
 
+%% @doc Type cast object to text.
+%% Object must be a reference to text.
+-spec to_text(object()) -> binary().
 to_text(#object{ ref=#ref{ kind=Kind }=Ref})
   when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data(text, Ref, <<>>).
 
+%% @doc Type cast object to binary data.
+%% Object must be a reference to data.
+-spec to_data(object()) -> binary().
 to_data(#object{ ref=#ref{ kind=Kind }=Ref})
   when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data(data, Ref, <<>>).

@@ -47,6 +47,9 @@
 %%   <dt>{@type fun((set, field_name(), field_value(), object()) -> ok)}</dt>
 %%   <dd>Write value to object field.</dd>
 %%
+%%   <dt>{@type fun((set, {field_name(), field_value()@}|field_name(), object()) -> ok)}</dt>
+%%   <dd>Write unnamed union value.</dd>
+%%
 %%   <dt>{@type fun((to_struct, schema_type(), object()) -> object())}</dt>
 %%   <dd>Type cast object to another struct type.</dd>
 %%

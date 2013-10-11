@@ -14,6 +14,16 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Data server module
+%%
+%% All objects data is held in a data process, implemented by this
+%% module.
+%%
+%% I have a wish to get away with the fact that each reference to
+%% default data ends up with their own separate data process.
+
 -module(ecapnp_data).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -28,28 +38,48 @@
 %% API functions
 %% ===================================================================
 
+%% @doc Start a new data process.
+-spec new(#msg{}
+          |{schema(), SegmentSize::posinteger()}
+          |{pid(), Data::binary()}) -> pid().
 new(Init) ->
     spawn_link(fun() -> data_state(Init) end).
 
+%% @doc Allocate data.
+%%
+%% Preferably from segment id `Id', if possible.  This will rarely
+%% fail, as new segments are added in case there is not enough free
+%% space left.
+-spec alloc(segment_id(), integer(), pid()) -> {segment_id(), Offset::integer()}.
 alloc(Id, Size, Pid) 
   when is_integer(Id), is_integer(Size) ->
     data_request(alloc, {Id, Size}, Pid).
-    
+
+%% @doc Write data to segment.
+-spec update_segment({segment_id(), integer()}, binary(), pid()) -> ok.
 update_segment({Id, Offset}, Data, Pid)
   when is_integer(Id), is_integer(Offset), is_binary(Data) ->
     data_request(update_segment, {Id, Offset, Data}, Pid).
 
+%% @doc Read data from segment.
+-spec get_segment(segment_id(), integer(), integer(), pid()) -> binary().
 get_segment(Id, Offset, Length, Pid)
   when is_integer(Id), is_integer(Offset) andalso
        is_integer(Length); Length == all ->
     data_request(get_segment, {Id, Offset, Length}, Pid).
 
+%% @doc Get size of segment, in words (8 bytes).
+-spec get_segment_size(segment_id(), pid()) -> integer().
 get_segment_size(Id, Pid) ->
     data_request(get_segment_size, Id, Pid).
 
+%% @doc Get the data process message record.
+-spec get_message(pid()) -> #msg{}.
 get_message(Pid) ->
     data_request(get_message, [], Pid).
 
+%% @doc Lookup type in schema.
+-spec get_type(schema_type(), pid()) -> node_type() | false.
 get_type(Type, Pid)
   when is_atom(Type);
        is_integer(Type) ->

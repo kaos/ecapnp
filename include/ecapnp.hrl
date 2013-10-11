@@ -113,6 +113,7 @@
 -type node_types() :: list({atom(), node_type()}).
 -type field_name() :: atom().
 -type field_value() :: value() | object().
+-type field_type() :: #data{} | #ptr{} | #group{}.
 -type object() :: #object{}.
 -type object_field() :: #data{} | #ptr{}.
 -type object_fields() :: list({field_name(), object_field()}).

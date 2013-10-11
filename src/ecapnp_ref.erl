@@ -14,6 +14,13 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Read/Write/Allocate references.
+%%
+%% Everything reference.
+%% Which is almost everything in Cap'n Proto :p.
+
 -module(ecapnp_ref).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -34,20 +41,55 @@
 %% API functions
 %% ===================================================================
 
+%% @doc Allocate data for a reference.
+%%
+%% The allocated data is left empty.
+-spec alloc(segment_id(), integer(), pid()) -> #ref{}.
 alloc(SegmentId, Size, Data) ->
     {Id, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     #ref{ segment=Id, pos=Pos, data=Data }.
 
+%% @doc Allocate data for a reference of a specific kind.
+%%
+%% The reference will be written to the first word of the allocated
+%% data, by {@link set/2}.
+%%
+%% @see set/2
+%% @see alloc/3
+-spec alloc(ref_kind(), segment_id(), integer(), pid()) -> #ref{}.
 alloc(Kind, SegmentId, Size, Data) ->
     set(Kind, alloc(SegmentId, Size, Data)).
 
+%% @doc Set reference kind.
+%%
+%% Updates the reference kind and writes it to the segment data at
+%% `Ref.pos'.
+%%
+%% @see alloc/4
 set(Kind, Ref0) ->
     Ref = Ref0#ref{ kind=Kind },
     ok = write(Ref), Ref.
 
+%% @doc Get reference from segment data.
+%%
+%% Read segment, and parse it for a reference pointer.
+%%
+%% Will follow far pointers.
+%%
+%% @see get/4
+-spec get(segment_id(), integer(), pid()) -> #ref{}.
 get(SegmentId, Pos, Data) when is_pid(Data) ->
     get(SegmentId, Pos, Data, true).
 
+%% @doc Get reference from segment data.
+%%
+%% Read segment, and parse it for a reference pointer.
+%%
+%% The resulting reference may be a far pointer, unless `FollowFar' is `true'.
+%%
+%% @see read_segment/5
+%% @see ecapnp_data:get_segment/4
+-spec get(segment_id(), integer(), pid(), boolean()) -> #ref{}.
 get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
     read_segment(SegmentId, Pos,
                  ecapnp_data:get_segment(SegmentId, Pos, 1, Data),

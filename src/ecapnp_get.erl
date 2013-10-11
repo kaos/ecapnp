@@ -14,6 +14,12 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Read support.
+%%
+%% Everything for reading data out of a message.
+
 -module(ecapnp_get).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -26,6 +32,9 @@
 %% API functions
 %% ===================================================================
 
+%% @doc Get the root object for a message.
+%% @see ecapnp:get_root/3
+-spec root(type_name(), schema(), message()) -> {ok, Root::object()}.
 root(Type, Schema, Segments) ->
     {ok, ecapnp_obj:from_data(
            #msg{
@@ -35,19 +44,27 @@ root(Type, Schema, Segments) ->
              },
            Type)}.
 
-%% Lookup field value in object
+%% @doc Read the field value of object.
+%% @see ecapnp:get/2
+-spec field(field_name(), object()) -> field_value().
 field(FieldName, #object{ ref=Ref }=Object)
   when is_atom(FieldName) ->
     read_field(ecapnp_obj:field(FieldName, Object), Ref).
 
+%% @doc Read the unnamed union value of object.
+%% @see ecapnp:get/1
+-spec union(object()) -> {field_name(), field_value()} | field_name().
 union(#object{ type=#struct{ union_field=none }}=Object) ->
     throw({no_unnamed_union_in_object, Object});
 union(#object{ ref=Ref, type=#struct{ union_field=Union }}) ->
     read_field(Union, Ref).
 
+%% @doc internal function not intended for client code.
 ref_data(Ptr, Ref) ->
     read_ptr(Ptr, Ref).
 
+%% @doc Read data of object reference as type.
+%% This is a Low-level function.
 ref_data(Type, #object{ ref=Ref }, Default) ->
     ref_data(Type, Ref, Default);
 ref_data(Type, Ref, Default) ->

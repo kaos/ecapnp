@@ -14,6 +14,13 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Message framing.
+%%
+%% Takes care of reading a framed message, getting the segments data
+%% out, and writing the message header with the segment table.
+
 -module(ecapnp_message).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -26,13 +33,24 @@
 %% API functions
 %% ===================================================================
 
+%% @doc Parse segment table in the (unpacked, but otherwise framed)
+%% message.
+-spec read(binary()) -> {ok, message()}.
 read(Data)
   when is_binary(Data) ->
     read_message(Data).
 
+%% @doc Write segment table for message and return it along with the
+%% segments data.
+%%
+%% Any non-default object may be passed to this function.
+-spec write(object()) -> binary().
 write(#object{ ref=#ref{ data=Pid } }) ->
     write_message(ecapnp_data:get_message(Pid)).
 
+%% @doc Read binary message from file.
+%% @see read/1
+-spec read_file(string()) -> {ok, message()}.
 read_file(Filename) ->
     {ok, Data} = file:read_file(Filename),
     read(Data).
