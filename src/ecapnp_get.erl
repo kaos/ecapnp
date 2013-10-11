@@ -71,11 +71,14 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
                     {FieldName, read_field(Field, StructRef)}
             end;
         Type ->
-            Size = ecapnp_val:size(Type),
-            ecapnp_val:get(
-              Type, 
-              ecapnp_ref:read_struct_data(Align, Size, StructRef),
-              Default)
+            case ecapnp_val:size(Type) of
+                0 -> void;
+                Size ->
+                    ecapnp_val:get(
+                      Type, ecapnp_ref:read_struct_data(
+                              Align, Size, StructRef),
+                      Default)
+            end
     end;
 read_field(#ptr{ idx=Idx }=Ptr, StructRef) ->
     Ref = ecapnp_ref:read_struct_ptr(Idx, StructRef),
@@ -107,7 +110,7 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
                         {enum, EnumType} ->
                             [get_enum_value(
                                EnumType,
-                              ecapnp_val:get(uint16, Data),
+                               ecapnp_val:get(uint16, Data),
                                Ref) 
                              || Data <- Values];
                         _ ->

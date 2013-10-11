@@ -19,46 +19,46 @@
 -include_lib("eunit/include/eunit.hrl").
 
 get_test() ->
-    ?assertEqual(false, ecapnp_val:get(bool, <<0:1>>, false)),
-    ?assertEqual(true, ecapnp_val:get(bool, <<1:1>>, false)),
-    ?assertEqual(true, ecapnp_val:get(bool, <<0:1>>, true)),
-    ?assertEqual(false, ecapnp_val:get(bool, <<1:1>>, true)).
+    ?assertEqual(false, ecapnp_val:get(bool, <<0:1>>, <<0:1>>)),
+    ?assertEqual(true, ecapnp_val:get(bool, <<1:1>>, <<0:1>>)),
+    ?assertEqual(true, ecapnp_val:get(bool, <<0:1>>, <<1:1>>)),
+    ?assertEqual(false, ecapnp_val:get(bool, <<1:1>>, <<1:1>>)).
 
 set_test() ->
-    ?assertEqual(<<0:1>>, ecapnp_val:set(bool, false, false)),
-    ?assertEqual(<<1:1>>, ecapnp_val:set(bool, true, false)),
-    ?assertEqual(<<1:1>>, ecapnp_val:set(bool, false, true)),
-    ?assertEqual(<<0:1>>, ecapnp_val:set(bool, true, true)).
+    ?assertEqual(<<0:1>>, ecapnp_val:set(bool, false, <<0:1>>)),
+    ?assertEqual(<<1:1>>, ecapnp_val:set(bool, true, <<0:1>>)),
+    ?assertEqual(<<1:1>>, ecapnp_val:set(bool, false, <<1:1>>)),
+    ?assertEqual(<<0:1>>, ecapnp_val:set(bool, true, <<1:1>>)).
 
 inf_nan_32_test() ->
     Pinf = <<0,0,128,127>>,
     Ninf = <<0,0,128,255>>,
     NaN = <<0,0,192,127>>,
-    ?assertEqual(Pinf, ecapnp_val:set(float32, inf, 0)),
-    ?assertEqual(Ninf, ecapnp_val:set(float32, '-inf', 0)),
-    ?assertEqual(NaN, ecapnp_val:set(float32, nan, 0)),
-    ?assertEqual(inf, ecapnp_val:get(float32, Pinf, 0)),
-    ?assertEqual('-inf', ecapnp_val:get(float32, Ninf, 0)),
-    ?assertEqual(nan, ecapnp_val:get(float32, NaN, 0)).
+    ?assertEqual(Pinf, ecapnp_val:set(float32, inf)),
+    ?assertEqual(Ninf, ecapnp_val:set(float32, '-inf')),
+    ?assertEqual(NaN, ecapnp_val:set(float32, nan)),
+    ?assertEqual(inf, ecapnp_val:get(float32, Pinf)),
+    ?assertEqual('-inf', ecapnp_val:get(float32, Ninf)),
+    ?assertEqual(nan, ecapnp_val:get(float32, NaN)).
     
 inf_nan_64_test() ->
     Pinf = <<0:32, 0,0,240,127>>,
     Ninf = <<0:32, 0,0,240,255>>,
     NaN = <<0:32, 0,0,248,127>>,
-    ?assertEqual(Pinf, ecapnp_val:set(float64, inf, 0)),
-    ?assertEqual(Ninf, ecapnp_val:set(float64, '-inf', 0)),
-    ?assertEqual(NaN, ecapnp_val:set(float64, nan, 0)),
-    ?assertEqual(inf, ecapnp_val:get(float64, Pinf, 0)),
-    ?assertEqual('-inf', ecapnp_val:get(float64, Ninf, 0)),
-    ?assertEqual(nan, ecapnp_val:get(float64, NaN, 0)).
+    ?assertEqual(Pinf, ecapnp_val:set(float64, inf)),
+    ?assertEqual(Ninf, ecapnp_val:set(float64, '-inf')),
+    ?assertEqual(NaN, ecapnp_val:set(float64, nan)),
+    ?assertEqual(inf, ecapnp_val:get(float64, Pinf)),
+    ?assertEqual('-inf', ecapnp_val:get(float64, Ninf)),
+    ?assertEqual(nan, ecapnp_val:get(float64, NaN)).
     
 float_test() ->
     F = 1234.5,
-    F32 = ecapnp_val:set(float32, F, 0),
-    F64 = ecapnp_val:set(float64, F, 0),
+    F32 = ecapnp_val:set(float32, F),
+    F64 = ecapnp_val:set(float64, F),
     ?assertEqual(4, size(F32)),
     ?assertEqual(8, size(F64)),
-    ?assertEqual(F, ecapnp_val:get(float32, F32, 0)),
-    ?assertEqual(F, ecapnp_val:get(float64, F64, 0)).
+    ?assertEqual(F, ecapnp_val:get(float32, F32)),
+    ?assertEqual(F, ecapnp_val:get(float64, F64)).
 
 -endif.

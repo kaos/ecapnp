@@ -241,17 +241,24 @@ export_item(#annotation{ node=Node }, Out, Indent) ->
     Out(["}"]);
 export_item(#data{ type={union, L}, align=A, default=D }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#data{ align=~p, default= ~p, type=~n~*s"
+    Out(["#data{ align=~p, default= ~w, type=~n~*s"
          "{union,~n~*s[",
          A, D, I, "", I + 2, ""]),
     export_items(L, Out, {first, I + 3}),
     Out(["~n~*s]} }", I, ""]);
 export_item(#data{ type=T, align=A, default=D }, Out, Indent) ->
     Out(["#data{ type=~p, align=~p,~n~*s"
-         "       default= ~p }", T, A, Indent, "", D]);
+         "       default= ~w }", T, A, Indent, "", D]);
 export_item(#ptr{ type=T, idx=I, default=D }, Out, Indent) ->
-    Out(["#ptr{ type=~p, idx=~p,~n~*s"
-         "      default= ~p }", T, I, Indent, "", D]);
+    %% the l modifier didn't appear until erl R16..'
+    Df = if T == text; element(1, T) == struct;
+            element(1, T) == list -> "~p";
+            true -> "~w" end,
+    Out([lists:flatten(
+           io_lib:format(
+             "#ptr{ type=~~p, idx=~~p,~n~~*s"
+             "      default= ~s }", [Df])),
+         T, I, Indent, "", D]);
 export_item(#group{ id=Id }, Out, _Indent) ->
     Out(["#group{ id=~p }", Id]);
 export_item(Item, Out, _Indent) ->
@@ -359,16 +366,23 @@ ptr_field(Type, Index, Default) ->
 
 default_value(Type, #object{type=#struct{node=#node{name='Value'}}}=Object) ->
     default_value(Type, schema(get, Object));
-default_value(Type, {_, Object}) when is_record(Object, object) ->
-    if Type == object
-       orelse element(1, Type) == struct
-       orelse is_tuple(element(2, Type)) ->
-            ecapnp_obj:copy(Object);
-       element(1, Type) == list ->
-            ecapnp_obj:to_list(element(2, Type), Object)
-    end;
-default_value({Type, _}, {Type, Value}) -> Value;
-default_value(Type, {Type, Value}) -> Value;
+default_value(_Type, {_, Object}) when is_record(Object, object) ->
+    ecapnp_obj:copy(Object);
+    %% if Type == object
+    %%    orelse element(1, Type) == struct
+    %%    orelse is_tuple(element(2, Type)) ->
+    %%         ecapnp_obj:copy(Object);
+    %%    element(1, Type) == list ->
+    %%         ecapnp_obj:to_list(element(2, Type), Object)
+    %% end;
+default_value({Type, _}, {Type, Value})
+  when Type == union; Type == enum ->
+    ecapnp_val:set(uint16, Value);
+default_value(Type, {Type, Value})
+  when Type == text; Type == data -> Value;
+default_value(Type, {ValueType, Value})
+  when Type == ValueType; element(1, Type) == ValueType ->
+    ecapnp_val:set(ValueType, Value);
 default_value(Type, Value) -> throw({value_type_mismatch, Type, Value}).
 
 

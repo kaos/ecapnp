@@ -1,32 +1,58 @@
 %%% DO NOT EDIT, this file was generated.
 -include_lib("ecapnp/include/ecapnp.hrl").
--export([test/1, test/2, test/3, test/4]).
 
-%% test/4
+-compile({nowarn_unused_function, test/1}).
+-compile({nowarn_unused_function, test/2}).
+-compile({nowarn_unused_function, test/3}).
+-compile({nowarn_unused_function, test/4}).
+
+%% Write value to object field.
+%% -spec test(set, Field::atom(), Value::term(), Object::#object{}) -> ok.
 test(set, Field, Value, Object) ->
     ecapnp:set(Field, Value, Object).
 
-%% test/3
+%% Write unnamed union value
+%% -spec test(set, {field_name(), field_value()}|field_name(), object()) -> ok.
+test(set, Value, Object) ->
+    ecapnp:set(Value, Object);
+
+%% Get a reference to the root object in message.
+%% -spec test(root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::#object{}}.
 test(root, Type, Message) ->
     ecapnp:get_root(Type, test(schema), Message);
+
+%% Read object field value.
+%% -spec test(get, Field::atom(), Object::#object{}) -> term().
 test(get, Field, Object) ->
     ecapnp:get(Field, Object);
+
+%% Type cast object to another struct or list.
+%% -spec test(to_struct, Type::atom() | integer(), Object1::#object{}) -> Object2#object{}.
+%% -spec test(to_list, Type::atom() | integer(), Object::#object{}) -> list().
 test(TypeCast, Type, Object)
   when TypeCast == to_struct;
        TypeCast == to_list ->
     ecapnp_obj:TypeCast(Type, Object).
 
-%% test/2
+%% Set root type for a new message.
+%% -spec test(root, Type::atom() | integer()) -> {ok, Root::#object{}}.
 test(root, Type) ->
     ecapnp:set_root(Type, test(schema));
+
+%% Read unnamed union value of object.
+%% -spec test(get, Object::#object{}) -> Tag::atom() | {Tag::atom(), Value::term()}.
 test(get, Object) ->
     ecapnp:get(Object);
+
+%% Type cast object to text/data.
+%% -spec test(to_text | to_data, Object::#object{}) -> binary().
 test(TypeCast, Object)
   when TypeCast == to_text;
        TypeCast == to_data ->
     ecapnp_obj:TypeCast(Object).
 
-%% test/1
+%% Get the compiled schema.
+%% -spec test(schema) -> #schema{}.
 
 test(schema) ->
   #schema{
@@ -37,15 +63,18 @@ test(schema) ->
          node=#node{ %% 0xfa556038e27b336d
            name='Test', id=18038429679936549741, source= <<"test/test.capnp:Test">> },
          dsize=2, psize=6, esize=inlineComposite,
-         union_field=#data{ align=16, default= 0, type=
+         union_field=#data{ align=16, default= <<0,0>>, type=
            {union,
-             [{0,boolField,{data,bool,15,false}},
-              {1,groupField,{group,12591081617868223671}}
+             [{0,boolField,
+               #data{ type=bool, align=15,
+                      default= <<0:1>> }},
+              {1,groupField,
+               #group{ id=12591081617868223671 }}
            ]} },
          fields=
            [{intField,
              #data{ type=uint8, align=0,
-                    default= 33 }},
+                    default= <<33>> }},
             {textField,
              #ptr{ type=text, idx=0,
                    default= <<"test">> }},
@@ -66,13 +95,13 @@ test(schema) ->
               fields=
                 [{id,
                   #data{ type=uint16, align=80,
-                         default= 0 }},
+                         default= <<0,0>> }},
                  {tag,
                   #ptr{ type=text, idx=2,
                         default= <<>> }},
                  {data,
                   #ptr{ type=data, idx=3,
-                        default= <<"1234">> }},
+                        default= <<49,50,51,52>> }},
                  {struct,
                   #ptr{ type={struct,15091335337902283752}, idx=5,
                         default= <<0,0,0,0,1,0,2,0,0,0,0,0,12,0,0,0,5,0,0,0,
@@ -85,12 +114,20 @@ test(schema) ->
               node=#node{ %% 0x81d9e4f01134cd00
                 name=opts, id=9356761420570873088, source= <<"test/test.capnp:Test.opts">> },
               dsize=2, psize=6, esize=inlineComposite,
-              union_field=#data{ align=64, default= 0, type=
+              union_field=#data{ align=64, default= <<0,0>>, type=
                 {union,
-                  [{0,bool,{data,bool,55,true}},
-                   {1,text,{ptr,text,1,<<>>}},
-                   {2,data,{ptr,data,1,<<>>}},
-                   {3,object,{ptr,object,1,<<0,0,0,0,0,0,0,0>>}}
+                  [{0,bool,
+                    #data{ type=bool, align=55,
+                           default= <<1:1>> }},
+                   {1,text,
+                    #ptr{ type=text, idx=1,
+                          default= <<>> }},
+                   {2,data,
+                    #ptr{ type=data, idx=1,
+                          default= <<>> }},
+                   {3,object,
+                    #ptr{ type=object, idx=1,
+                          default= <<0,0,0,0,0,0,0,0>> }}
                 ]} }},
             #struct{
               node=#node{ %% 0xaebc820562fc74b7
@@ -100,13 +137,13 @@ test(schema) ->
               fields=
                 [{a,
                   #data{ type=int8, align=8,
-                         default= -44 }},
+                         default= <<212>> }},
                  {b,
                   #data{ type=int8, align=32,
-                         default= 55 }},
+                         default= <<55>> }},
                  {c,
                   #data{ type=int8, align=40,
-                         default= 0 }}
+                         default= <<0>> }}
                 ]}
            ]},
        #struct{
@@ -120,13 +157,13 @@ test(schema) ->
                    default= <<"default message">> }},
             {value,
              #data{ type=uint32, align=0,
-                    default= 222 }},
+                    default= <<222,0,0,0>> }},
             {simpleMessage,
              #ptr{ type=text, idx=1,
                    default= <<"simple message">> }},
             {defaultValue,
              #data{ type=uint32, align=32,
-                    default= 333 }}
+                    default= <<77,1,0,0>> }}
            ]},
        #struct{
          node=#node{ %% 0xed15f6a91b7977a6

@@ -26,19 +26,20 @@
 %% API functions
 %% ===================================================================
 
-set(ValueType, Value) -> set(ValueType, Value, 0).
-set(ValueType, Value, Default) ->
-    value(set, {ValueType, 
-                to_value(ValueType, Value),
-                to_value(ValueType, Default)}).
+set(ValueType, Value) ->
+    value(set, {ValueType, to_value(ValueType, Value)}).
 
-get(ValueType, Data) -> get(ValueType, Data, 0).
-get(ValueType, Data, Default) ->
-    from_value(ValueType,
-               value(get, {ValueType,
-                           Data,
-                           to_value(ValueType, Default)
-                          })).
+set(ValueType, Value, Default) when is_bitstring(Default) ->
+    value(set, {ValueType, to_value(ValueType, Value), Default}).
+
+get(ValueType, Data) when is_bitstring(Data) ->
+    from_value(ValueType, value(get, {ValueType, Data})).
+
+get(ValueType, Data, Default)
+  when is_bitstring(Data),
+       is_bitstring(Default) ->
+    Value = value(get, {ValueType, Data, Default}),
+    from_value(ValueType, Value).
 
 size(ValueType) ->
     value(size, ValueType).
@@ -50,20 +51,24 @@ size(ValueType) ->
 
 -define(DEFINE_TYPE(ValueType, Size, TypeSpec),
         value(size, ValueType) -> Size;
+        value(get, {ValueType, Data}) ->
+               <<Value:Size/TypeSpec>> = Data, Value;
         value(get, {ValueType, Data, Default}) ->
                PadSize = 7 - ((Size + 7) rem 8),
                <<Value:Size/TypeSpec, _/bits>>
                    = apply_default(
                        <<Data/bits, 0:PadSize/integer>>,
-                       <<Default:Size/TypeSpec, 0:PadSize/integer>>),
+                       <<Default/bits, 0:PadSize/integer>>),
                Value;
 
+            value(set, {ValueType, Value}) ->
+               <<Value:Size/TypeSpec>>;
             value(set, {ValueType, Value, Default}) ->
                PadSize = 7 - ((Size + 7) rem 8),
                <<Data:Size/bits, _/bits>>
                    = apply_default(
                        <<Value:Size/TypeSpec, 0:PadSize/integer>>,
-                       <<Default:Size/TypeSpec, 0:PadSize/integer>>),
+                       <<Default/bits, 0:PadSize/integer>>),
                Data
                    ).
 
@@ -79,7 +84,7 @@ size(ValueType) ->
 ?DEFINE_TYPE(float32, 32, bits); %% actual float conversion is done in the
 ?DEFINE_TYPE(float64, 64, bits); %% to_value/from_value functions.
 value(size, void) -> 0;
-value(_, {void, _, _}) -> void.
+value(_, {void, _}) -> void.
 
 -define(INF_NAN_32(N,S), <<0:16,1:1,N:1,0:6,S:1,127:7>>).
 -define(INF_NAN_64(N,S), <<0:48,15:4,N:1,0:3,S:1,127:7>>).
@@ -94,7 +99,8 @@ from_value(float64, ?INF_NAN_64(1, _)) -> nan;
 from_value(float64, ?INF_NAN_64(0, 0)) -> inf;
 from_value(float64, ?INF_NAN_64(0, 1)) -> '-inf';
 from_value(float64, <<Value:64/float-little>>) -> Value;
-from_value(_, Value) -> Value.
+from_value(_, Value) when is_number(Value) -> Value;
+from_value(_, void) -> void.
 
 to_value(bool, true) -> <<1:1>>;
 to_value(bool, _) -> <<0:1>>;
@@ -107,7 +113,7 @@ to_value(float64, '-inf') -> ?INF_NAN_64(0, 1);
 to_value(float64, nan) -> ?INF_NAN_64(1, 0);
 to_value(float64, Value) -> <<Value:64/float-little>>;
 to_value(_, Value) when is_number(Value) -> Value;
-to_value(_, _) -> 0.
+to_value(_, void) -> void.
 
 apply_default(Value, Default) ->
     crypto:exor(Value, Default).

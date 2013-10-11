@@ -110,10 +110,7 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                         case list_element_size(ElementType, StructRef) of
                             #struct_ref{} -> ugh;
                             pointer -> hmm;
-                            _ -> ecapnp_val:set(
-                                   ElementType, 
-                                   element(2, Value),
-                                   0)
+                            _ -> ecapnp_val:set(ElementType, element(2, Value))
                         end,
                     ecapnp_ref:write_list(
                       Idx,

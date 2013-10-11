@@ -11,6 +11,11 @@
 schema(set, Field, Value, Object) ->
     ecapnp:set(Field, Value, Object).
 
+%% Write unnamed union value
+%% -spec schema(set, {field_name(), field_value()}|field_name(), object()) -> ok.
+schema(set, Value, Object) ->
+    ecapnp:set(Value, Object);
+
 %% Get a reference to the root object in message.
 %% -spec schema(root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::#object{}}.
 schema(root, Type, Message) ->
@@ -58,7 +63,7 @@ schema(schema) ->
          node=#node{ %% 0xe682ab4cf923a417
            name='Node', id=16610026722781537303, source= <<"schema.capnp:Node">> },
          dsize=5, psize=5, esize=inlineComposite,
-         union_field=#data{ align=96, default= 0, type=
+         union_field=#data{ align=96, default= <<0,0>>, type=
            {union,
              [{0,file,void},
               {1,struct,
@@ -75,16 +80,16 @@ schema(schema) ->
          fields=
            [{id,
              #data{ type=uint64, align=0,
-                    default= 0 }},
+                    default= <<0,0,0,0,0,0,0,0>> }},
             {displayName,
              #ptr{ type=text, idx=0,
                    default= <<>> }},
             {displayNamePrefixLength,
              #data{ type=uint32, align=64,
-                    default= 0 }},
+                    default= <<0,0,0,0>> }},
             {scopeId,
              #data{ type=uint64, align=128,
-                    default= 0 }},
+                    default= <<0,0,0,0,0,0,0,0>> }},
             {nestedNodes,
              #ptr{ type={list,{struct,16050641862814319170}}, idx=1,
                    default= <<0,0,0,0,0,0,0,0>> }},
@@ -104,7 +109,7 @@ schema(schema) ->
                         default= <<>> }},
                  {id,
                   #data{ type=uint64, align=0,
-                         default= 0 }}
+                         default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0xec1619d4400a0290
@@ -117,40 +122,40 @@ schema(schema) ->
                         default= <<0,0,0,0,0,0,0,0>> }},
                  {targetsFile,
                   #data{ type=bool, align=119,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsConst,
                   #data{ type=bool, align=118,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsEnum,
                   #data{ type=bool, align=117,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsEnumerant,
                   #data{ type=bool, align=116,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsStruct,
                   #data{ type=bool, align=115,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsField,
                   #data{ type=bool, align=114,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsUnion,
                   #data{ type=bool, align=113,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsGroup,
                   #data{ type=bool, align=112,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsInterface,
                   #data{ type=bool, align=127,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsMethod,
                   #data{ type=bool, align=126,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsParam,
                   #data{ type=bool, align=125,
-                         default= false }},
+                         default= <<0:1>> }},
                  {targetsAnnotation,
                   #data{ type=bool, align=124,
-                         default= false }}
+                         default= <<0:1>> }}
                 ]},
             #struct{
               node=#node{ %% 0xb18aa5ac7a0d9420
@@ -193,22 +198,22 @@ schema(schema) ->
               fields=
                 [{dataWordCount,
                   #data{ type=uint16, align=112,
-                         default= 0 }},
+                         default= <<0,0>> }},
                  {pointerCount,
                   #data{ type=uint16, align=192,
-                         default= 0 }},
+                         default= <<0,0>> }},
                  {preferredListEncoding,
                   #data{ type={enum,15102134695616452902}, align=208,
-                         default= 0 }},
+                         default= <<0,0>> }},
                  {isGroup,
                   #data{ type=bool, align=231,
-                         default= false }},
+                         default= <<0:1>> }},
                  {discriminantCount,
                   #data{ type=uint16, align=240,
-                         default= 0 }},
+                         default= <<0,0>> }},
                  {discriminantOffset,
                   #data{ type=uint32, align=256,
-                         default= 0 }},
+                         default= <<0,0,0,0>> }},
                  {fields,
                   #ptr{ type={list,{struct,11145653318641710175}}, idx=3,
                         default= <<0,0,0,0,0,0,0,0>> }}
@@ -218,7 +223,7 @@ schema(schema) ->
          node=#node{ %% 0x9aad50a41f4af45f
            name='Field', id=11145653318641710175, source= <<"schema.capnp:Field">> },
          dsize=3, psize=4, esize=inlineComposite,
-         union_field=#data{ align=64, default= 0, type=
+         union_field=#data{ align=64, default= <<0,0>>, type=
            {union,
              [{0,slot,
                #group{ id=14133145859926553711 }},
@@ -231,13 +236,13 @@ schema(schema) ->
                    default= <<>> }},
             {codeOrder,
              #data{ type=uint16, align=0,
-                    default= 0 }},
+                    default= <<0,0>> }},
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
                    default= <<0,0,0,0,0,0,0,0>> }},
             {discriminantValue,
              #data{ type=uint16, align=16,
-                    default= 65535 }},
+                    default= <<255,255>> }},
             {ordinal,
              #group{ id=13515537513213004774 }}
            ],
@@ -246,12 +251,12 @@ schema(schema) ->
               node=#node{ %% 0xbb90d5c287870be6
                 name=ordinal, id=13515537513213004774, source= <<"schema.capnp:Field.ordinal">> },
               dsize=3, psize=4, esize=inlineComposite,
-              union_field=#data{ align=80, default= 0, type=
+              union_field=#data{ align=80, default= <<0,0>>, type=
                 {union,
                   [{0,implicit,void},
                    {1,explicit,
                     #data{ type=uint16, align=96,
-                           default= 0 }}
+                           default= <<0,0>> }}
                 ]} }},
             #struct{
               node=#node{ %% 0xcafccddb68db1d11
@@ -261,7 +266,7 @@ schema(schema) ->
               fields=
                 [{typeId,
                   #data{ type=uint64, align=128,
-                         default= 0 }}
+                         default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0xc42305476bb4746f
@@ -271,7 +276,7 @@ schema(schema) ->
               fields=
                 [{offset,
                   #data{ type=uint32, align=32,
-                         default= 0 }},
+                         default= <<0,0,0,0>> }},
                  {type,
                   #ptr{ type={struct,15020482145304562784}, idx=2,
                         default= <<0,0,0,0,0,0,0,0>> }},
@@ -291,7 +296,7 @@ schema(schema) ->
                    default= <<>> }},
             {codeOrder,
              #data{ type=uint16, align=0,
-                    default= 0 }},
+                    default= <<0,0>> }},
             {annotations,
              #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
                    default= <<0,0,0,0,0,0,0,0>> }}
@@ -307,13 +312,13 @@ schema(schema) ->
                    default= <<>> }},
             {codeOrder,
              #data{ type=uint16, align=0,
-                    default= 0 }},
+                    default= <<0,0>> }},
             {params,
              #ptr{ type={list,{struct,14681955158633610486}}, idx=1,
                    default= <<0,0,0,0,0,0,0,0>> }},
             {requiredParamCount,
              #data{ type=uint16, align=16,
-                    default= 0 }},
+                    default= <<0,0>> }},
             {returnType,
              #ptr{ type={struct,15020482145304562784}, idx=2,
                    default= <<0,0,0,0,0,0,0,0>> }},
@@ -346,7 +351,7 @@ schema(schema) ->
          node=#node{ %% 0xd07378ede1f9cc60
            name='Type', id=15020482145304562784, source= <<"schema.capnp:Type">> },
          dsize=2, psize=1, esize=inlineComposite,
-         union_field=#data{ align=0, default= 0, type=
+         union_field=#data{ align=0, default= <<0,0>>, type=
            {union,
              [{0,void,void},
               {1,bool,void},
@@ -381,7 +386,7 @@ schema(schema) ->
               fields=
                 [{typeId,
                   #data{ type=uint64, align=64,
-                         default= 0 }}
+                         default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0xac3a6f60ef4cc6d3
@@ -391,7 +396,7 @@ schema(schema) ->
               fields=
                 [{typeId,
                   #data{ type=uint64, align=64,
-                         default= 0 }}
+                         default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0x9e0e78711a7f87a9
@@ -401,7 +406,7 @@ schema(schema) ->
               fields=
                 [{typeId,
                   #data{ type=uint64, align=64,
-                         default= 0 }}
+                         default= <<0,0,0,0,0,0,0,0>> }}
                 ]},
             #struct{
               node=#node{ %% 0x87e739250a60ea97
@@ -418,42 +423,42 @@ schema(schema) ->
          node=#node{ %% 0xce23dcd2d7b00c9b
            name='Value', id=14853958794117909659, source= <<"schema.capnp:Value">> },
          dsize=2, psize=1, esize=inlineComposite,
-         union_field=#data{ align=0, default= 0, type=
+         union_field=#data{ align=0, default= <<0,0>>, type=
            {union,
              [{0,void,void},
               {1,bool,
                #data{ type=bool, align=23,
-                      default= false }},
+                      default= <<0:1>> }},
               {2,int8,
                #data{ type=int8, align=16,
-                      default= 0 }},
+                      default= <<0>> }},
               {3,int16,
                #data{ type=int16, align=16,
-                      default= 0 }},
+                      default= <<0,0>> }},
               {4,int32,
                #data{ type=int32, align=32,
-                      default= 0 }},
+                      default= <<0,0,0,0>> }},
               {5,int64,
                #data{ type=int64, align=64,
-                      default= 0 }},
+                      default= <<0,0,0,0,0,0,0,0>> }},
               {6,uint8,
                #data{ type=uint8, align=16,
-                      default= 0 }},
+                      default= <<0>> }},
               {7,uint16,
                #data{ type=uint16, align=16,
-                      default= 0 }},
+                      default= <<0,0>> }},
               {8,uint32,
                #data{ type=uint32, align=32,
-                      default= 0 }},
+                      default= <<0,0,0,0>> }},
               {9,uint64,
                #data{ type=uint64, align=64,
-                      default= 0 }},
+                      default= <<0,0,0,0,0,0,0,0>> }},
               {10,float32,
                #data{ type=float32, align=32,
-                      default= 0.0 }},
+                      default= <<0,0,0,0>> }},
               {11,float64,
                #data{ type=float64, align=64,
-                      default= 0.0 }},
+                      default= <<0,0,0,0,0,0,0,0>> }},
               {12,text,
                #ptr{ type=text, idx=0,
                      default= <<>> }},
@@ -465,7 +470,7 @@ schema(schema) ->
                      default= <<0,0,0,0,0,0,0,0>> }},
               {15,enum,
                #data{ type=uint16, align=16,
-                      default= 0 }},
+                      default= <<0,0>> }},
               {16,struct,
                #ptr{ type=object, idx=0,
                      default= <<0,0,0,0,0,0,0,0>> }},
@@ -482,7 +487,7 @@ schema(schema) ->
          fields=
            [{id,
              #data{ type=uint64, align=0,
-                    default= 0 }},
+                    default= <<0,0,0,0,0,0,0,0>> }},
             {value,
              #ptr{ type={struct,14853958794117909659}, idx=0,
                    default= <<0,0,0,0,0,0,0,0>> }}
@@ -522,7 +527,7 @@ schema(schema) ->
               fields=
                 [{id,
                   #data{ type=uint64, align=0,
-                         default= 0 }},
+                         default= <<0,0,0,0,0,0,0,0>> }},
                  {filename,
                   #ptr{ type=text, idx=0,
                         default= <<>> }},
@@ -539,7 +544,7 @@ schema(schema) ->
                    fields=
                      [{id,
                        #data{ type=uint64, align=0,
-                              default= 0 }},
+                              default= <<0,0,0,0,0,0,0,0>> }},
                       {name,
                        #ptr{ type=text, idx=0,
                              default= <<>> }}
