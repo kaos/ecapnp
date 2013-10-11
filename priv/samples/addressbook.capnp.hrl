@@ -11,6 +11,11 @@
 addressbook(set, Field, Value, Object) ->
     ecapnp:set(Field, Value, Object).
 
+%% Write unnamed union value
+%% -spec addressbook(set, {field_name(), field_value()}|field_name(), object()) -> ok.
+addressbook(set, Value, Object) ->
+    ecapnp:set(Value, Object);
+
 %% Get a reference to the root object in message.
 %% -spec addressbook(root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::#object{}}.
 addressbook(root, Type, Message) ->
@@ -62,7 +67,7 @@ addressbook(schema) ->
          fields=
            [{id,
              #data{ type=uint32, align=0,
-                    default= 0 }},
+                    default= <<0,0,0,0>> }},
             {name,
              #ptr{ type=text, idx=0,
                    default= <<>> }},
@@ -87,7 +92,7 @@ addressbook(schema) ->
                         default= <<>> }},
                  {type,
                   #data{ type={enum,10511609358742521391}, align=0,
-                         default= 0 }}
+                         default= <<0,0>> }}
                 ],
               types=
                 [#enum{
@@ -103,7 +108,7 @@ addressbook(schema) ->
               node=#node{ %% 0xbb0b2bd4bdc3693d
                 name=employment, id=13477914502553102653, source= <<"addressbook.capnp:Person.employment">> },
               dsize=1, psize=4, esize=inlineComposite,
-              union_field=#data{ align=32, default= 0, type=
+              union_field=#data{ align=32, default= <<0,0>>, type=
                 {union,
                   [{0,unemployed,void},
                    {1,employer,

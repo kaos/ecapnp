@@ -44,6 +44,145 @@ text/data) or other structs (useful when reading fields of type
 
 See {@link ecapnpc} for details on the compiled schema.
 
+=== Example ===
+
+A practical example is best to show what it looks like. 
+
+The `addressbook' example from Cap'n Proto has been ported and serves
+as an example for ecapnp as well; and is included here as a reference
+example.
+
+==== Addressbook schema ====
+
+The `addressbook.capnp' schema is defined thus:
+<pre>``
+@0x9eb32e19f86ee174;
+
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("addressbook");
+
+struct Person {
+  id @0 :UInt32;
+  name @1 :Text;
+  email @2 :Text;
+  phones @3 :List(PhoneNumber);
+
+  struct PhoneNumber {
+    number @0 :Text;
+    type @1 :Type;
+
+    enum Type {
+      mobile @0;
+      home @1;
+      work @2;
+    }
+  }
+
+  employment :union {
+    unemployed @4 :Void;
+    employer @5 :Text;
+    school @6 :Text;
+    selfEmployed @7 :Void;
+    # We assume that a person is only one of these.
+  }
+}
+
+struct AddressBook {
+  people @0 :List(Person);
+}
+''
+</pre>
+
+And when compiled with `capnpc -oerl addressbook.capnp', resulting in
+a `addressbook.capnp.hrl'-file, these functions are defined (as `addressbook/N'):
+<dl>
+  <dt>Write value to object field.</dt>
+  <dd>{@type fun((set, Field::atom(), Value::term(), object()) -> ok)}</dd>
+
+  <dt>Get a reference to the root object in message.</dt>
+  <dd>{@type fun((root, Type::atom() | integer(), Message::list(binary())) -> {ok, Root::object()@})}</dd>
+
+  <dt>Read object field value.</dt>
+  <dd>{@type fun((get, Field::atom(), object()) -> term())}</dd>
+
+  <dt>Type cast object to another struct or list.</dt>
+  <dd>{@type fun((to_struct, Type::atom() | integer(), object()) -> object())}<br/>
+      {@type fun((to_list, Type::atom() | integer(), object()) -> list())}</dd>
+
+  <dt>Set root type for a new message.</dt>
+  <dd>{@type fun((root, Type::atom() | integer()) -> {ok, Root::object()@})}</dd>
+
+  <dt>Read unnamed union value of object.</dt>
+  <dd>{@type fun((get, object()) -> (Tag::atom() | {Tag::atom(), Value::term()@}))}</dd>
+
+  <dt>Type cast object to text/data.</dt>
+  <dd>{@type fun((to_text | to_data, object()) -> binary())}</dd>
+
+  <dt>Get the compiled schema.</dt>
+  <dd>{@type fun((schema) -> schema())}</dd>
+</dl>
+
+==== Writing an addressbook ====
+
+To write a addressbook message, we first need a `AddressBook' root object:
+
+``{ok, AddressBook} = addressbook(root, 'AddressBook').''
+
+Now, we can fill in the details. Let's add two people, and call them
+`Alice' and `Bob':
+
+``[Alice, Bob] = addressbook(set, people, 2, AddressBook).''
+
+Now, `Alice' has one phone number, while `Bob' has two:
+
+``[addressbook(set, phones, N, P) || {P, N} <- [{Alice, 1}, {Bob, 2}]].''
+
+Ok, we're all set to fill in the blanks of the people and phone objects we have allocated:
+
+<pre>
+``
+[addressbook(set, Field, Value, Obj)
+ || {Obj, FieldValue} <-
+          [{Alice,
+                [{id, 123},
+                 {name, <<"Alice">>},
+                 {email, <<"alice@example.com">>},
+                 {employment, {shool, <<"MIT">>}},
+                 {phones, {0, {number, <<"555-1212">>}}},
+                 {phones, {0, {type, mobile}}}]},
+           {Bob,
+                [{id, 456},
+                 {name, <<"Bob">>},
+                 {email, <<"bob@example.com">>},
+                 {employment, unemployed},
+                 {phones, {0, {number, <<"555-4567">>}}},
+                 {phones, {0, {type, home}}},
+                 {phones, {1, {number, <<"555-7654">>}}},
+                 {phones, {1, {type, mobile}}}]}],
+    {Field, Value} <- FieldValues].
+''
+</pre>
+
+There's quite a number of `addressbook(set, ...)'-calls there. Also
+note that we could have saved a reference to the phone objects
+directly and used those instead of embedding them in the calls to
+Alice and Bob, when we allocated the phone objects, the same way we
+saved the result when allocating people.
+
+All that is left now is to get the message out. Here's how to get a
+packed binary ready for dispatching:
+
+``Data = ecapnp_serialize:pack(ecapnp_message:write(AddressBook)).''
+
+If you intend to send it to `io', make sure it uses `unicode' encoding:
+
+``io:setopts([{encoding, unicode}]).'' will take care of it.
+
+
+==== Reading an addressbook message ====
+
+To be written...
+
 
 == Project info ==
 <dl>

@@ -22,7 +22,7 @@ read([]) ->
 
 write([]) ->    
     {ok, Root} = addressbook(root, 'AddressBook'),
-    [Alice, Bob] = addressbook(set, people, 2, Root),
+    [Alice, Bob, Steve] = addressbook(set, people, 3, Root),
     [AlicePhone] = addressbook(set, phones, 1, Alice),
     [BobPhone1, BobPhone2] = addressbook(set, phones, 2, Bob),
     [ok = addressbook(set, Field, Value, Obj)
@@ -47,7 +47,20 @@ write([]) ->
                {type, home}]},
              {BobPhone2,
               [{number, <<"555-7654">>},
-               {type, work}]}
+               {type, work}]},
+             {Steve,
+              [{id, 123456},
+               {name, <<"Steve">>},
+               {email, <<"steve@example.com">>},
+               {employment, selfEmployed},
+               {phones, 3},
+               {phones, {0, {number, <<"555-1234">>}}},
+               {phones, {0, {type, home}}},
+               {phones, {1, {number, <<"555-4321">>}}},
+               {phones, {1, {type, work}}},
+               {phones, {2, {number, <<"070-5555">>}}},
+               {phones, {2, {type, mobile}}}
+              ]}
             ],
         {Field, Value} <- FieldValues],
 
