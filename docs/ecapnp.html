@@ -10,52 +10,137 @@
 <hr>
 
 <h1>Module ecapnp</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>The highlevel Cap'n Proto API.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>The highlevel Cap'n Proto API.</p>
+ 
+  This module doesn't implement any functionality, it is simply
+  exposing the highlevel functions from the other modules.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
+<p><tt>field_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_value">field_value()</a></h3>
+<p><tt>field_value() = <a href="#type-value">value()</a> | <a href="#type-object">object()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-message">message()</a></h3>
+<p><tt>message() = [binary()]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
+<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
+<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object">object()</a></h3>
+<p><tt>object() = #object{ref = undefined | #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, type = <a href="#type-node_type">node_type()</a> | object}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
+<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
+<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
+<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema">schema()</a></h3>
+<p><tt>schema() = #schema{node = undefined | <a href="#type-schema_node">schema_node()</a>, types = <a href="#type-node_types">node_types()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
+<p><tt>segment_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get-1">get/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get-2">get/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get_root-3">get_root/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#set-2">set/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#set-3">set/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#set_root-2">set_root/2</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get-1">get/1</a></td><td>Read the unnamed union value of object.</td></tr>
+<tr><td valign="top"><a href="#get-2">get/2</a></td><td>Read the field value of object.</td></tr>
+<tr><td valign="top"><a href="#get_root-3">get_root/3</a></td><td>Get the root object for a message.</td></tr>
+<tr><td valign="top"><a href="#set-2">set/2</a></td><td>Write union value to the unnamed union of object.</td></tr>
+<tr><td valign="top"><a href="#set-3">set/3</a></td><td>Write value to a field of object.</td></tr>
+<tr><td valign="top"><a href="#set_root-2">set_root/2</a></td><td>Set the root object for a new message.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="get-1">get/1</a></h3>
 <div class="spec">
-<p><tt>get(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>get(Object::<a href="#type-object">object()</a>) -&gt; {<a href="#type-field_name">field_name()</a>, <a href="#type-field_value">field_value()</a>} | <a href="#type-field_name">field_name()</a></tt><br></p>
+</div><p>Read the unnamed union value of object.
+  The result value is either a tuple, describing which union tag it
+  is, and its associated value, or just the tag name, if the value is
+  void.</p>
+<p><b>See also:</b> <a href="ecapnp_get.html#union-1">ecapnp_get:union/1</a>.</p>
 
 <h3 class="function"><a name="get-2">get/2</a></h3>
 <div class="spec">
-<p><tt>get(Field, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>get(Field::<a href="#type-field_name">field_name()</a>, Object::<a href="#type-object">object()</a>) -&gt; <a href="#type-field_value">field_value()</a></tt><br></p>
+</div><p>Read the field value of object.</p>
+<p><b>See also:</b> <a href="ecapnp_get.html#field-2">ecapnp_get:field/2</a>.</p>
 
 <h3 class="function"><a name="get_root-3">get_root/3</a></h3>
 <div class="spec">
-<p><tt>get_root(Type, Schema, Segments) -&gt; any()</tt></p>
-</div>
+<p><tt>get_root(Type::<a href="#type-type_name">type_name()</a>, Schema::<a href="#type-schema">schema()</a>, Segments::<a href="#type-message">message()</a>) -&gt; {ok, Root::<a href="#type-object">object()</a>}</tt><br></p>
+</div><p>Get the root object for a message.
+  The message should already have been unpacked and parsed.</p>
+<p><b>See also:</b> <a href="ecapnp_get.html#root-3">ecapnp_get:root/3</a>, <a href="ecapnp_message.html#read-1">ecapnp_message:read/1</a>, <a href="ecapnp_serialize.html#unpack-1">ecapnp_serialize:unpack/1</a>.</p>
 
 <h3 class="function"><a name="set-2">set/2</a></h3>
 <div class="spec">
-<p><tt>set(Value, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>set(Value::{<a href="#type-field_name">field_name()</a>, <a href="#type-field_value">field_value()</a>} | <a href="#type-field_name">field_name()</a>, Object::<a href="#type-object">object()</a>) -&gt; ok</tt><br></p>
+</div><p>Write union value to the unnamed union of object.</p>
+<p><b>See also:</b> <a href="ecapnp_set.html#union-2">ecapnp_set:union/2</a>.</p>
 
 <h3 class="function"><a name="set-3">set/3</a></h3>
 <div class="spec">
-<p><tt>set(Field, Value, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>set(Field::<a href="#type-field_name">field_name()</a>, Value::<a href="#type-field_value">field_value()</a>, Object::<a href="#type-object">object()</a>) -&gt; ok</tt><br></p>
+</div><p>Write value to a field of object.</p>
+<p><b>See also:</b> <a href="ecapnp_set.html#field-3">ecapnp_set:field/3</a>.</p>
 
 <h3 class="function"><a name="set_root-2">set_root/2</a></h3>
 <div class="spec">
-<p><tt>set_root(Type, Schema) -&gt; any()</tt></p>
-</div>
+<p><tt>set_root(Type::<a href="#type-type_name">type_name()</a>, Schema::<a href="#type-schema">schema()</a>) -&gt; {ok, Root::<a href="#type-object">object()</a>}</tt><br></p>
+</div><p><p>Set the root object for a new message.  
+This creates a new empty message, ready to be filled with data.</p>
+ 
+  To get the segment data out, call <a href="ecapnp_message.html#write-1"><code>ecapnp_message:write/1</code></a>.</p>
+<p><b>See also:</b> <a href="ecapnp_set.html#root-2">ecapnp_set:root/2</a>.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
+<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
 </body>
 </html>

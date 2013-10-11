@@ -10,70 +10,137 @@
 <hr>
 
 <h1>Module ecapnp_obj</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Everything object.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>Everything object.</p>
+ 
+  Structs.. structs.. and more structs.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
+<p><tt>field_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_type">field_type()</a></h3>
+<p><tt>field_type() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>} | #group{id = integer()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
+<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
+<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object">object()</a></h3>
+<p><tt>object() = #object{ref = undefined | #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, type = <a href="#type-node_type">node_type()</a> | object}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
+<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
+<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
+<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
+<p><tt>segment_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#field-2">field/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#from_data-2">from_data/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#from_ref-2">from_ref/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#to_data-1">to_data/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#to_list-2">to_list/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#to_struct-2">to_struct/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#to_text-1">to_text/1</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data for a new object.</td></tr>
+<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td>Copy object recursively.</td></tr>
+<tr><td valign="top"><a href="#field-2">field/2</a></td><td>Lookup field definition by name for object.</td></tr>
+<tr><td valign="top"><a href="#from_data-2">from_data/2</a></td><td>Get object (or list) from data.</td></tr>
+<tr><td valign="top"><a href="#from_ref-2">from_ref/2</a></td><td>Get object (or list) from reference.</td></tr>
+<tr><td valign="top"><a href="#to_data-1">to_data/1</a></td><td>Type cast object to binary data.</td></tr>
+<tr><td valign="top"><a href="#to_list-2">to_list/2</a></td><td>Type cast object to list of type.</td></tr>
+<tr><td valign="top"><a href="#to_struct-2">to_struct/2</a></td><td>Type cast object to another type of object.</td></tr>
+<tr><td valign="top"><a href="#to_text-1">to_text/1</a></td><td>Type cast object to text.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="alloc-3">alloc/3</a></h3>
 <div class="spec">
-<p><tt>alloc(Type, SegmentId, Data) -&gt; any()</tt></p>
-</div>
+<p><tt>alloc(Type::<a href="#type-type_name">type_name()</a>, SegmentId::<a href="#type-segment_id">segment_id()</a>, Data::pid()) -&gt; <a href="#type-object">object()</a></tt><br></p>
+</div><p>Allocate data for a new object.</p>
 
 <h3 class="function"><a name="copy-1">copy/1</a></h3>
 <div class="spec">
-<p><tt>copy(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>copy(Object::<a href="#type-object">object()</a>) -&gt; binary()</tt><br></p>
+</div><p>Copy object recursively.</p>
 
 <h3 class="function"><a name="field-2">field/2</a></h3>
 <div class="spec">
-<p><tt>field(FieldName, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>field(FieldName::<a href="#type-field_name">field_name()</a>, Object::<a href="#type-object">object()</a> | #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>}) -&gt; <a href="#type-field_type">field_type()</a></tt><br></p>
+</div><p>Lookup field definition by name for object.</p>
 
 <h3 class="function"><a name="from_data-2">from_data/2</a></h3>
 <div class="spec">
-<p><tt>from_data(Data, Type) -&gt; any()</tt></p>
-</div>
+<p><tt>from_data(Data::binary(), Type::<a href="#type-type_name">type_name()</a>) -&gt; <a href="#type-object">object()</a> | list()</tt><br></p>
+</div><p>Get object (or list) from data.</p>
+<p><b>See also:</b> <a href="#from_ref-2">from_ref/2</a>.</p>
 
 <h3 class="function"><a name="from_ref-2">from_ref/2</a></h3>
 <div class="spec">
-<p><tt>from_ref(Ref, Type) -&gt; any()</tt></p>
-</div>
+<p><tt>from_ref(Ref::#ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, Type::<a href="#type-type_name">type_name()</a>) -&gt; <a href="#type-object">object()</a> | list()</tt><br></p>
+</div><p>Get object (or list) from reference.</p>
 
 <h3 class="function"><a name="to_data-1">to_data/1</a></h3>
 <div class="spec">
-<p><tt>to_data(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>to_data(Object::<a href="#type-object">object()</a>) -&gt; binary()</tt><br></p>
+</div><p>Type cast object to binary data.
+  Object must be a reference to data.</p>
 
 <h3 class="function"><a name="to_list-2">to_list/2</a></h3>
 <div class="spec">
-<p><tt>to_list(Type, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>to_list(Type::<a href="#type-type_name">type_name()</a>, Object::<a href="#type-object">object()</a>) -&gt; list()</tt><br></p>
+</div><p>Type cast object to list of type.
+  Object must be a reference to a list.</p>
 
 <h3 class="function"><a name="to_struct-2">to_struct/2</a></h3>
 <div class="spec">
-<p><tt>to_struct(Type, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>to_struct(Type::<a href="#type-type_name">type_name()</a>, Object::<a href="#type-object">object()</a>) -&gt; <a href="#type-object">object()</a></tt><br></p>
+</div><p>Type cast object to another type of object.</p>
 
 <h3 class="function"><a name="to_text-1">to_text/1</a></h3>
 <div class="spec">
-<p><tt>to_text(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>to_text(Object::<a href="#type-object">object()</a>) -&gt; binary()</tt><br></p>
+</div><p>Type cast object to text.
+  Object must be a reference to text.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
+<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
 </body>
 </html>

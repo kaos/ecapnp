@@ -10,58 +10,129 @@
 <hr>
 
 <h1>Module ecapnp_data</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Data server module.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>Data server module</p>
+ 
+  <p>All objects data is held in a data process, implemented by this  
+module.</p>
+ 
+  I have a wish to get away with the fact that each reference to
+  default data ends up with their own separate data process.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
+<p><tt>field_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-message">message()</a></h3>
+<p><tt>message() = [binary()]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
+<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
+<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
+<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
+<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema">schema()</a></h3>
+<p><tt>schema() = #schema{node = undefined | <a href="#type-schema_node">schema_node()</a>, types = <a href="#type-node_types">node_types()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_type">schema_type()</a></h3>
+<p><tt>schema_type() = <a href="#type-type_name">type_name()</a> | <a href="#type-type_id">type_id()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
+<p><tt>segment_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get_message-1">get_message/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get_segment-4">get_segment/4</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get_segment_size-2">get_segment_size/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get_type-2">get_type/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#new-1">new/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#update_segment-3">update_segment/3</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data.</td></tr>
+<tr><td valign="top"><a href="#get_message-1">get_message/1</a></td><td>Get the data process message record.</td></tr>
+<tr><td valign="top"><a href="#get_segment-4">get_segment/4</a></td><td>Read data from segment.</td></tr>
+<tr><td valign="top"><a href="#get_segment_size-2">get_segment_size/2</a></td><td>Get size of segment, in words (8 bytes).</td></tr>
+<tr><td valign="top"><a href="#get_type-2">get_type/2</a></td><td>Lookup type in schema.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>Start a new data process.</td></tr>
+<tr><td valign="top"><a href="#update_segment-3">update_segment/3</a></td><td>Write data to segment.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="alloc-3">alloc/3</a></h3>
 <div class="spec">
-<p><tt>alloc(Id, Size, Pid) -&gt; any()</tt></p>
-</div>
+<p><tt>alloc(Id::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Pid::pid()) -&gt; {<a href="#type-segment_id">segment_id()</a>, Offset::integer()}</tt><br></p>
+</div><p><p>Allocate data.</p>
+ 
+  Preferably from segment id <code>Id</code>, if possible.  This will rarely
+  fail, as new segments are added in case there is not enough free
+  space left.</p>
 
 <h3 class="function"><a name="get_message-1">get_message/1</a></h3>
 <div class="spec">
-<p><tt>get_message(Pid) -&gt; any()</tt></p>
-</div>
+<p><tt>get_message(Pid::pid()) -&gt; #msg{schema = undefined | <a href="#type-schema">schema()</a>, alloc = [integer()], data = <a href="#type-message">message()</a>}</tt><br></p>
+</div><p>Get the data process message record.</p>
 
 <h3 class="function"><a name="get_segment-4">get_segment/4</a></h3>
 <div class="spec">
-<p><tt>get_segment(Id, Offset, Length, Pid) -&gt; any()</tt></p>
-</div>
+<p><tt>get_segment(Id::<a href="#type-segment_id">segment_id()</a>, Offset::integer(), Length::integer(), Pid::pid()) -&gt; binary()</tt><br></p>
+</div><p>Read data from segment.</p>
 
 <h3 class="function"><a name="get_segment_size-2">get_segment_size/2</a></h3>
 <div class="spec">
-<p><tt>get_segment_size(Id, Pid) -&gt; any()</tt></p>
-</div>
+<p><tt>get_segment_size(Id::<a href="#type-segment_id">segment_id()</a>, Pid::pid()) -&gt; integer()</tt><br></p>
+</div><p>Get size of segment, in words (8 bytes).</p>
 
 <h3 class="function"><a name="get_type-2">get_type/2</a></h3>
 <div class="spec">
-<p><tt>get_type(Type, Pid) -&gt; any()</tt></p>
-</div>
+<p><tt>get_type(Type::<a href="#type-schema_type">schema_type()</a>, Pid::pid()) -&gt; <a href="#type-node_type">node_type()</a> | false</tt><br></p>
+</div><p>Lookup type in schema.</p>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Init) -&gt; any()</tt></p>
-</div>
+<p><tt>new(Init::#msg{schema = undefined | <a href="#type-schema">schema()</a>, alloc = [integer()], data = <a href="#type-message">message()</a>} | {<a href="#type-schema">schema()</a>, SegmentSize::<a href="#type-posinteger">posinteger()</a>} | {pid(), Data::binary()}) -&gt; pid()</tt><br></p>
+</div><p>Start a new data process.</p>
 
 <h3 class="function"><a name="update_segment-3">update_segment/3</a></h3>
 <div class="spec">
-<p><tt>update_segment(X1, Data, Pid) -&gt; any()</tt></p>
-</div>
+<p><tt>update_segment(X1::{<a href="#type-segment_id">segment_id()</a>, integer()}, Data::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>Write data to segment.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
+<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
 </body>
 </html>

@@ -10,46 +10,121 @@
 <hr>
 
 <h1>Module ecapnp_get</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Read support.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>Read support.</p>
+ 
+  Everything for reading data out of a message.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
+<p><tt>field_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_value">field_value()</a></h3>
+<p><tt>field_value() = <a href="#type-value">value()</a> | <a href="#type-object">object()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-message">message()</a></h3>
+<p><tt>message() = [binary()]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
+<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
+<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object">object()</a></h3>
+<p><tt>object() = #object{ref = undefined | #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, type = <a href="#type-node_type">node_type()</a> | object}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
+<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
+<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
+<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema">schema()</a></h3>
+<p><tt>schema() = #schema{node = undefined | <a href="#type-schema_node">schema_node()</a>, types = <a href="#type-node_types">node_types()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
+<p><tt>segment_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#field-2">field/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#ref_data-2">ref_data/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#ref_data-3">ref_data/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#root-3">root/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#union-1">union/1</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#field-2">field/2</a></td><td>Read the field value of object.</td></tr>
+<tr><td valign="top"><a href="#ref_data-2">ref_data/2</a></td><td>internal function not intended for client code.</td></tr>
+<tr><td valign="top"><a href="#ref_data-3">ref_data/3</a></td><td>Read data of object reference as type.</td></tr>
+<tr><td valign="top"><a href="#root-3">root/3</a></td><td>Get the root object for a message.</td></tr>
+<tr><td valign="top"><a href="#union-1">union/1</a></td><td>Read the unnamed union value of object.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="field-2">field/2</a></h3>
 <div class="spec">
-<p><tt>field(FieldName, Object) -&gt; any()</tt></p>
-</div>
+<p><tt>field(FieldName::<a href="#type-field_name">field_name()</a>, Object::<a href="#type-object">object()</a>) -&gt; <a href="#type-field_value">field_value()</a></tt><br></p>
+</div><p>Read the field value of object.</p>
+<p><b>See also:</b> <a href="ecapnp.html#get-2">ecapnp:get/2</a>.</p>
 
 <h3 class="function"><a name="ref_data-2">ref_data/2</a></h3>
 <div class="spec">
 <p><tt>ref_data(Ptr, Ref) -&gt; any()</tt></p>
-</div>
+</div><p>internal function not intended for client code.</p>
 
 <h3 class="function"><a name="ref_data-3">ref_data/3</a></h3>
 <div class="spec">
 <p><tt>ref_data(Type, Object, Default) -&gt; any()</tt></p>
-</div>
+</div><p>Read data of object reference as type.
+  This is a Low-level function.</p>
 
 <h3 class="function"><a name="root-3">root/3</a></h3>
 <div class="spec">
-<p><tt>root(Type, Schema, Segments) -&gt; any()</tt></p>
-</div>
+<p><tt>root(Type::<a href="#type-type_name">type_name()</a>, Schema::<a href="#type-schema">schema()</a>, Segments::<a href="#type-message">message()</a>) -&gt; {ok, Root::<a href="#type-object">object()</a>}</tt><br></p>
+</div><p>Get the root object for a message.</p>
+<p><b>See also:</b> <a href="ecapnp.html#get_root-3">ecapnp:get_root/3</a>.</p>
 
 <h3 class="function"><a name="union-1">union/1</a></h3>
 <div class="spec">
-<p><tt>union(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>union(Object::<a href="#type-object">object()</a>) -&gt; {<a href="#type-field_name">field_name()</a>, <a href="#type-field_value">field_value()</a>} | <a href="#type-field_name">field_name()</a></tt><br></p>
+</div><p>Read the unnamed union value of object.</p>
+<p><b>See also:</b> <a href="ecapnp.html#get-1">ecapnp:get/1</a>.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
+<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
 </body>
 </html>

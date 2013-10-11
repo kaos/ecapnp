@@ -10,34 +10,105 @@
 <hr>
 
 <h1>Module ecapnp_message</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Message framing.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>Message framing.</p>
+ 
+  Takes care of reading a framed message, getting the segments data
+  out, and writing the message header with the segment table.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
+<p><tt>field_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-message">message()</a></h3>
+<p><tt>message() = [binary()]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
+<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
+<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object">object()</a></h3>
+<p><tt>object() = #object{ref = undefined | #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, type = <a href="#type-node_type">node_type()</a> | object}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
+<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
+<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
+<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
+<p><tt>segment_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = atom()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#read-1">read/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_file-1">read_file/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#write-1">write/1</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#read-1">read/1</a></td><td>Parse segment table in the (unpacked, but otherwise framed)
+  message.</td></tr>
+<tr><td valign="top"><a href="#read_file-1">read_file/1</a></td><td>Read binary message from file.</td></tr>
+<tr><td valign="top"><a href="#write-1">write/1</a></td><td>Write segment table for message and return it along with the  
+segments data.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="read-1">read/1</a></h3>
 <div class="spec">
-<p><tt>read(Data) -&gt; any()</tt></p>
-</div>
+<p><tt>read(Data::binary()) -&gt; {ok, <a href="#type-message">message()</a>}</tt><br></p>
+</div><p>Parse segment table in the (unpacked, but otherwise framed)
+  message.</p>
 
 <h3 class="function"><a name="read_file-1">read_file/1</a></h3>
 <div class="spec">
-<p><tt>read_file(Filename) -&gt; any()</tt></p>
-</div>
+<p><tt>read_file(Filename::string()) -&gt; {ok, <a href="#type-message">message()</a>}</tt><br></p>
+</div><p>Read binary message from file.</p>
+<p><b>See also:</b> <a href="#read-1">read/1</a>.</p>
 
 <h3 class="function"><a name="write-1">write/1</a></h3>
 <div class="spec">
-<p><tt>write(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>write(Object::<a href="#type-object">object()</a>) -&gt; binary()</tt><br></p>
+</div><p><p>Write segment table for message and return it along with the  
+segments data.</p>
+ 
+  Any non-default object may be passed to this function.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
+<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
 </body>
 </html>

@@ -10,18 +10,38 @@
 <hr>
 
 <h1>Module ecapnp_ref</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Read/Write/Allocate references.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>Read/Write/Allocate references.</p>
+ 
+  Everything reference.
+  Which is almost everything in Cap'n Proto :p.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
+<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+
+
+<h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
+<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
+<p><tt>segment_id() = integer()</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#alloc-4">alloc/4</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data for a reference.</td></tr>
+<tr><td valign="top"><a href="#alloc-4">alloc/4</a></td><td>Allocate data for a reference of a specific kind.</td></tr>
 <tr><td valign="top"><a href="#alloc_data-1">alloc_data/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#alloc_list-3">alloc_list/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#copy-1">copy/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#follow_far-1">follow_far/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get-3">get/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get-4">get/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get-3">get/3</a></td><td>Get reference from segment data.</td></tr>
+<tr><td valign="top"><a href="#get-4">get/4</a></td><td>Get reference from segment data.</td></tr>
 <tr><td valign="top"><a href="#null_ref-1">null_ref/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#ptr-2">ptr/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#read_data-1">read_data/1</a></td><td></td></tr>
@@ -34,7 +54,7 @@
 <tr><td valign="top"><a href="#read_struct_ptr-3">read_struct_ptr/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#read_text-1">read_text/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#read_text-2">read_text/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#set-2">set/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#set-2">set/2</a></td><td>Set reference kind.</td></tr>
 <tr><td valign="top"><a href="#write_data-3">write_data/3</a></td><td></td></tr>
 <tr><td valign="top"><a href="#write_list-4">write_list/4</a></td><td></td></tr>
 <tr><td valign="top"><a href="#write_struct_data-4">write_struct_data/4</a></td><td></td></tr>
@@ -46,13 +66,20 @@
 
 <h3 class="function"><a name="alloc-3">alloc/3</a></h3>
 <div class="spec">
-<p><tt>alloc(SegmentId, Size, Data) -&gt; any()</tt></p>
-</div>
+<p><tt>alloc(SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+</div><p><p>Allocate data for a reference.</p>
+ 
+  The allocated data is left empty.</p>
 
 <h3 class="function"><a name="alloc-4">alloc/4</a></h3>
 <div class="spec">
-<p><tt>alloc(Kind, SegmentId, Size, Data) -&gt; any()</tt></p>
-</div>
+<p><tt>alloc(Kind::<a href="#type-ref_kind">ref_kind()</a>, SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+</div><p><p>Allocate data for a reference of a specific kind.</p>
+ 
+  The reference will be written to the first word of the allocated
+  data, by <a href="#set-2"><code>set/2</code></a>.
+ </p>
+<p><b>See also:</b> <a href="#alloc-3">alloc/3</a>, <a href="#set-2">set/2</a>.</p>
 
 <h3 class="function"><a name="alloc_data-1">alloc_data/1</a></h3>
 <div class="spec">
@@ -76,13 +103,25 @@
 
 <h3 class="function"><a name="get-3">get/3</a></h3>
 <div class="spec">
-<p><tt>get(SegmentId, Pos, Data) -&gt; any()</tt></p>
-</div>
+<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+</div><p><p>Get reference from segment data.</p>
+ 
+  <p>Read segment, and parse it for a reference pointer.</p>
+ 
+  Will follow far pointers.
+ </p>
+<p><b>See also:</b> <a href="#get-4">get/4</a>.</p>
 
 <h3 class="function"><a name="get-4">get/4</a></h3>
 <div class="spec">
-<p><tt>get(SegmentId, Pos, Data, FollowFar) -&gt; any()</tt></p>
-</div>
+<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid(), FollowFar::boolean()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+</div><p><p>Get reference from segment data.</p>
+ 
+  <p>Read segment, and parse it for a reference pointer.</p>
+ 
+  The resulting reference may be a far pointer, unless <code>FollowFar</code> is <code>true</code>.
+ </p>
+<p><b>See also:</b> <a href="#read_segment-5">read_segment/5</a>, <a href="ecapnp_data.html#get_segment-4">ecapnp_data:get_segment/4</a>.</p>
 
 <h3 class="function"><a name="null_ref-1">null_ref/1</a></h3>
 <div class="spec">
@@ -147,7 +186,12 @@
 <h3 class="function"><a name="set-2">set/2</a></h3>
 <div class="spec">
 <p><tt>set(Kind, Ref0) -&gt; any()</tt></p>
-</div>
+</div><p><p>Set reference kind.</p>
+ 
+  Updates the reference kind and writes it to the segment data at
+  <code>Ref.pos</code>.
+ </p>
+<p><b>See also:</b> <a href="#alloc-4">alloc/4</a>.</p>
 
 <h3 class="function"><a name="write_data-3">write_data/3</a></h3>
 <div class="spec">
@@ -176,6 +220,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
+<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
 </body>
 </html>
