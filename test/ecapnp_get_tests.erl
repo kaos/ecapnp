@@ -15,6 +15,7 @@
 %%  
 
 -module(ecapnp_get_tests).
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -include("test/test.capnp.hrl").
 
@@ -129,3 +130,27 @@ default_list_test() ->
      || {O, T} <- [{Obj1, [{value, 1}, {message, <<"first">>}]},
                    {Obj2, [{value, 2}, {message, <<"second">>}]}],
         {F, E} <- T].
+
+text_list_test() ->
+    Text1 = <<"abcdefghijklmnopqrstuvwxyz">>,
+    Text2 = <<"0123456789">>,
+    Text3 = <<"The end">>,
+    Msg = <<0,0,0,0, 0,0,4,0,
+            0:3/integer-little-unit:64,
+            1,0,0,0, 30,0,0,0, %% listText: off 0, 3 ptrs
+            9,0,0,0, 218,0,0,0, %% text 1, 26 bytes+NULL, 4 words
+            21,0,0,0, 90,0,0,0, %% text 2, 10 bytes+NULL, 2 words
+            25,0,0,0, 66,0,0,0, %% text 3, 7+NULL, 1 word
+            Text1/binary, 0,
+            0:5/integer-little-unit:8, %% padding
+            Text2/binary, 0,
+            0:5/integer-little-unit:8, %% padding
+            Text3/binary, 0>>,
+    {ok, Root} = test(root, 'ListTest', [Msg]),
+    [?assertEqual(Expect, Actual)
+     || {Expect, Actual} <- 
+            lists:zip(
+              [Text1, Text2, Text3],
+              test(get, listText, Root))].
+
+-endif.

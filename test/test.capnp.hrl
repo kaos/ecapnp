@@ -168,12 +168,13 @@ test(schema) ->
        #struct{
          node=#node{ %% 0xed15f6a91b7977a6
            name='ListTest', id=17083831967670695846, source= <<"test/test.capnp:ListTest">> },
-         dsize=0, psize=3, esize=inlineComposite,
+         dsize=0, psize=4, esize=inlineComposite,
          union_field=none,
          fields=
            [{listInts,
              #ptr{ type={list,int32}, idx=0,
-                   default= [456,789,-123] }},
+                   default= <<1,0,0,0,28,0,0,0,200,1,0,0,21,3,0,0,133,255,255,
+                              255,0,0,0,0>> }},
             {listAny,
              #ptr{ type=object, idx=1,
                    default= <<0,0,0,0,0,0,0,0>> }},
@@ -182,6 +183,9 @@ test(schema) ->
                    default= <<1,0,0,0,55,0,0,0,8,0,0,0,1,0,2,0,223,0,0,0,0,0,0,
                               0,17,0,0,0,50,0,0,0,0,0,0,0,0,0,0,0,220,0,0,0,0,
                               0,0,0,9,0,0,0,58,0,0,0,0,0,0,0,0,0,0,0,102,105,
-                              114,115,116,0,0,0,115,101,99,111,110,100,0,0>> }}
+                              114,115,116,0,0,0,115,101,99,111,110,100,0,0>> }},
+            {listText,
+             #ptr{ type={list,text}, idx=3,
+                   default= <<0,0,0,0,0,0,0,0>> }}
            ]}
       ]}.

@@ -58,7 +58,21 @@ ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
   when Idx >= 0, Idx < PSize ->
     #ref{ segment=SegmentId,
           pos=Pos + 1 + Offset + DSize + Idx,
-          data=Data }.
+          data=Data };
+ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
+               kind=#list_ref{ size=pointer, count=Count } })
+  when Idx >= 0, Idx < Count ->
+    #ref{ segment=SegmentId,
+          pos=Pos + 1 + Offset + Idx,
+          data=Data };
+ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
+               kind=#list_ref{ size=inlineComposite, count=Size } }) ->
+    TagOffset = Pos + 1 + Offset,
+    #ref{ offset=Count }=Tag = get(SegmentId, TagOffset, Data),
+    if Idx >= 0, Idx < Count ->
+            Tag#ref{ pos=-1, offset=TagOffset + 1
+                     + ((Size div Count) * Idx) }
+    end.
 
 read_struct_data(Align, Len, Ref) ->
     read_struct_data(Align, Len, Ref, <<0:Len/integer>>).
@@ -248,6 +262,7 @@ list_element_size(byte) -> 8;
 list_element_size(twoBytes) -> 16;
 list_element_size(fourBytes) -> 32;
 list_element_size(eightBytes) -> 64;
+list_element_size(pointer) -> 64;
 list_element_size(inlineComposite) -> inlineComposite.
 
 get_segment(Len, #ref{ segment=SegmentId, pos=Pos,
@@ -258,6 +273,7 @@ set_segment(Value, #ref{ segment=SegmentId, pos=Pos,
                          offset=Offset, data=Data }) ->
     ecapnp_data:update_segment({SegmentId, Pos + 1 + Offset}, Value, Data).
 
+write(#ref{ pos=-1 }) -> ok;
 write(#ref{ segment=SegmentId, pos=Pos,
             offset=Offset, data=Data }=Ref) ->
     ecapnp_data:update_segment(
@@ -266,18 +282,25 @@ write(#ref{ segment=SegmentId, pos=Pos,
       Data).
 
 check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
-          #ref{ segment=SegmentId, pos=Pos, data=Data,
-                offset=Offset,
-                kind=#struct_ref{ dsize=DSize,
-                                  psize=PSize } })
+          #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
+                kind=#struct_ref{ dsize=DSize, psize=PSize } })
   when Ptr >= (Pos + 1 + Offset + DSize),
-       Ptr <  (Pos + 1 + Offset + DSize + PSize) ->
-    ok.
-
+       Ptr <  (Pos + 1 + Offset + DSize + PSize) -> ok;
+check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
+          #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
+                kind=#list_ref{ size=pointer, count=Count } })
+  when Ptr >= (Pos + 1 + Offset),
+       Ptr <  (Pos + 1 + Offset + Count) -> ok;
+check_ptr(#ref{ segment=SegmentId, pos=-1, offset=Ptr, data=Data },
+          #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
+                kind=#list_ref{ size=inlineComposite, count=Size } }) ->
+    TagOffset = Pos + 1 + Offset,
+    Tag = get(SegmentId, TagOffset, Data),
+    End = Ptr + ref_data_size(Tag),
+    if Ptr > TagOffset, End =< TagOffset + 1 + Size -> ok end.
 
 update_offset(Target, #ref{ pos=Pos }=Ref) ->
     Ref#ref{ offset=Target - Pos - 1 }.
-
 
 read_segment(SegmentId, Pos, Segment, Data, FollowFar)
   when size(Segment) == 8 ->

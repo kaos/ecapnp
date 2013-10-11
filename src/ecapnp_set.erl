@@ -106,22 +106,46 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                         StructRef),
                       Type);
                is_tuple(Value), size(Value) == 2 -> %% {Idx, Value}
-                    ElementValue =
-                        case list_element_size(ElementType, StructRef) of
-                            #struct_ref{} -> ugh;
-                            pointer -> hmm;
-                            _ -> ecapnp_val:set(ElementType, element(2, Value))
-                        end,
-                    ecapnp_ref:write_list(
-                      Idx,
-                      element(1, Value),
-                      ElementValue,
-                      StructRef);
+                    case ElementType of
+                        object -> throw(not_yet_implemented);
+                        interface -> throw(not_yet_implemented);
+                        {list, _} -> throw(not_yet_implemented);
+                        {struct, _} ->
+                            case element(2, Value) of %% {Idx, {Field, Value}}
+                                {FieldName, FieldValue} ->
+                                    List = ecapnp_ref:read_struct_ptr(
+                                             Idx, StructRef),
+                                    field(FieldName, FieldValue,
+                                          ecapnp_obj:from_ref(
+                                            ecapnp_ref:ptr(
+                                              element(1, Value), List),
+                                            ElementType))
+                            end;
+                        text ->
+                            List = ecapnp_ref:read_struct_ptr(Idx, StructRef),
+                            ecapnp_ref:write_text(
+                              element(2, Value),
+                              ecapnp_ref:ptr(element(1, Value), List),
+                              List);
+                        data ->
+                            List = ecapnp_ref:read_struct_ptr(Idx, StructRef),
+                            ecapnp_ref:write_data(
+                              element(2, Value),
+                              ecapnp_ref:ptr(element(1, Value), List),
+                              List);
+                        _ ->
+                            ecapnp_ref:write_list(
+                              Idx,
+                              element(1, Value),
+                              ecapnp_val:set(ElementType, element(2, Value)),
+                              StructRef)
+                    end;
                is_list(Value) -> %% [Value...]
-                    [set_field(Ptr, V, StructRef)
+                    set_field(Ptr, length(Value), StructRef),
+                    [ok = set_field(Ptr, V, StructRef)
                      || V <- lists:zip(
                                lists:seq(0, length(Value) - 1),
-                               Value)]
+                               Value)], ok
             end
     end;
 set_field(#group{ id=Type }, Value, StructRef) ->
@@ -142,6 +166,8 @@ union_tag(Value, [_|Fields]) ->
 default(void) -> void;
 default(FieldType) -> {FieldType, undefined}.
 
+list_element_size(text, _) -> pointer;
+list_element_size(data, _) -> pointer;
 list_element_size({list, _}, _) -> pointer;
 list_element_size(Type, Ref) ->
     case ecapnp_schema:lookup(Type, Ref) of
