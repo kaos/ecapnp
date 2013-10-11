@@ -9,7 +9,7 @@
 <div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
 <h1>Overview of ecapnp: the Cap'n Proto library for Erlang</h1>
 <p>Copyright © 2013, Andreas Stenius &lt;kaos@astekk.se&gt;</p>
-<p><b>Version:</b> Oct 8 2013 22:03:39</p>
+<p><b>Version:</b> Oct 11 2013 23:00:41</p>
 <p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>) [<em>web site:</em> <tt><a href="http://blog.astekk.se" target="_top">http://blog.astekk.se</a></tt>].</p>
 
 
@@ -51,6 +51,141 @@ text/data) or other structs (useful when reading fields of type
 
 <p>See <a href="ecapnpc.html"><code>ecapnpc</code></a> for details on the compiled schema.</p>
 
+<h4><a name="Example">Example</a></h4>
+
+<p>A practical example is best to show what it looks like. </p>
+
+<p>The <code>addressbook</code> example from Cap'n Proto has been ported and serves
+as an example for ecapnp as well; and is included here as a reference
+example.</p>
+
+<h5><a name="Addressbook_schema">Addressbook schema</a></h5>
+
+The <code>addressbook.capnp</code> schema is defined thus:
+<pre><code>@0x9eb32e19f86ee174;
+
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("addressbook");
+
+struct Person {
+  id @0 :UInt32;
+  name @1 :Text;
+  email @2 :Text;
+  phones @3 :List(PhoneNumber);
+
+  struct PhoneNumber {
+    number @0 :Text;
+    type @1 :Type;
+
+    enum Type {
+      mobile @0;
+      home @1;
+      work @2;
+    }
+  }
+
+  employment :union {
+    unemployed @4 :Void;
+    employer @5 :Text;
+    school @6 :Text;
+    selfEmployed @7 :Void;
+    # We assume that a person is only one of these.
+  }
+}
+
+struct AddressBook {
+  people @0 :List(Person);
+}</code>
+</pre>
+
+And when compiled with <code>capnpc -oerl addressbook.capnp</code>, resulting in
+a <code>addressbook.capnp.hrl</code>-file, these functions are defined (as <code>addressbook/N</code>):
+<dl>
+  <dt>Write value to object field.</dt>
+  <dd><code>fun((set, Field::atom(), Value::term(), <a href="#type-object">object()</a>) -&gt; ok)</code></dd>
+
+  <dt>Get a reference to the root object in message.</dt>
+  <dd><code>fun((root, Type::atom() | integer(), Message::[binary()]) -&gt; {ok, Root::<a href="#type-object">object()</a>})</code></dd>
+
+  <dt>Read object field value.</dt>
+  <dd><code>fun((get, Field::atom(), <a href="#type-object">object()</a>) -&gt; term())</code></dd>
+
+  <dt>Type cast object to another struct or list.</dt>
+  <dd><code>fun((to_struct, Type::atom() | integer(), <a href="#type-object">object()</a>) -&gt; <a href="#type-object">object()</a>)</code><br>
+      <code>fun((to_list, Type::atom() | integer(), <a href="#type-object">object()</a>) -&gt; list())</code></dd>
+
+  <dt>Set root type for a new message.</dt>
+  <dd><code>fun((root, Type::atom() | integer()) -&gt; {ok, Root::<a href="#type-object">object()</a>})</code></dd>
+
+  <dt>Read unnamed union value of object.</dt>
+  <dd><code>fun((get, <a href="#type-object">object()</a>) -&gt; Tag::atom() | {Tag::atom(), Value::term()})</code></dd>
+
+  <dt>Type cast object to text/data.</dt>
+  <dd><code>fun((to_text | to_data, <a href="#type-object">object()</a>) -&gt; binary())</code></dd>
+
+  <dt>Get the compiled schema.</dt>
+  <dd><code>fun((schema) -&gt; <a href="#type-schema">schema()</a>)</code></dd>
+</dl>
+
+<h5><a name="Writing_an_addressbook">Writing an addressbook</a></h5>
+
+<p>To write a addressbook message, we first need a <code>AddressBook</code> root object:</p>
+
+<p><code>{ok, AddressBook} = addressbook(root, 'AddressBook').</code></p>
+
+<p>Now, we can fill in the details. Let's add two people, and call them
+<code>Alice</code> and <code>Bob</code>:</p>
+
+<p><code>[Alice, Bob] = addressbook(set, people, 2, AddressBook).</code></p>
+
+<p>Now, <code>Alice</code> has one phone number, while <code>Bob</code> has two:</p>
+
+<p><code>[addressbook(set, phones, N, P) || {P, N} &lt;- [{Alice, 1}, {Bob, 2}]].</code></p>
+
+<p>Ok, we're all set to fill in the blanks of the people and phone objects we have allocated:</p>
+
+<pre>
+<code>[addressbook(set, Field, Value, Obj)
+ || {Obj, FieldValue} &lt;-
+          [{Alice,
+                [{id, 123},
+                 {name, &lt;&lt;"Alice"&gt;&gt;},
+                 {email, &lt;&lt;"alice@example.com"&gt;&gt;},
+                 {employment, {shool, &lt;&lt;"MIT"&gt;&gt;}},
+                 {phones, {0, {number, &lt;&lt;"555-1212"&gt;&gt;}}},
+                 {phones, {0, {type, mobile}}}]},
+           {Bob,
+                [{id, 456},
+                 {name, &lt;&lt;"Bob"&gt;&gt;},
+                 {email, &lt;&lt;"bob@example.com"&gt;&gt;},
+                 {employment, unemployed},
+                 {phones, {0, {number, &lt;&lt;"555-4567"&gt;&gt;}}},
+                 {phones, {0, {type, home}}},
+                 {phones, {1, {number, &lt;&lt;"555-7654"&gt;&gt;}}},
+                 {phones, {1, {type, mobile}}}]}],
+    {Field, Value} &lt;- FieldValues].</code>
+</pre>
+
+<p>There's quite a number of <code>addressbook(set, ...)</code>-calls there. Also
+note that we could have saved a reference to the phone objects
+directly and used those instead of embedding them in the calls to
+Alice and Bob, when we allocated the phone objects, the same way we
+saved the result when allocating people.</p>
+
+<p>All that is left now is to get the message out. Here's how to get a
+packed binary ready for dispatching:</p>
+
+<p><code>Data = ecapnp_serialize:pack(ecapnp_message:write(AddressBook)).</code></p>
+
+<p>If you intend to send it to <code>io</code>, make sure it uses <code>unicode</code> encoding:</p>
+
+<p><code>io:setopts([{encoding, unicode}]).</code> will take care of it.</p>
+
+
+<h5><a name="Reading_an_addressbook_message">Reading an addressbook message</a></h5>
+
+<p>To be written...</p>
+
 
 <h3><a name="Project_info">Project info</a></h3>
 <dl>
@@ -78,6 +213,6 @@ limitations under the License.</pre>
 
 <hr>
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 8 2013, 22:03:39.</i></p>
+<p><i>Generated by EDoc, Oct 11 2013, 23:00:41.</i></p>
 </body>
 </html>
