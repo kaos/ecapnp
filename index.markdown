@@ -1,7 +1,9 @@
 ---
 layout: page
-title: home
+title: ecapnp home
 ---
+
+Home | [Stuff todo](/todo)
 
 About ecapnp
 ============
