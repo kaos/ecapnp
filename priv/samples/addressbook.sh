@@ -25,7 +25,7 @@ write([]) ->
     [Alice, Bob, Steve] = addressbook(set, people, 3, Root),
     [AlicePhone] = addressbook(set, phones, 1, Alice),
     [BobPhone1, BobPhone2] = addressbook(set, phones, 2, Bob),
-    [ok = addressbook(set, Field, Value, Obj)
+    [addressbook(set, Field, Value, Obj)
      || {Obj, FieldValues} <- 
             [{Alice,
               [{id, 123},

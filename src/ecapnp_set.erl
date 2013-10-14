@@ -54,7 +54,7 @@ set_field(#data{ type=Type, align=Align, default=Default }=D,
             end,
     case Type of
         {enum, EnumType} ->
-            {ok, #enum{ values=Values }}
+            {ok, #schema_node{ kind=#enum{ values=Values } }}
                 = ecapnp_schema:lookup(EnumType, StructRef),
             Tag = if is_atom(Value) ->
                           {Idx, Value} = lists:keyfind(Value, 2, Values),
