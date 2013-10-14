@@ -105,7 +105,7 @@ data_request(Request, Args, Pid)
 %% Data state functions, should only be called from the data process
 %% ===================================================================
 
--record(state, { msg, types }).
+-record(state, { msg, nodes }).
 
 data_state(State)
   when is_record(State, state) ->
@@ -126,7 +126,7 @@ data_state({Pid, Data}) when is_pid(Pid), is_binary(Data) ->
                  data=[Data]
                 });
 data_state({Schema, MsgSize})
-  when is_record(Schema, schema), is_integer(MsgSize) ->
+  when is_record(Schema, schema_node), is_integer(MsgSize) ->
     data_state(new_state(#msg{ 
                             schema=Schema, 
                             alloc=[0],
@@ -136,27 +136,13 @@ data_state({Schema, MsgSize})
 new_state(#msg{ schema=Schema }=Msg) ->
     #state{
        msg=Msg,
-       types=list_types(Schema, [])
+       nodes=list_nodes([Schema], [])
       }.
 
--define(list_types(Type),
-        list_types(#Type{ node=#node{ name=Name, id=Id }, types=Ts }=T, Acc) ->
-               list_types(Ts, [{Id, T},{Name, T}|Acc])
-                   ).
--define(list_type(Type),
-       list_types(#Type{ node=#node{ name=Name, id=Id } }=T, Acc) ->
-               [{Id, T},{Name, T}|Acc]
-                   ).
-?list_types(schema);
-?list_types(struct);
-?list_types(enum);
-?list_type(interface);
-?list_type(const);
-list_types([T|Ts], Acc) ->
-    list_types(Ts, list_types(T, Acc));
-list_types(_, Acc) -> Acc.
--undef(list_types).
--undef(list_type).
+list_nodes([#schema_node{ nodes=Nodes }=T|Ts], Acc) ->
+    list_nodes(Nodes, list_nodes(Ts, [T|Acc]));
+list_nodes(_, Acc) -> Acc.
+
 
 handle_response({Response, State}, {Request, From}) ->
     From ! {Request, Response},
@@ -239,8 +225,10 @@ do_get_segment(Id, Offset, Length, State) ->
 do_get_segment_size(Id, State) ->
     {size(get_segment(Id, State)) div 8, State}.
 
-do_get_type(Type, #state{ types=Ts }=State) ->
-    {proplists:get_value(Type, Ts, false), State}.
+do_get_type(Type, #state{ nodes=Ns }=State) when is_atom(Type) ->
+    {lists:keyfind(Type, #schema_node.name, Ns), State};
+do_get_type(Type, #state{ nodes=Ns }=State) when is_integer(Type) ->
+    {lists:keyfind(Type, #schema_node.id, Ns), State}.
 
 
 %% ===================================================================

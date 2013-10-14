@@ -57,6 +57,26 @@
 
 -include("ecapnp_records.hrl").
 
+-type schema_node() :: #schema_node{}.
+
+-type schema_nodes() :: list(schema_node()).
+
+-type schema_kind() :: file | struct()
+                     | enum() | interface()
+                     | const() | annotation().
+
+-type struct() :: #struct{}.
+
+-type enum() :: #enum{}.
+-type interface() :: #interface{}.
+-type const() :: #const{}.
+-type annotation() :: #annotation{}.
+
+-type text() :: binary().
+
+-type schema() :: #schema_node{ kind::file }.
+
+
 -type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
 -type field_name() :: atom().
 -type field_type() :: #data{} | #ptr{} | #group{}.
@@ -68,8 +88,7 @@
 -type object_field() :: #data{} | #ptr{}.
 -type object_fields() :: list({field_name(), object_field()}).
 -type ref_kind() :: null | #struct_ref{} | #list_ref{} | #far_ref{}.
--type schema() :: #schema{}.
--type schema_node() :: #node{}.
+%-type schema_node() :: #node{}.
 -type schema_type() :: type_name() | type_id().
 -type segment_id() :: integer().
 -type type_id() :: integer().
@@ -89,7 +108,7 @@
 -spec get_root(type_name(), schema(), message()) -> {ok, Root::object()}.
 get_root(Type, Schema, [Segment|_]=Segments) 
   when is_atom(Type),
-       is_record(Schema, schema),
+       is_record(Schema, schema_node),
        is_binary(Segment) ->
     ecapnp_get:root(Type, Schema, Segments).
 
@@ -101,7 +120,7 @@ get_root(Type, Schema, [Segment|_]=Segments)
 -spec set_root(type_name(), schema()) -> {ok, Root::object()}.
 set_root(Type, Schema)
   when is_atom(Type),
-       is_record(Schema, schema) ->
+       is_record(Schema, schema_node) ->
     ecapnp_set:root(Type, Schema).
 
 %% @doc Read the unnamed union value of object.

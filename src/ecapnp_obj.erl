@@ -44,7 +44,7 @@ alloc(Type, SegmentId, Data) when is_pid(Data) ->
                psize=ecapnp_schema:ptrs_size(T)
               },
             SegmentId, 1 + ecapnp_schema:size_of(T), Data),
-    #object{ ref=Ref, type=T }.
+    #object{ ref=Ref, schema=T }.
 
 %% @doc Get object (or list) from reference.
 -spec from_ref(#ref{}, type_name()) -> object() | list().
@@ -66,9 +66,9 @@ from_data(Data, Type) ->
 
 %% @doc Lookup field definition by name for object.
 -spec field(field_name(), object() | #struct{}) -> field_type().
-field(FieldName, #object{ type=Node }) ->
-    field(FieldName, Node);
-field(FieldName, #struct{ fields=Fields }) ->
+field(FieldName, #object{ schema=#schema_node{
+                                  kind=#struct{ fields=Fields }
+                                 }}) ->
     find_field(FieldName, Fields).
 
 %% @doc Copy object recursively.
@@ -84,7 +84,7 @@ to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
             {ok, FoundType} -> FoundType;
             _ -> object
         end,
-    Object#object{ type=T }.
+    Object#object{ schema=T }.
 
 %% @doc Type cast object to list of type.
 %% Object must be a reference to a list.

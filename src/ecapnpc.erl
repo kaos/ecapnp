@@ -123,7 +123,7 @@ export([Schema|Ss]) ->
     export(Ss);
 export([]) -> ok.
 
-export_schema(#schema{ node=#node{ source=Src } }=Schema) ->
+export_schema(#schema_node{ kind=file, src=Src }=Schema) ->
     FileName = get_output_filename(Src),
     {ok, File} = create_output_file(FileName),
     try 
@@ -142,10 +142,11 @@ export_schema(#schema{ node=#node{ source=Src } }=Schema) ->
     end.
 
 write_header(Out, _) ->
-    Out(["%%% DO NOT EDIT, this file was generated.~n"
+    Out(["%%% DO NOT EDIT, this file was generated.~n" 
+         %% TODO: include version info: application:get_key(ecapnp, vsn) -> {ok, "vsn"}.
          "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"]).
 
-write_api(Out, #schema{ node=#node{ name=Name } }) ->
+write_api(Out, #schema_node{ name=Name }) ->
     {ok, Stubs} = file:read_file(
                     filename:join(
                       code:priv_dir(ecapnp), 
@@ -158,20 +159,21 @@ write_api(Out, #schema{ node=#node{ name=Name } }) ->
             ]),
     Out(["~s~n", Api]).
 
-export_schema(Out, #schema{ node=Node, types=Types }) ->
-    I = 4,
-    Out(["~p(schema) ->~n"
-         "  #schema{~n"
-         "    node=",
-         Node#node.name]),
-    export_item(Node, Out, I),
-    export_list("types", Types, Out, I),
-    Out(["}.~n"]).
+export_schema(Out, #schema_node{ name=Name }=Schema) ->
+    I = 2,
+    Out(["~p(schema) ->~n~*s", Name, I, ""]),
+    export_item(Schema, Out, I + 2),
+    Out([".~n"]).
 
 export_list(_Label, [], _Out, _Indent) -> ok;
 export_list(Label, List, Out, Indent) ->
     I = Indent + 2,
-    Out([",~n~*s~s=~n~*s[", Indent, "", Label, I, ""]),
+    Out([",~n~*s~s=~n~*s", Indent, "", Label, I, ""]),
+    export_list(List, Out, Indent).
+
+export_list(List, Out, Indent) ->
+    I = Indent + 2,
+    Out(["["]),
     export_items(List, Out, {first, I + 1}),
     Out(["~n~*s]", I, ""]).
 
@@ -184,6 +186,19 @@ export_items([Item|List], Out, Indent) ->
     export_items(List, Out, Indent);
 export_items([], _, _) -> ok.
 
+export_item(#schema_node{ name=Name, id=Id, 
+                          src=Src, kind=Kind,
+                          nodes=Nodes },
+            Out, Indent) ->
+    I = Indent + 2,
+    Out(["#schema_node{ %% 0x~.16b~n~*s"
+         "name=~p, id=~b, src= ~p,~n~*s"
+         "kind=",
+         Id, I, "",
+         Name, Id, Src, I, ""]),
+    export_item(Kind, Out, I + 2),
+    export_list("nodes", Nodes, Out, I),
+    Out(["}"]);
 export_item({Tag, Type}, Out, Indent) 
   when is_tuple(Type), is_atom(element(1, Type)) ->
     I = Indent + 1,
@@ -196,59 +211,37 @@ export_item({Idx, Tag, Type}, Out, Indent)
     Out(["{~p,~p,~n~*s", Idx, Tag, I, ""]),
     export_item(Type, Out, I),
     Out(["}"]);
-export_item(#node{ id=Id, source=Src, name=Name }, Out, Indent) ->
-    I = Indent + 2,
-    Out(["#node{ %% 0x~.16b~n~*s"
-         "name=~p, id=~b, source= ~p }",
-         Id, I, "", Name, Id, Src]);
-export_item(#struct{ node=Node, dsize=DSize, psize=PSize, esize=ESize,
-                     fields=Fields, types=Types, union_field=Union },
+export_item(#struct{ dsize=DSize, psize=PSize, esize=ESize,
+                     fields=Fields, union_field=Union },
             Out, Indent) ->
     I = Indent + 2,
-    Out(["#struct{~n~*s"
-         "node=", I, ""]),
-    export_item(Node, Out, I),
-    Out([",~n~*s"
-         "dsize=~p, psize=~p, esize=~p,~n~*s"
+    Out(["#struct{ dsize=~p, psize=~p, esize=~p,~n~*s"
          "union_field=",
-         I, "", DSize, PSize, ESize,
-         I, ""]),
+         DSize, PSize, ESize, I, ""]),
     export_item(Union, Out, I),
     export_list("fields", Fields, Out, I),
-    export_list("types", Types, Out, I),
     Out(["}"]);
-export_item(#enum{ node=Node, values=Values, types=Types },
-            Out, Indent) ->
+export_item(#enum{ values=Values }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#enum{~n~*s"
-         "node=", I, ""]),
-    export_item(Node, Out, I),
-    export_list("values", Values, Out, I),
-    export_list("types", Types, Out, I),
+    Out(["#enum{ values=~n~*s", I, ""]),
+    export_list(Values, Out, I),
     Out(["}"]);
-export_item(#interface{ node=Node }, Out, Indent) ->
+export_item(#interface{}, Out, Indent) ->
     I = Indent + 2,
-    Out(["#interface{ %% NYI..~n~*snode=", I, ""]),
-    export_item(Node, Out, I),
-    Out(["}"]);
-export_item(#const{ node=Node }, Out, Indent) ->
+    Out(["#interface{ %% NYI..~n~*s}", I, ""]);
+export_item(#const{}, Out, Indent) ->
     I = Indent + 2,
-    Out(["#const{~n~*s"
-         "node=", I, ""]),
-    export_item(Node, Out, I),
-    Out(["}"]);
-export_item(#annotation{ node=Node }, Out, Indent) ->
+    Out(["#const{ %% NYI..~n~*s}", I, ""]);
+export_item(#annotation{}, Out, Indent) ->
     I = Indent + 2,
-    Out(["#annotation{ %% NYI..~n~*snode=", I, ""]),
-    export_item(Node, Out, I),
-    Out(["}"]);
+    Out(["#annotation{ %% NYI..~n~*s}", I, ""]);
 export_item(#data{ type={union, L}, align=A, default=D }, Out, Indent) ->
     I = Indent + 2,
     Out(["#data{ align=~p, default= ~w, type=~n~*s"
          "{union,~n~*s[",
          A, D, I, "", I + 2, ""]),
     export_items(L, Out, {first, I + 3}),
-    Out(["~n~*s]} }", I, ""]);
+    Out(["~n~*s]}}", I, ""]);
 export_item(#data{ type=T, align=A, default=D }, Out, Indent) ->
     Out(["#data{ type=~p, align=~p,~n~*s"
          "       default= ~w }", T, A, Indent, "", D]);
@@ -284,41 +277,42 @@ compile_node(Node) ->
     {schema(get, id, Node),
      {Node, compile_node(
               schema(get, Node),
-              #node{
+              #schema_node{
                  id = schema(get, id, Node),
-                 source = schema(get, displayName, Node)}
-             )
+                 src = schema(get, displayName, Node)
+                })
      }}.
 
 compile_node(file, Node) ->
-    #schema{ node = Node };
+    Node#schema_node{ kind = file };
 compile_node({struct, Struct}, Node) ->
     {Fields, Union} = lists:partition(
                         fun (F) ->
                                 16#ffff == schema(get, discriminantValue, F)
                         end,
                         schema(get, fields, Struct)),
-    #struct{ node = Node,
-             dsize = schema(get, dataWordCount, Struct),
-             psize = schema(get, pointerCount, Struct),
-             esize = schema(get, preferredListEncoding, Struct),
-             fields = [compile_struct_field(M)
-                       || M <- Fields],
-             union_field = compile_union(Union, Struct)
-           };
+    Node#schema_node{
+      kind=#struct{
+              dsize = schema(get, dataWordCount, Struct),
+              psize = schema(get, pointerCount, Struct),
+              esize = schema(get, preferredListEncoding, Struct),
+              fields = [compile_struct_field(M)
+                        || M <- Fields],
+              union_field = compile_union(Union, Struct)
+             }};
 compile_node({enum, Enum}, Node) ->
     Enumerants = [binary_to_atom(schema(get, name, E), latin1) 
                   || E <- schema(get, enumerants, Enum)],
-    #enum{ node = Node,
-           values = lists:zip(
-                      lists:seq(0, length(Enumerants) - 1),
-                      Enumerants)};
+    Node#schema_node{
+      kind=#enum{ values = lists:zip(
+                             lists:seq(0, length(Enumerants) - 1),
+                             Enumerants)}};
 compile_node({interface, _Interface}, Node) ->
-    #interface{ node = Node };
+    Node#schema_node{ kind=#interface{} };
 compile_node({const, _Const}, Node) ->
-    #const{ node = Node };
+    Node#schema_node{ kind=#const{} };
 compile_node({annotation, _Annotation}, Node) ->
-    #annotation{ node = Node };
+    Node#schema_node{ kind=#annotation{} };
 compile_node({What, _}, Node) ->
     throw({unknown_node, What, Node}).
 
@@ -367,17 +361,10 @@ data_field({Type, Size}, Offset, Default) ->
 ptr_field(Type, Index, Default) ->
     #ptr{ type=Type, idx=Index, default=default_value(Type, Default) }.
 
-default_value(Type, #object{type=#struct{node=#node{name='Value'}}}=Object) ->
+default_value(Type, #object{ schema=#schema_node{ name='Value' } }=Object) ->
     default_value(Type, schema(get, Object));
 default_value(_Type, {_, Object}) when is_record(Object, object) ->
     ecapnp_obj:copy(Object);
-    %% if Type == object
-    %%    orelse element(1, Type) == struct
-    %%    orelse is_tuple(element(2, Type)) ->
-    %%         ecapnp_obj:copy(Object);
-    %%    element(1, Type) == list ->
-    %%         ecapnp_obj:to_list(element(2, Type), Object)
-    %% end;
 default_value({Type, _}, {Type, Value})
   when Type == union; Type == enum ->
     ecapnp_val:set(uint16, Value);
@@ -410,7 +397,7 @@ capnp_type_info({RefT, Obj})
   when RefT == struct; RefT == interface ->
     {ptr_field, {RefT, schema(get, typeId, Obj)}};
 capnp_type_info(Other) -> throw({unknown_capnp_type, Other}).
-    
+
 list_field_type(List) ->
     Type = schema(get, elementType, List),
     case capnp_type_info(schema(get, Type)) of
@@ -419,46 +406,51 @@ list_field_type(List) ->
     end.
 
 
-link_node(Id, NodeName, Nodes) ->
-    {Node, Schema} = proplists:get_value(Id, Nodes),
+link_node(Id, NodeName, AllNodes) ->
+    {Node, Schema} = proplists:get_value(Id, AllNodes),
+    %% link all nested nodes
     NestedNodes = [begin
                        Name = binary_to_atom(schema(get, name, N), latin1),
-                       link_node(schema(get, id, N), Name, Nodes)
+                       link_node(schema(get, id, N), Name, AllNodes)
                    end || N <- schema(get, nestedNodes, Node)],
-    Groups = case schema(get, Node) of
-                 {struct, O} ->
-                     lists:foldl(
-                       fun(F, G) ->
-                               case schema(get, F) of
-                                   {group, Group} ->
-                                       Name = binary_to_atom(schema(get, name, F), latin1),
-                                       [link_node(schema(get, typeId, Group), Name, Nodes)|G];
-                                   _ -> G
-                               end
-                       end,
-                       [],
-                       schema(get, fields, O));
-                 _ -> []
-             end,
-    Types = NestedNodes ++ Groups,
-    case Schema of
-        #schema{ node=N }=S
-          when NodeName == root ->
-            S#schema{ node=N#node{ name=schema_name(N) },
-                      types=Types };
-        #struct{ node=N }=S ->
-            S#struct{ node=N#node{ name=NodeName },
-                      types=Types };
-        #enum{ node=N }=E ->
-            E#enum{ node=N#node{ name=NodeName },
-                    types=Types };
-        #interface{ node=N }=I ->
-            I#interface{ node=N#node{ name=NodeName } };
-        #const{ node=N }=C ->
-            C#const{ node=N#node{ name=NodeName } };
-        #annotation{ node=N }=A ->
-            A#annotation{ node=N#node{ name=NodeName } }
-    end.
+    %% link all group nodes
+    Nodes = case schema(get, Node) of
+                {struct, O} ->
+                    lists:foldl(
+                      fun(F, G) ->
+                              case schema(get, F) of
+                                  {group, Group} ->
+                                      Name = binary_to_atom(schema(get, name, F), latin1),
+                                      [link_node(schema(get, typeId, Group), Name, AllNodes)|G];
+                                  _ -> G
+                              end
+                      end,
+                      NestedNodes,
+                      schema(get, fields, O));
+                _ -> NestedNodes
+            end,
+    %%Types = NestedNodes ++ Groups,
+    Schema#schema_node{ name=node_name(NodeName, Schema),
+                        nodes=Nodes }.
+%% case Schema of
+%%     #schema{ node=N }=S
+%%       when NodeName == root ->
+%%         S#schema{ node=N#node{ name=schema_name(N) },
+%%                   types=Types };
+%%     #struct{ node=N }=S ->
+%%         S#struct{ node=N#node{ name=NodeName },
+%%                   types=Types };
+%%     #enum{ node=N }=E ->
+%%         E#enum{ node=N#node{ name=NodeName },
+%%                 types=Types };
+%%     #interface{ node=N }=I ->
+%%         I#interface{ node=N#node{ name=NodeName } };
+%%     #const{ node=N }=C ->
+%%         C#const{ node=N#node{ name=NodeName } };
+%%     #annotation{ node=N }=A ->
+%%         A#annotation{ node=N#node{ name=NodeName } }
+%% end.
 
-schema_name(#node{ source=Src }) ->
-    binary_to_atom(filename:basename(Src, ".capnp"), latin1).
+node_name(root, #schema_node{ src=Src }) ->
+    binary_to_atom(filename:basename(Src, ".capnp"), latin1);
+node_name(NodeName, _) -> NodeName.

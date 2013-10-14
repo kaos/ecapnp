@@ -54,10 +54,13 @@ field(FieldName, #object{ ref=Ref }=Object)
 %% @doc Read the unnamed union value of object.
 %% @see ecapnp:get/1
 -spec union(object()) -> {field_name(), field_value()} | field_name().
-union(#object{ type=#struct{ union_field=none }}=Object) ->
-    throw({no_unnamed_union_in_object, Object});
-union(#object{ ref=Ref, type=#struct{ union_field=Union }}) ->
-    read_field(Union, Ref).
+union(#object{ ref=Ref,
+               schema=#schema_node{
+                         kind=#struct{ union_field=Union }
+                        }}=Object) ->
+    if Union /= none -> read_field(Union, Ref);
+       true -> throw({no_unnamed_union_in_object, Object})
+    end.
 
 %% @doc internal function not intended for client code.
 ref_data(Ptr, Ref) ->
@@ -162,7 +165,8 @@ read_obj(Ref, Type, _) ->
     ecapnp_obj:from_ref(Ref, Type).
 
 get_enum_value(Type, Tag, Ref) ->
-    {ok, #enum{ values=Values }} = ecapnp_schema:lookup(Type, Ref),
+    {ok, #schema_node{ kind=#enum{ values=Values } }}
+        = ecapnp_schema:lookup(Type, Ref),
     case lists:keyfind(Tag, 1, Values) of
         {Tag, Value} -> Value;
         false -> Tag

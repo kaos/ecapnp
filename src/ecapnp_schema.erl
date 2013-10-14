@@ -28,24 +28,23 @@
 %% ===================================================================
 
 %% Lookup type in schema
-lookup({struct, Type}, Ts) ->
-    lookup(Type, Ts);
-lookup({list, Type}, Ts) ->
-    lookup(Type, Ts);
+lookup({struct, Type}, Nodes) ->
+    lookup(Type, Nodes);
+lookup({list, Type}, Nodes) ->
+    lookup(Type, Nodes);
 lookup(Type, _)
   when Type == object;
-       is_record(Type, struct);
-       is_record(Type, enum) ->
+       is_record(Type, schema_node) ->
     {ok, Type};
 
-lookup(Type, Types)
+lookup(Type, Nodes)
   when is_atom(Type),
-       is_list(Types) ->
-    keyfind(Type, #node.name, Types);
-lookup(Type, Types)
+       is_list(Nodes) ->
+    lists:keyfind(Type, #schema_node.name, Nodes);
+lookup(Type, Nodes)
   when is_integer(Type),
-       is_list(Types) ->
-    keyfind(Type, #node.id, Types);
+       is_list(Nodes) ->
+    lists:keyfind(Type, #schema_node.id, Nodes);
 
 lookup(Type, Data) when is_pid(Data) ->
     case ecapnp_data:get_type(Type, Data) of
@@ -61,39 +60,29 @@ lookup(Type, #ref{ data=Pid }) ->
         T -> {ok, T}
     end;
 
-lookup(Type, #schema{ types=Ts }) ->
-    case lookup(Type, Ts) of
+lookup(Type, #schema_node{ nodes=Nodes }) ->
+    case lookup(Type, Nodes) of
         false -> lookup(Type, null);
-        T -> {ok, T}
-    end;
-lookup(Type, #struct{ types=Ts }) ->
-    case lookup(Type, Ts) of
-        false -> false;
-        T -> {ok, T}
-    end;
-lookup(Type, #enum{ types=Ts }) ->
-    case lookup(Type, Ts) of
-        false -> false;
         T -> {ok, T}
     end;
 lookup(Type, null) ->
     {unknown_type, Type}.
 
-type_of(#object{ type=#node{ id=Type }}=Obj) ->
-    lookup(Type, Obj).
+type_of(#object{ schema=Type }) -> Type.
 
 size_of(Type, Store) ->    
     {ok, T} = lookup(Type, Store),
     size_of(T).
 
-size_of(#struct{ dsize=DSize, psize=PSize }) -> DSize + PSize.
+size_of(#schema_node{ kind=#struct{ dsize=DSize, psize=PSize } }) ->
+    DSize + PSize.
 
-data_size(#struct{ dsize=Size }) -> Size.
-ptrs_size(#struct{ psize=Size }) -> Size.
+data_size(#schema_node{ kind=#struct{ dsize=Size } }) -> Size.
+ptrs_size(#schema_node{ kind=#struct{ psize=Size } }) -> Size.
 
 set_ref_to(Type, Ref) ->
     case lookup(Type, Ref) of
-        {ok, #struct{ dsize=DSize, psize=PSize }} ->
+        {ok, #schema_node{ kind=#struct{ dsize=DSize, psize=PSize } }} ->
             Ref#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }
     end.
 
@@ -101,8 +90,8 @@ set_ref_to(Type, Ref) ->
 %% internal functions
 %% ===================================================================
 
-keyfind(_Key, _N, []) -> false;
-keyfind(Key, N, [T|Ts]) ->
-    if element(N, element(#schema.node, T)) == Key -> T;
-       true -> keyfind(Key, N, Ts)
-    end.
+%% keyfind(_Key, _N, []) -> false;
+%% keyfind(Key, N, [T|Ts]) ->
+%%     if element(N, element(#schema.node, T)) == Key -> T;
+%%        true -> keyfind(Key, N, Ts)
+%%     end.

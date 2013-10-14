@@ -25,15 +25,15 @@ from_ref_test() ->
     Data = data([<<0,0,0,0, 2,0,3,0>>]),
     Ref = ecapnp_ref:get(0, 0, Data),
     ?assertEqual(
-       #object{ ref=Ref, type=object },
+       #object{ ref=Ref, schema=object },
        ecapnp_obj:from_ref(Ref, object)).
 
 field_test() ->
     Data = data([]),
     {ok, T} = ecapnp_schema:lookup('Test', Data),
     ?assertEqual(
-       #data{ type=uint32, align=32, default=12345 },
-       ecapnp_obj:field(intField, #object{ type=T })).
+       #data{ type=uint32, align=32, default= <<1,2,3,4>> },
+       ecapnp_obj:field(intField, #object{ schema=T })).
 
 copy_test() ->
     Bin = <<0,0,0,0, 2,0,2,0,
@@ -47,7 +47,7 @@ copy_test() ->
     Data = data([Bin]),
     Ref = ecapnp_ref:get(0, 0, Data),
     Obj = ecapnp_obj:from_ref(Ref, object),
-    ?assertEqual(#object{ type=object, ref=Ref }, Obj),
+    ?assertEqual(#object{ schema=object, ref=Ref }, Obj),
     ?assertEqual(Bin, ecapnp_obj:copy(Obj)).
 
 object_test() ->
@@ -61,7 +61,7 @@ object_test() ->
 
     {ok, T} = ecapnp_schema:lookup('Test', NullRef), 
     ?assertEqual(
-      #object{ type=T, ref=NullRef },
+      #object{ schema=T, ref=NullRef },
       ecapnp_obj:to_struct('Test', NullObj)),
 
     ?assertEqual([], ecapnp_obj:to_list('Simple', ListObj)),

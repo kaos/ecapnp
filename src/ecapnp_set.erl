@@ -34,10 +34,13 @@ field(FieldName, Value, Object) ->
       ecapnp_obj:field(FieldName, Object),
       Value, Object#object.ref).
 
-union(_, #object{ type=#struct{ union_field=none }}=Object) ->
-    throw({no_unnamed_union_in_object, Object});
-union(Value, #object{ ref=Ref, type=#struct{ union_field=Union }}) ->
-    set_field(Union, Value, Ref).
+union(Value, #object{ ref=Ref,
+                      schema=#schema_node{
+                                kind=#struct{ union_field=Union }}
+                    }=Object) ->
+    if Union /= none -> set_field(Union, Value, Ref);
+       true -> throw({no_unnamed_union_in_object, Object})
+    end.
 
 
 %% ===================================================================
@@ -172,9 +175,13 @@ list_element_size({list, _}, _) -> pointer;
 list_element_size(Type, Ref) ->
     case ecapnp_schema:lookup(Type, Ref) of
         {ok, object} -> pointer;
-        {ok, #struct{ esize=inlineComposite, dsize=DSize, psize=PSize }} ->
+        {ok, #schema_node{
+                kind=#struct{
+                        esize=inlineComposite,
+                        dsize=DSize, psize=PSize }}} ->
             #struct_ref{ dsize=DSize, psize=PSize };
-        {ok, #struct{ esize=Size }} -> Size;
+        {ok, #schema_node{
+                kind=#struct{ esize=Size }}} -> Size;
         {ok, _} -> twoBytes; %% enum & union
         _ -> list_element_size(ecapnp_val:size(Type))
     end.
