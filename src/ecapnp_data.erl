@@ -40,7 +40,7 @@
 
 %% @doc Start a new data process.
 -spec new(#msg{}
-          |{schema(), SegmentSize::posinteger()}
+          |{schema(), SegmentSize::integer()}
           |{pid(), Data::binary()}) -> pid().
 new(Init) ->
     spawn_link(fun() -> data_state(Init) end).

@@ -37,6 +37,7 @@
 -include("ecapnp.hrl").
 
 
+
 %% ===================================================================
 %% API functions
 %% ===================================================================
@@ -138,7 +139,7 @@ read_struct_data(Align, Len, Ref) ->
 %%
 %% `Align' is number of bits into the data section to read from, and
 %% `Len' is number of bits to read.
--spec read_struct_data(integer(), integer(), #ref{}, any()) -> binary() | Default.
+-spec read_struct_data(integer(), integer(), #ref{}, any()) -> binary() | any().
 read_struct_data(_, _, #ref{ kind=null }, Default) -> Default;
 read_struct_data(Align, Len,
                  #ref{ kind=#struct_ref{ dsize=DSize }}=Ref,
@@ -155,7 +156,7 @@ read_struct_data(Align, Len,
 read_struct_ptr(Idx, Ref) -> read_struct_ptr(Idx, Ref, null_ref(Ref)).
 
 %% @doc Read a refeference from the pointer section of struct ref.
--spec read_struct_ptr(integer(), #ref{}, any()) -> #ref{} | Default.
+-spec read_struct_ptr(integer(), #ref{}, any()) -> #ref{} | any().
 read_struct_ptr(_, #ref{ kind=null }, Default) -> Default;
 read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
                            offset=Offset, data=Data,
@@ -172,7 +173,7 @@ read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
 read_list(Ref) -> read_list(Ref, []).
 
 %% @doc Read elements from a list ref.
--spec read_list(#ref{}, any()) -> [#ref{}] | [binary()] | Default.
+-spec read_list(#ref{}, any()) -> [#ref{}] | [binary()] | any().
 read_list(#ref{ kind=#list_ref{ count=0 } }, _) -> [];
 read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                 kind=#list_ref{ size=Size, count=Count } }, _) ->
@@ -213,7 +214,7 @@ read_text(Ref) -> read_text(Ref, <<>>).
 %%
 %% NOTICE: The required trailing `NULL' byte is silently dropped when
 %% reading the text.
--spec read_text(#ref{}, any()) -> binary() | Default.
+-spec read_text(#ref{}, any()) -> binary() | any().
 read_text(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
     binary_part(get_segment(1 + ((Count - 2) div 8), Ref), 0, Count - 1);
@@ -224,7 +225,7 @@ read_text(#ref{ kind=null }, Default) -> Default.
 read_data(Ref) -> read_data(Ref, <<>>).
 
 %% @doc Read data.
--spec read_data(#ref{}, any()) -> binary() | Default.
+-spec read_data(#ref{}, any()) -> binary() | any().
 read_data(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
     binary_part(get_segment(1 + ((Count - 1) div 8), Ref), 0, Count);

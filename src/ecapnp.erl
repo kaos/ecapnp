@@ -24,14 +24,61 @@
 -module(ecapnp).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get_root/3, get/1, get/2]).
--export([set_root/2, set/2, set/3]).
+%% ===================================================================
+%% Public API
+%% ===================================================================
 
--include("ecapnp.hrl").
+-export([get_root/3, get/1, get/2,
+         set_root/2, set/2, set/3]).
+
+%% ===================================================================
+%% Public Types
+%% ===================================================================
+
+-export_type([%element_size/0,
+              field_name/0,
+              field_type/0,
+              field_value/0,
+              message/0,
+              node_type/0,
+              node_types/0,
+              object/0,
+              object_field/0,
+              object_fields/0,
+              ref_kind/0,
+              schema/0,
+              schema_node/0,
+              schema_type/0,
+              segment_id/0,
+              type_id/0,
+              type_name/0,
+              value/0
+             ]).
+
+-include("ecapnp_records.hrl").
+
+-type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
+-type field_name() :: atom().
+-type field_type() :: #data{} | #ptr{} | #group{}.
+-type field_value() :: value() | object().
+-type message() :: list(binary()).
+-type node_type() :: #struct{} | #enum{} | #interface{} | #const{} | #annotation{}.
+-type node_types() :: list({atom(), node_type()}).
+-type object() :: #object{}.
+-type object_field() :: #data{} | #ptr{}.
+-type object_fields() :: list({field_name(), object_field()}).
+-type ref_kind() :: null | #struct_ref{} | #list_ref{} | #far_ref{}.
+-type schema() :: #schema{}.
+-type schema_node() :: #node{}.
+-type schema_type() :: type_name() | type_id().
+-type segment_id() :: integer().
+-type type_id() :: integer().
+-type type_name() :: atom().
+-type value() :: number() | boolean() | list(value()) | binary() | null.
 
 
 %% ===================================================================
-%% API functions
+%% API Implementation
 %% ===================================================================
 
 %% @doc Get the root object for a message.
