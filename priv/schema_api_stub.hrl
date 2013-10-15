@@ -42,6 +42,11 @@ _name_(root, Type) ->
 _name_(get, Object) ->
     ecapnp:get(Object);
 
+%% Read const value from schema
+%% -spec _name_(const, Name:: type_name() | type_id()) -> value().
+_name_(const, Name) ->
+    ecapnp:const(Name, _name_(schema));
+        
 %% Type cast object to text/data.
 %% -spec _name_(to_text | to_data, Object::#object{}) -> binary().
 _name_(TypeCast, Object)

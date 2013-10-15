@@ -50,9 +50,11 @@ decode(textListTypeTest, Msg) ->
 
 decode(uInt8DefaultValueTest, Msg) ->
     {ok, Root} = test(root, 'TestDefaults', Msg),
-    dbg:tracer(), dbg:p(all,call),dbg:tpl(ecapnp_get, binary_xor, []),
     io:format("(uInt8Field = ~b)~n",
               [test(get, uInt8Field, Root)]);
+
+decode(constTest, _Msg) ->
+    io:format("(msg = \"~s\")~n", [test(const, constTestValue)]);
 
 decode(Test, _) ->
     not_implemented(decode, Test).
@@ -72,6 +74,11 @@ encode(textListTypeTest) ->
 encode(uInt8DefaultValueTest) ->
     {ok, Root} = test(root, 'TestDefaults'),
     ok = test(set, uInt8Field, 0, Root),
+    Root;
+
+encode(constTest) ->
+    {ok, Root} = test(root, 'SimpleTest'),
+    ok = test(set, msg, test(const, constTestValue), Root),
     Root;
 
 encode(Test) ->

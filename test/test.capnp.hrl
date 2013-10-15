@@ -44,6 +44,11 @@ test(root, Type) ->
 test(get, Object) ->
     ecapnp:get(Object);
 
+%% Read const value from schema
+%% -spec test(const, Name:: type_name() | type_id()) -> value().
+test(const, Name) ->
+    ecapnp:const(Name, test(schema));
+        
 %% Type cast object to text/data.
 %% -spec test(to_text | to_data, Object::#object{}) -> binary().
 test(TypeCast, Object)

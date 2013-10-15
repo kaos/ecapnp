@@ -199,18 +199,6 @@ export_item(#schema_node{ name=Name, id=Id,
     export_item(Kind, Out, I + 2),
     export_list("nodes", Nodes, Out, I),
     Out(["}"]);
-export_item({Tag, Type}, Out, Indent) 
-  when is_tuple(Type), is_atom(element(1, Type)) ->
-    I = Indent + 1,
-    Out(["{~p,~n~*s", Tag, I, ""]),
-    export_item(Type, Out, I),
-    Out(["}"]);
-export_item({Idx, Tag, Type}, Out, Indent)
-  when is_tuple(Type), is_atom(element(1, Type)) ->
-    I = Indent + 1,
-    Out(["{~p,~p,~n~*s", Idx, Tag, I, ""]),
-    export_item(Type, Out, I),
-    Out(["}"]);
 export_item(#struct{ dsize=DSize, psize=PSize, esize=ESize,
                      fields=Fields, union_field=Union },
             Out, Indent) ->
@@ -229,9 +217,11 @@ export_item(#enum{ values=Values }, Out, Indent) ->
 export_item(#interface{}, Out, Indent) ->
     I = Indent + 2,
     Out(["#interface{ %% NYI..~n~*s}", I, ""]);
-export_item(#const{}, Out, Indent) ->
+export_item(#const{ field=Field }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#const{ %% NYI..~n~*s}", I, ""]);
+    Out(["#const{ field=~n~*s", I, ""]),
+    export_item(Field, Out, I),
+    Out(["}"]);
 export_item(#annotation{}, Out, Indent) ->
     I = Indent + 2,
     Out(["#annotation{ %% NYI..~n~*s}", I, ""]);
@@ -257,6 +247,18 @@ export_item(#ptr{ type=T, idx=I, default=D }, Out, Indent) ->
          T, I, Indent, "", D]);
 export_item(#group{ id=Id }, Out, _Indent) ->
     Out(["#group{ id=~p }", Id]);
+export_item({Tag, Type}, Out, Indent) 
+  when is_tuple(Type), is_atom(element(1, Type)) ->
+    I = Indent + 1,
+    Out(["{~p,~n~*s", Tag, I, ""]),
+    export_item(Type, Out, I),
+    Out(["}"]);
+export_item({Idx, Tag, Type}, Out, Indent)
+  when is_tuple(Type), is_atom(element(1, Type)) ->
+    I = Indent + 1,
+    Out(["{~p,~p,~n~*s", Idx, Tag, I, ""]),
+    export_item(Type, Out, I),
+    Out(["}"]);
 export_item(Item, Out, _Indent) ->
     Out(["~p", Item]).
 
@@ -309,8 +311,16 @@ compile_node({enum, Enum}, Node) ->
                              Enumerants)}};
 compile_node({interface, _Interface}, Node) ->
     Node#schema_node{ kind=#interface{} };
-compile_node({const, _Const}, Node) ->
-    Node#schema_node{ kind=#const{} };
+compile_node({const, Const}, Node) ->
+    Type = schema(get, schema(get, type, Const)),
+    Value = schema(get, schema(get, value, Const)),
+    Field = case capnp_type_info(Type) of
+                {data_field, DataType} ->
+                    data_field(DataType, 0, Value);
+                {ptr_field, PtrType} ->
+                    ptr_field(PtrType, 0, Value)
+            end,
+    Node#schema_node{ kind=#const{ field=Field }};
 compile_node({annotation, _Annotation}, Node) ->
     Node#schema_node{ kind=#annotation{} };
 compile_node({What, _}, Node) ->
@@ -356,24 +366,24 @@ data_field({Type, 1}, Offset, Default) ->
     data_field({Type, 8}, (Offset div 8) + ((7 - (Offset rem 8))/8), Default);
 data_field({Type, Size}, Offset, Default) ->
     %% convert alignment to integer (Size * Offset should never be a fraction)
-    #data{ type=Type, align=round(Size * Offset), default=default_value(Type, Default) }.
+    #data{ type=Type, align=round(Size * Offset), default=value(Type, Default) }.
 
 ptr_field(Type, Index, Default) ->
-    #ptr{ type=Type, idx=Index, default=default_value(Type, Default) }.
+    #ptr{ type=Type, idx=Index, default=value(Type, Default) }.
 
-default_value(Type, #object{ schema=#schema_node{ name='Value' } }=Object) ->
-    default_value(Type, schema(get, Object));
-default_value(_Type, {_, Object}) when is_record(Object, object) ->
+value(Type, #object{ schema=#schema_node{ name='Value' } }=Object) ->
+    value(Type, schema(get, Object));
+value(_Type, {_, Object}) when is_record(Object, object) ->
     ecapnp_obj:copy(Object);
-default_value({Type, _}, {Type, Value})
+value({Type, _}, {Type, Value})
   when Type == union; Type == enum ->
     ecapnp_val:set(uint16, Value);
-default_value(Type, {Type, Value})
+value(Type, {Type, Value})
   when Type == text; Type == data -> Value;
-default_value(Type, {ValueType, Value})
+value(Type, {ValueType, Value})
   when Type == ValueType; element(1, Type) == ValueType ->
     ecapnp_val:set(ValueType, Value);
-default_value(Type, Value) -> throw({value_type_mismatch, Type, Value}).
+value(Type, Value) -> throw({value_type_mismatch, Type, Value}).
 
 
 capnp_type_info(void) -> {data_field, void};
@@ -432,24 +442,6 @@ link_node(Id, NodeName, AllNodes) ->
     %%Types = NestedNodes ++ Groups,
     Schema#schema_node{ name=node_name(NodeName, Schema),
                         nodes=Nodes }.
-%% case Schema of
-%%     #schema{ node=N }=S
-%%       when NodeName == root ->
-%%         S#schema{ node=N#node{ name=schema_name(N) },
-%%                   types=Types };
-%%     #struct{ node=N }=S ->
-%%         S#struct{ node=N#node{ name=NodeName },
-%%                   types=Types };
-%%     #enum{ node=N }=E ->
-%%         E#enum{ node=N#node{ name=NodeName },
-%%                 types=Types };
-%%     #interface{ node=N }=I ->
-%%         I#interface{ node=N#node{ name=NodeName } };
-%%     #const{ node=N }=C ->
-%%         C#const{ node=N#node{ name=NodeName } };
-%%     #annotation{ node=N }=A ->
-%%         A#annotation{ node=N#node{ name=NodeName } }
-%% end.
 
 node_name(root, #schema_node{ src=Src }) ->
     binary_to_atom(filename:basename(Src, ".capnp"), latin1);

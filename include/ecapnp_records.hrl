@@ -4,7 +4,7 @@
           name :: ecapnp:type_name(),
           id=0 :: ecapnp:type_id(),
           src = <<>> :: ecapnp:text(),
-          kind :: ecapnp:schema_kind(),
+          kind=file :: ecapnp:schema_kind(),
           nodes=[] :: ecapnp:schema_nodes()
          }).
 
@@ -30,13 +30,11 @@
 
 %% Const node
 -record(const, {
-          type=0 :: integer(),
-          value :: any()
+          field :: ecapnp:field_type()
          }).
 
 %% Annotation node
 -record(annotation, {
-          type=0 :: integer(),
           targets=[] :: list(boolean())
          }).
 
@@ -65,7 +63,7 @@
           pos=-1 :: ecapnp:segment_pos(),
           offset=0 :: ecapnp:segment_offset(),
           kind=null :: ecapnp:ref_kind(),
-          data :: ecapnp:data()
+          data :: pid()
          }).
 
 -record(struct_ref, {
@@ -84,13 +82,13 @@
          }).
 
 -record(object, {
-          ref :: ecapnp:ref(),
+          ref=null :: ecapnp:ref(),
           schema=object :: object | ecapnp:schema_node()
          }).
 
 %% Internal message struct for the data server
 -record(msg, {
           schema :: ecapnp:schema(),
-          alloc = [] :: list(integer()),
-          data = [] :: ecapnp:message()
+          alloc=[] :: list(integer()),
+          data=[] :: ecapnp:message()
          }).
