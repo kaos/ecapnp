@@ -1,5 +1,5 @@
 
-%% the new schema node record
+%% Common record for all schema nodes
 -record(schema_node, {
           name :: ecapnp:type_name(),
           id=0 :: ecapnp:type_id(),
@@ -8,82 +8,53 @@
           nodes=[] :: ecapnp:schema_nodes()
          }).
 
-%% obsolete
-%% -record(schema, {
-%%           node :: ecapnp:schema_node(),
-%%           types=[] :: ecapnp:node_types()
-%%          }).
+%% Struct node
+-record(struct, {
+          dsize=0 :: ecapnp:word_count(),
+          psize=0 :: ecapnp:ptr_count(),
+          esize=inlineComposite :: ecapnp:element_size(),
+          union_field=none :: none | ecapnp:field_type(),
+          fields=[] :: ecapnp:struct_fields()
+         }).
 
+%% Enum node
+-record(enum, {
+          values=[] :: ecapnp:enum_values()
+         }).
 
-%% Field types
+%% Interface node
+-record(interface, {
+          extends=[] :: list(),
+          methods=[] :: list()
+         }).
 
+%% Const node
+-record(const, {
+          type=0 :: integer(),
+          value :: any()
+         }).
+
+%% Annotation node
+-record(annotation, {
+          type=0 :: integer(),
+          targets=[] :: list(boolean())
+         }).
+
+%% Schema Field types
 -record(ptr, {
           type :: term(),
-          idx=0 :: integer(),
+          idx=0 :: ecapnp:ptr_index(),
           default=null :: ecapnp:value()
          }).
 
 -record(data, {
           type :: term(),
-          align=0 :: integer(),
-          default=0 :: ecapnp:value()
+          align=0 :: ecapnp:bit_count(),
+          default :: ecapnp:value()
          }).
 
 -record(group, {
-          id=0 :: integer()
-         }).
-
-
-%% obsolete
-%% -record(node, {
-%%           name :: ecapnp:type_name(),
-%%           id=0 :: ecapnp:type_id(),
-%%           source = <<>> :: binary()
-%%          }).
-
-
--record(struct, {
-          dsize=0 :: integer(),
-          psize=0 :: integer(),
-          esize=inlineComposite :: ecapnp:element_size(),
-          union_field=none :: #data{} | none,
-          fields=[] :: ecapnp:object_fields()
-
-          %% obsolete
-          %% types=[] :: ecapnp:node_types(),
-          %% node :: ecapnp:schema_node()
-         }).
-
--record(enum, {
-          values=[] :: list()
-          
-          %% obsolete
-          %% node :: ecapnp:schema_node(),
-          %% types=[] :: ecapnp:node_types()
-         }).
-
--record(interface, {
-          extends=[] :: list(),
-          methods=[] :: list()
-
-          %% obsolete
-          %% node :: ecapnp:schema_node()
-         }).
-
--record(const, {
-          type=0 :: integer(),
-          value :: any()
-
-          %% obsolete
-          %% node :: ecapnp:schema_node()
-         }).
-
--record(annotation, {
-          type=0 :: integer(),
-          targets=[] :: list(boolean())
-
-          %% obsolete
-          %% node :: ecapnp:schema_node()
+          id=0 :: ecapnp:type_id()
          }).
 
 
@@ -91,33 +62,30 @@
 
 -record(ref, {
           segment :: ecapnp:segment_id(),
-          pos=0 :: integer(),
-          offset=0 :: integer(),
+          pos=-1 :: ecapnp:segment_pos(),
+          offset=0 :: ecapnp:segment_offset(),
           kind=null :: ecapnp:ref_kind(),
-          data :: pid()
+          data :: ecapnp:data()
          }).
 
 -record(struct_ref, {
-          dsize=0 :: integer(),
-          psize=0 :: integer()
+          dsize=0 :: ecapnp:word_count(),
+          psize=0 :: ecapnp:ptr_count()
          }).
 
 -record(list_ref, {
           size=empty :: ecapnp:element_size(),
-          count=0 :: integer()
+          count=0 :: non_neg_integer()
          }).
 
 -record(far_ref, {
-          segment=0 :: integer(),
+          segment=0 :: non_neg_integer(),
           double_far=false :: boolean()
          }).
 
 -record(object, {
-          ref :: #ref{},
-          schema=object :: ecapnp:schema_node() | object
-
-          %% obsolete
-          %type=object :: ecapnp:node_type() | object
+          ref :: ecapnp:ref(),
+          schema=object :: object | ecapnp:schema_node()
          }).
 
 %% Internal message struct for the data server

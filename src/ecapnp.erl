@@ -23,77 +23,158 @@
 
 -module(ecapnp).
 -author("Andreas Stenius <kaos@astekk.se>").
+-include("ecapnp_records.hrl").
 
 %% ===================================================================
 %% Public API
 %% ===================================================================
 
--export([get_root/3, get/1, get/2,
-         set_root/2, set/2, set/3]).
+-export([get_root/3, get/1, get/2, set_root/2, set/2, set/3]).
 
 %% ===================================================================
 %% Public Types
 %% ===================================================================
 
--export_type([%element_size/0,
-              field_name/0,
-              field_type/0,
-              field_value/0,
-              message/0,
-              node_type/0,
-              node_types/0,
-              object/0,
-              object_field/0,
-              object_fields/0,
-              ref_kind/0,
-              schema/0,
-              schema_node/0,
-              schema_type/0,
-              segment_id/0,
-              type_id/0,
-              type_name/0,
-              value/0
-             ]).
+-export_type([annotation/0, bit_count/0, const/0, data/0,
+              element_size/0, enum/0, enum_values/0, far_ref/0,
+              field_type/0, field_value/0, group/0, interface/0,
+              list_ref/0, message/0, msg/0, object/0, ptr/0,
+              ptr_count/0, ptr_index/0, ref/0, ref_kind/0, schema/0,
+              schema_kind/0, schema_node/0, schema_nodes/0,
+              schema_type/0, segment_id/0, segment_offset/0,
+              segment_pos/0, struct/0, struct_fields/0, struct_ref/0,
+              text/0, type_id/0, type_name/0, value/0, word_count/0
+              ]).
 
--include("ecapnp_records.hrl").
 
--type schema_node() :: #schema_node{}.
+-type annotation() :: #annotation{}.
+%% Describes an annotation type.
 
--type schema_nodes() :: list(schema_node()).
+-type bit_count() :: non_neg_integer().
+-type const() :: #const{}.
+%% A schema const value.
+
+-type data() :: pid().
+%% Pid of the data server for a reference pointer.
+
+-type element_size() :: empty | bit | byte | twoBytes | fourBytes
+                      | eightBytes | pointer | inlineComposite.
+%% The data size for the values in a list.
+%%
+%% In case of `inlineComposite' the list data is prefixed with a `tag'
+%% word describing the layout of the element data. The `tag' is in the
+%% same format as a struct ref, except the `offset' field indicates
+%% the number of elements in the list.
+
+-type enum() :: #enum{}.
+%% Describes the schema for a enum type.
+
+-type enum_values() :: list({integer(), atom()}).
+%% A list of tuples, pairing the enumerants ordinal value with its name.
+
+-type far_ref() :: #far_ref{}.
+
+-type field_name() :: atom().
+-type field_type() :: #data{} | #ptr{} | #group{}.
+-type field_value() :: any().
+%% @todo improve type spec.
+
+-type group() :: #group{}.
+%% Declares the type of group for a struct field.
+
+-type interface() :: #interface{}.
+%% Describes the schema for a interface type.
+
+-type list_ref() :: #list_ref{}.
+%% The reference is a pointer to a list.
+
+-type message() :: list(binary()).
+%% Holds all the segments in a Cap'n Proto message.
+%%
+%% This is the raw segment data, no segment headers or other
+%% information is present.
+
+-type msg() :: #msg{}.
+%% A message record for the data server.
+
+-type object() :: #object{}.
+%% A reference paired with schema type information.
+
+%% -type object_field() :: #data{} | #ptr{}.
+%% -type object_fields() :: list({field_name(), object_field()}).
+
+-type ptr() :: #ptr{}.
+%% Describes a pointer field within a struct.
+
+-type ptr_count() :: non_neg_integer().
+-type ptr_index() :: non_neg_integer().
+-type ref() :: #ref{}.
+%% A reference instance.
+%%
+%% If `pos' is `-1', then the instance has no allocated space in the
+%% message, but may still point to a valid location within a
+%% segment. Note, the value of `pos' should still be used even when `pos' is `-1'.
+%%
+%% To get the position of the data the reference points to:
+%% ``DataPos = R#ref.pos + R#ref.offset + 1.''
+
+-type ref_kind() :: null | struct_ref() | list_ref() | far_ref().
+
+-type schema() :: #schema_node{ kind::file }.
+%% The top-level schema node (for the .capnp-file).
 
 -type schema_kind() :: file | struct()
                      | enum() | interface()
                      | const() | annotation().
 
--type struct() :: #struct{}.
 
--type enum() :: #enum{}.
--type interface() :: #interface{}.
--type const() :: #const{}.
--type annotation() :: #annotation{}.
+-type schema_node() :: #schema_node{}.
+%% Each schema node within a file.
 
--type text() :: binary().
-
--type schema() :: #schema_node{ kind::file }.
-
-
--type element_size() :: empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite.
--type field_name() :: atom().
--type field_type() :: #data{} | #ptr{} | #group{}.
--type field_value() :: value() | object().
--type message() :: list(binary()).
--type node_type() :: #struct{} | #enum{} | #interface{} | #const{} | #annotation{}.
--type node_types() :: list({atom(), node_type()}).
--type object() :: #object{}.
--type object_field() :: #data{} | #ptr{}.
--type object_fields() :: list({field_name(), object_field()}).
--type ref_kind() :: null | #struct_ref{} | #list_ref{} | #far_ref{}.
-%-type schema_node() :: #node{}.
+-type schema_nodes() :: list(schema_node()).
 -type schema_type() :: type_name() | type_id().
 -type segment_id() :: integer().
+-type segment_offset() :: integer().
+-type segment_pos() :: -1 | non_neg_integer().
+-type struct() :: #struct{}.
+%% Describes the schema for a struct type.
+%%
+%% <dl>
+%%   <dt>`dsize'</dt>
+%%   <dd>The size of the struct's data section, in words.</dd>
+%%   <dt>`psize'</dt>
+%%   <dd>The number of pointers in the struct.</dd>
+%%   <dt>`esize'</dt>
+%%   <dd>The list {@link element_size(). element size} for the struct.</dd>
+%%   <dt>`union_field'</dt>
+%%   <dd>Describes the unnamed union in the struct, or `none' if there
+%%       is no unnamed union in the struct.</dd>
+%%   <dt>`fields'</dt>
+%%   <dd>Describes all the fields in the struct.</dd>
+%% </dl>
+
+-type struct_fields() :: list(field_type()).
+
+-type struct_ref() :: #struct_ref{}.
+%% The reference is a pointer to a struct.
+%%
+%% `dsize' and `psize' specifies the data size and pointer count
+%% actually allocated in the message. This may not match those
+%% expected by the schema. Any data in the message that is outside of
+%% what the schema expects will be unreachable by application code,
+%% while any reads outside of the allocated data will result in a
+%% default value back. Thus the missmatch is transparent in
+%% application code.
+
+-type text() :: binary().
+%% The required NULL byte suffix is automatically taken care of by
+%% {@link ecapnp_ref} for `text' values.
+
 -type type_id() :: integer().
 -type type_name() :: atom().
 -type value() :: number() | boolean() | list(value()) | binary() | null.
+-type word_count() :: non_neg_integer().
+%% Note that in Cap'n Proto, a word is 8 bytes (64 bits).
 
 
 %% ===================================================================
