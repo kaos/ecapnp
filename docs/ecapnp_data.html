@@ -24,60 +24,20 @@ module.</p>
   default data ends up with their own separate data process.
 <h2><a name="types">Data Types</a></h2>
 
-<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
-<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
-
-
-<h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
-<p><tt>field_name() = atom()</tt></p>
-
-
-<h3 class="typedecl"><a name="type-message">message()</a></h3>
-<p><tt>message() = [binary()]</tt></p>
-
-
 <h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
-<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
-<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
-
-
-<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
-<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
-<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
+<p><tt>node_type() = <a href="ecapnp.html#type-node_type">ecapnp:node_type()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-schema">schema()</a></h3>
-<p><tt>schema() = #schema{node = undefined | <a href="#type-schema_node">schema_node()</a>, types = <a href="#type-node_types">node_types()</a>}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
-<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+<p><tt>schema() = <a href="ecapnp.html#type-schema">ecapnp:schema()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-schema_type">schema_type()</a></h3>
-<p><tt>schema_type() = <a href="#type-type_name">type_name()</a> | <a href="#type-type_id">type_id()</a></tt></p>
+<p><tt>schema_type() = <a href="ecapnp.html#type-schema_type">ecapnp:schema_type()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
-<p><tt>segment_id() = integer()</tt></p>
-
-
-<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
-<p><tt>type_id() = integer()</tt></p>
-
-
-<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
-<p><tt>type_name() = atom()</tt></p>
-
-
-<h3 class="typedecl"><a name="type-value">value()</a></h3>
-<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
+<p><tt>segment_id() = <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -103,7 +63,7 @@ module.</p>
 
 <h3 class="function"><a name="get_message-1">get_message/1</a></h3>
 <div class="spec">
-<p><tt>get_message(Pid::pid()) -&gt; #msg{schema = undefined | <a href="#type-schema">schema()</a>, alloc = [integer()], data = <a href="#type-message">message()</a>}</tt><br></p>
+<p><tt>get_message(Pid::pid()) -&gt; #msg{schema = undefined | <a href="ecapnp.html#type-schema">ecapnp:schema()</a>, alloc = [integer()], data = <a href="ecapnp.html#type-message">ecapnp:message()</a>}</tt><br></p>
 </div><p>Get the data process message record.</p>
 
 <h3 class="function"><a name="get_segment-4">get_segment/4</a></h3>
@@ -123,7 +83,7 @@ module.</p>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Init::#msg{schema = undefined | <a href="#type-schema">schema()</a>, alloc = [integer()], data = <a href="#type-message">message()</a>} | {<a href="#type-schema">schema()</a>, SegmentSize::<a href="#type-posinteger">posinteger()</a>} | {pid(), Data::binary()}) -&gt; pid()</tt><br></p>
+<p><tt>new(Init::#msg{schema = undefined | <a href="ecapnp.html#type-schema">ecapnp:schema()</a>, alloc = [integer()], data = <a href="ecapnp.html#type-message">ecapnp:message()</a>} | {<a href="#type-schema">schema()</a>, SegmentSize::integer()} | {pid(), Data::binary()}) -&gt; pid()</tt><br></p>
 </div><p>Start a new data process.</p>
 
 <h3 class="function"><a name="update_segment-3">update_segment/3</a></h3>
@@ -133,6 +93,6 @@ module.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
+<p><i>Generated by EDoc, Oct 15 2013, 14:21:01.</i></p>
 </body>
 </html>

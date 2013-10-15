@@ -21,59 +21,59 @@
   Which is almost everything in Cap'n Proto :p.
 <h2><a name="types">Data Types</a></h2>
 
-<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
-<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+<h3 class="typedecl"><a name="type-ref">ref()</a></h3>
+<p><tt>ref() = <a href="ecapnp.html#type-ref">ecapnp:ref()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
-<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+<p><tt>ref_kind() = <a href="ecapnp.html#type-ref_kind">ecapnp:ref_kind()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
-<p><tt>segment_id() = integer()</tt></p>
+<p><tt>segment_id() = <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data for a reference.</td></tr>
 <tr><td valign="top"><a href="#alloc-4">alloc/4</a></td><td>Allocate data for a reference of a specific kind.</td></tr>
-<tr><td valign="top"><a href="#alloc_data-1">alloc_data/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#alloc_list-3">alloc_list/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#follow_far-1">follow_far/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#alloc_data-1">alloc_data/1</a></td><td>Allocate data for reference.</td></tr>
+<tr><td valign="top"><a href="#alloc_list-3">alloc_list/3</a></td><td>Allocate data for list.</td></tr>
+<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td>Copy all data for a reference.</td></tr>
+<tr><td valign="top"><a href="#follow_far-1">follow_far/1</a></td><td>Resolve a far pointer.</td></tr>
 <tr><td valign="top"><a href="#get-3">get/3</a></td><td>Get reference from segment data.</td></tr>
 <tr><td valign="top"><a href="#get-4">get/4</a></td><td>Get reference from segment data.</td></tr>
-<tr><td valign="top"><a href="#null_ref-1">null_ref/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#ptr-2">ptr/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_data-1">read_data/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_data-2">read_data/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_list-1">read_list/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_list-2">read_list/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_struct_data-3">read_struct_data/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_struct_data-4">read_struct_data/4</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_struct_ptr-2">read_struct_ptr/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_struct_ptr-3">read_struct_ptr/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_text-1">read_text/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#read_text-2">read_text/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#null_ref-1">null_ref/1</a></td><td>Get a null pointer.</td></tr>
+<tr><td valign="top"><a href="#ptr-2">ptr/2</a></td><td>Get indexed reference (unintialized).</td></tr>
+<tr><td valign="top"><a href="#read_data-1">read_data/1</a></td><td>Read data.</td></tr>
+<tr><td valign="top"><a href="#read_data-2">read_data/2</a></td><td>Read data.</td></tr>
+<tr><td valign="top"><a href="#read_list-1">read_list/1</a></td><td>Read elements from a list ref.</td></tr>
+<tr><td valign="top"><a href="#read_list-2">read_list/2</a></td><td>Read elements from a list ref.</td></tr>
+<tr><td valign="top"><a href="#read_struct_data-3">read_struct_data/3</a></td><td>Read from data section of a struct ref.</td></tr>
+<tr><td valign="top"><a href="#read_struct_data-4">read_struct_data/4</a></td><td>Read from data section of a struct ref.</td></tr>
+<tr><td valign="top"><a href="#read_struct_ptr-2">read_struct_ptr/2</a></td><td>Read a refeference from the pointer section of struct ref.</td></tr>
+<tr><td valign="top"><a href="#read_struct_ptr-3">read_struct_ptr/3</a></td><td>Read a refeference from the pointer section of struct ref.</td></tr>
+<tr><td valign="top"><a href="#read_text-1">read_text/1</a></td><td>Read text.</td></tr>
+<tr><td valign="top"><a href="#read_text-2">read_text/2</a></td><td>Read text.</td></tr>
 <tr><td valign="top"><a href="#set-2">set/2</a></td><td>Set reference kind.</td></tr>
-<tr><td valign="top"><a href="#write_data-3">write_data/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#write_list-4">write_list/4</a></td><td></td></tr>
-<tr><td valign="top"><a href="#write_struct_data-4">write_struct_data/4</a></td><td></td></tr>
-<tr><td valign="top"><a href="#write_struct_ptr-2">write_struct_ptr/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#write_text-3">write_text/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#write_data-3">write_data/3</a></td><td>Write data.</td></tr>
+<tr><td valign="top"><a href="#write_list-4">write_list/4</a></td><td>Write list element.</td></tr>
+<tr><td valign="top"><a href="#write_struct_data-4">write_struct_data/4</a></td><td>Write to struct data section.</td></tr>
+<tr><td valign="top"><a href="#write_struct_ptr-2">write_struct_ptr/2</a></td><td>Write pointer reference.</td></tr>
+<tr><td valign="top"><a href="#write_text-3">write_text/3</a></td><td>Write text.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="alloc-3">alloc/3</a></h3>
 <div class="spec">
-<p><tt>alloc(SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+<p><tt>alloc(SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Allocate data for a reference.</p>
  
   The allocated data is left empty.</p>
 
 <h3 class="function"><a name="alloc-4">alloc/4</a></h3>
 <div class="spec">
-<p><tt>alloc(Kind::<a href="#type-ref_kind">ref_kind()</a>, SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+<p><tt>alloc(Kind::<a href="#type-ref_kind">ref_kind()</a>, SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Allocate data for a reference of a specific kind.</p>
  
   The reference will be written to the first word of the allocated
@@ -83,27 +83,46 @@
 
 <h3 class="function"><a name="alloc_data-1">alloc_data/1</a></h3>
 <div class="spec">
-<p><tt>alloc_data(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>alloc_data(Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Allocate data for reference.</p>
+ 
+  <p>The number of words allocated is deduced from the passed <code>Ref</code>erence.</p>
+ 
+  Returns an updated reference with the offset field updated to point
+  at the newly allocated data.</p>
 
 <h3 class="function"><a name="alloc_list-3">alloc_list/3</a></h3>
 <div class="spec">
-<p><tt>alloc_list(Idx, List_ref, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>alloc_list(Idx::integer(), List_ref::<a href="#type-ref_kind">ref_kind()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Allocate data for list.</p>
+ 
+  <code>Kind</code> should be a <code>#list_ref{}</code> describing the list to
+  allocate; but for <code>inlineComposite</code> lists, the <code>#list_ref.size</code>
+  field should point to a <code>#struct_ref{}</code> describing the list element
+  type, and <code>#list_ref.count</code> should still be the number of elements
+  rather than the total word count.
+ </p>
+<p><b>See also:</b> <a href="#alloc_data-1">alloc_data/1</a>.</p>
 
 <h3 class="function"><a name="copy-1">copy/1</a></h3>
 <div class="spec">
-<p><tt>copy(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>copy(Ref::<a href="#type-ref">ref()</a>) -&gt; binary()</tt><br></p>
+</div><p><p>Copy all data for a reference.</p>
+ 
+  Recursively follows all pointers and copies them as well. So
+  copying a root object will effectively defragment a fragmented
+  message.</p>
 
 <h3 class="function"><a name="follow_far-1">follow_far/1</a></h3>
 <div class="spec">
-<p><tt>follow_far(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>follow_far(Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Resolve a far pointer.</p>
+ 
+  Usually this is done automatically when reading ref's.</p>
 
 <h3 class="function"><a name="get-3">get/3</a></h3>
 <div class="spec">
-<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Get reference from segment data.</p>
  
   <p>Read segment, and parse it for a reference pointer.</p>
@@ -114,7 +133,7 @@
 
 <h3 class="function"><a name="get-4">get/4</a></h3>
 <div class="spec">
-<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid(), FollowFar::boolean()) -&gt; #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}</tt><br></p>
+<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid(), FollowFar::boolean()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Get reference from segment data.</p>
  
   <p>Read segment, and parse it for a reference pointer.</p>
@@ -125,63 +144,88 @@
 
 <h3 class="function"><a name="null_ref-1">null_ref/1</a></h3>
 <div class="spec">
-<p><tt>null_ref(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>null_ref(Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Get a null pointer.</p>
+ 
+  The up-side with this function in contrast to using a default
+  <code>#ref{}</code> record on its own is that the null reference returned by
+  this function knows about the schema and segment data of the
+  message for which it was based.</p>
 
 <h3 class="function"><a name="ptr-2">ptr/2</a></h3>
 <div class="spec">
-<p><tt>ptr(Idx, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>ptr(Idx::integer(), Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Get indexed reference (unintialized).</p>
+ 
+  <p>NOTICE: That by 'uninitialized', the returned reference is a null  
+reference, regardless of what data currently is in the segment.</p>
+ 
+  That is, for structs, get a reference for pointer <code>Idx</code>, while for
+  lists, get a reference for the element at <code>Idx</code> (either a pointer
+  or a "unpositioned" ref pointing to where a inlineComposite element
+  holds its data).</p>
 
 <h3 class="function"><a name="read_data-1">read_data/1</a></h3>
 <div class="spec">
-<p><tt>read_data(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>read_data(Ref::<a href="#type-ref">ref()</a>) -&gt; binary()</tt><br></p>
+</div><p>Read data.</p>
 
 <h3 class="function"><a name="read_data-2">read_data/2</a></h3>
 <div class="spec">
-<p><tt>read_data(Ref, Default) -&gt; any()</tt></p>
-</div>
+<p><tt>read_data(Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; binary() | any()</tt><br></p>
+</div><p>Read data.</p>
 
 <h3 class="function"><a name="read_list-1">read_list/1</a></h3>
 <div class="spec">
-<p><tt>read_list(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>read_list(Ref::<a href="#type-ref">ref()</a>) -&gt; [<a href="#type-ref">ref()</a>] | [binary()]</tt><br></p>
+</div><p>Read elements from a list ref.</p>
 
 <h3 class="function"><a name="read_list-2">read_list/2</a></h3>
 <div class="spec">
-<p><tt>read_list(Ref, Default) -&gt; any()</tt></p>
-</div>
+<p><tt>read_list(Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; [<a href="#type-ref">ref()</a>] | [binary()] | any()</tt><br></p>
+</div><p>Read elements from a list ref.</p>
 
 <h3 class="function"><a name="read_struct_data-3">read_struct_data/3</a></h3>
 <div class="spec">
-<p><tt>read_struct_data(Align, Len, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>read_struct_data(Align::integer(), Len::integer(), Ref::<a href="#type-ref">ref()</a>) -&gt; binary()</tt><br></p>
+</div><p><p>Read from data section of a struct ref.</p>
+ 
+  <code>Align</code> is number of bits into the data section to read from, and
+  <code>Len</code> is number of bits to read.</p>
 
 <h3 class="function"><a name="read_struct_data-4">read_struct_data/4</a></h3>
 <div class="spec">
-<p><tt>read_struct_data(Align, Len, Ref, Default) -&gt; any()</tt></p>
-</div>
+<p><tt>read_struct_data(Align::integer(), Len::integer(), Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; binary() | any()</tt><br></p>
+</div><p><p>Read from data section of a struct ref.</p>
+ 
+  <code>Align</code> is number of bits into the data section to read from, and
+  <code>Len</code> is number of bits to read.</p>
 
 <h3 class="function"><a name="read_struct_ptr-2">read_struct_ptr/2</a></h3>
 <div class="spec">
-<p><tt>read_struct_ptr(Idx, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>read_struct_ptr(Idx::integer(), Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p>Read a refeference from the pointer section of struct ref.</p>
 
 <h3 class="function"><a name="read_struct_ptr-3">read_struct_ptr/3</a></h3>
 <div class="spec">
-<p><tt>read_struct_ptr(Idx, Ref, Default) -&gt; any()</tt></p>
-</div>
+<p><tt>read_struct_ptr(Idx::integer(), Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; <a href="#type-ref">ref()</a> | any()</tt><br></p>
+</div><p>Read a refeference from the pointer section of struct ref.</p>
 
 <h3 class="function"><a name="read_text-1">read_text/1</a></h3>
 <div class="spec">
-<p><tt>read_text(Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>read_text(Ref::<a href="#type-ref">ref()</a>) -&gt; binary()</tt><br></p>
+</div><p><p>Read text.</p>
+ 
+  NOTICE: The required trailing <code>NULL</code> byte is silently dropped when
+  reading the text.</p>
 
 <h3 class="function"><a name="read_text-2">read_text/2</a></h3>
 <div class="spec">
-<p><tt>read_text(Ref, Default) -&gt; any()</tt></p>
-</div>
+<p><tt>read_text(Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; binary() | any()</tt><br></p>
+</div><p><p>Read text.</p>
+ 
+  NOTICE: The required trailing <code>NULL</code> byte is silently dropped when
+  reading the text.</p>
 
 <h3 class="function"><a name="set-2">set/2</a></h3>
 <div class="spec">
@@ -195,31 +239,43 @@
 
 <h3 class="function"><a name="write_data-3">write_data/3</a></h3>
 <div class="spec">
-<p><tt>write_data(Data, Ptr, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>write_data(Data::binary(), Ptr::<a href="#type-ref">ref()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
+</div><p><p>Write data.</p>
+ 
+  Allocates data for <code>Data</code> and updates the <code>Ptr</code> in <code>Ref</code> to point
+  to the newly allocated (and updated) data.</p>
 
 <h3 class="function"><a name="write_list-4">write_list/4</a></h3>
 <div class="spec">
-<p><tt>write_list(Idx, ElementIdx, Value, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>write_list(Idx::integer(), ElementIdx::integer(), Value::binary(), Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
+</div><p>Write list element.</p>
 
 <h3 class="function"><a name="write_struct_data-4">write_struct_data/4</a></h3>
 <div class="spec">
-<p><tt>write_struct_data(Align, Len, Value, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>write_struct_data(Align::integer(), Len::integer(), Value::binary(), Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
+</div><p>Write to struct data section.</p>
 
 <h3 class="function"><a name="write_struct_ptr-2">write_struct_ptr/2</a></h3>
 <div class="spec">
-<p><tt>write_struct_ptr(Ptr, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>write_struct_ptr(Ptr::<a href="#type-ref">ref()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
+</div><p><p>Write pointer reference.</p>
+ 
+  <code>Ptr</code> must be a pointer from <code>Ref</code> (i.e. the pointer is within the
+  data bounds of the reference).</p>
 
 <h3 class="function"><a name="write_text-3">write_text/3</a></h3>
 <div class="spec">
-<p><tt>write_text(Text, Ptr, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>write_text(Text::binary(), Ptr::<a href="#type-ref">ref()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
+</div><p><p>Write text.</p>
+ 
+  <p>Allocates data for <code>Text</code> and updates the <code>Ptr</code> in <code>Ref</code> to point  
+to the newly allocated (and updated) data.</p>
+ 
+  NOTICE: An additional <code>NULL</code> byte is appended to <code>Text</code> to stay
+  conformant with Cap'n Proto specifications.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
+<p><i>Generated by EDoc, Oct 15 2013, 14:21:02.</i></p>
 </body>
 </html>

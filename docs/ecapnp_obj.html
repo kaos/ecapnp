@@ -20,60 +20,24 @@
   Structs.. structs.. and more structs.
 <h2><a name="types">Data Types</a></h2>
 
-<h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
-<p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
-
-
 <h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
-<p><tt>field_name() = atom()</tt></p>
+<p><tt>field_name() = <a href="ecapnp.html#type-field_name">ecapnp:field_name()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-field_type">field_type()</a></h3>
-<p><tt>field_type() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>} | #group{id = integer()}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
-<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
-<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
+<p><tt>field_type() = <a href="ecapnp.html#type-field_type">ecapnp:field_type()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-object">object()</a></h3>
-<p><tt>object() = #object{ref = undefined | #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, type = <a href="#type-node_type">node_type()</a> | object}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
-<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
-<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
-
-
-<h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
-<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
-<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+<p><tt>object() = <a href="ecapnp.html#type-object">ecapnp:object()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
-<p><tt>segment_id() = integer()</tt></p>
-
-
-<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
-<p><tt>type_id() = integer()</tt></p>
+<p><tt>segment_id() = <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
-<p><tt>type_name() = atom()</tt></p>
-
-
-<h3 class="typedecl"><a name="type-value">value()</a></h3>
-<p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
+<p><tt>type_name() = <a href="ecapnp.html#type-type_name">ecapnp:type_name()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -102,7 +66,7 @@
 
 <h3 class="function"><a name="field-2">field/2</a></h3>
 <div class="spec">
-<p><tt>field(FieldName::<a href="#type-field_name">field_name()</a>, Object::<a href="#type-object">object()</a> | #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>}) -&gt; <a href="#type-field_type">field_type()</a></tt><br></p>
+<p><tt>field(FieldName::<a href="#type-field_name">field_name()</a>, Object::<a href="#type-object">object()</a> | #struct{dsize = <a href="ecapnp.html#type-word_count">ecapnp:word_count()</a>, psize = <a href="ecapnp.html#type-ptr_count">ecapnp:ptr_count()</a>, esize = <a href="ecapnp.html#type-element_size">ecapnp:element_size()</a>, union_field = none | <a href="ecapnp.html#type-field_type">ecapnp:field_type()</a>, fields = <a href="ecapnp.html#type-struct_fields">ecapnp:struct_fields()</a>}) -&gt; <a href="#type-field_type">field_type()</a></tt><br></p>
 </div><p>Lookup field definition by name for object.</p>
 
 <h3 class="function"><a name="from_data-2">from_data/2</a></h3>
@@ -113,7 +77,7 @@
 
 <h3 class="function"><a name="from_ref-2">from_ref/2</a></h3>
 <div class="spec">
-<p><tt>from_ref(Ref::#ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, Type::<a href="#type-type_name">type_name()</a>) -&gt; <a href="#type-object">object()</a> | list()</tt><br></p>
+<p><tt>from_ref(Ref::#ref{segment = undefined | <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a>, pos = <a href="ecapnp.html#type-segment_pos">ecapnp:segment_pos()</a>, offset = <a href="ecapnp.html#type-segment_offset">ecapnp:segment_offset()</a>, kind = <a href="ecapnp.html#type-ref_kind">ecapnp:ref_kind()</a>, data = undefined | <a href="ecapnp.html#type-data">ecapnp:data()</a>}, Type::<a href="#type-type_name">type_name()</a>) -&gt; <a href="#type-object">object()</a> | list()</tt><br></p>
 </div><p>Get object (or list) from reference.</p>
 
 <h3 class="function"><a name="to_data-1">to_data/1</a></h3>
@@ -141,6 +105,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
+<p><i>Generated by EDoc, Oct 15 2013, 14:21:02.</i></p>
 </body>
 </html>

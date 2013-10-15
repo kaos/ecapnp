@@ -10,58 +10,105 @@
 <hr>
 
 <h1>Module ecapnp_schema</h1>
-<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Schema functions.
+<p>Copyright © 2013, Andreas Stenius</p>
+
+<p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2><p>Schema functions.</p>
+ 
+  This module exports functions for interacting with a compiled
+  schema.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-lookup_search">lookup_search()</a></h3>
+<p><tt>lookup_search() = <a href="#type-object">object()</a> | <a href="#type-ref">ref()</a> | <a href="#type-schema_nodes">schema_nodes()</a> | <a href="#type-schema_node">schema_node()</a></tt></p>
+<p>  Where to search for the type being looked up.</p>
+
+<h3 class="typedecl"><a name="type-lookup_type">lookup_type()</a></h3>
+<p><tt>lookup_type() = <a href="#type-type_id">type_id()</a> | <a href="#type-type_name">type_name()</a> | object | <a href="#type-schema_node">schema_node()</a></tt></p>
+<p>  The various types that can be looked up.</p>
+
+<h3 class="typedecl"><a name="type-object">object()</a></h3>
+<p><tt>object() = <a href="ecapnp.html#type-object">ecapnp:object()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-ref">ref()</a></h3>
+<p><tt>ref() = <a href="ecapnp.html#type-ref">ecapnp:ref()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
+<p><tt>schema_node() = <a href="ecapnp.html#type-schema_node">ecapnp:schema_node()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_nodes">schema_nodes()</a></h3>
+<p><tt>schema_nodes() = <a href="ecapnp.html#type-schema_nodes">ecapnp:schema_nodes()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
+<p><tt>type_id() = <a href="ecapnp.html#type-type_id">ecapnp:type_id()</a></tt></p>
+
+
+<h3 class="typedecl"><a name="type-type_name">type_name()</a></h3>
+<p><tt>type_name() = <a href="ecapnp.html#type-type_name">ecapnp:type_name()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#data_size-1">data_size/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#lookup-2">lookup/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#ptrs_size-1">ptrs_size/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#set_ref_to-2">set_ref_to/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#size_of-1">size_of/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#size_of-2">size_of/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#type_of-1">type_of/1</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#data_size-1">data_size/1</a></td><td>Get data size of a struct type.</td></tr>
+<tr><td valign="top"><a href="#lookup-2">lookup/2</a></td><td>Find schema node for type.</td></tr>
+<tr><td valign="top"><a href="#ptrs_size-1">ptrs_size/1</a></td><td>Get pointer count for a struct type.</td></tr>
+<tr><td valign="top"><a href="#set_ref_to-2">set_ref_to/2</a></td><td>Set reference kind.</td></tr>
+<tr><td valign="top"><a href="#size_of-1">size_of/1</a></td><td>Query size of a struct type.</td></tr>
+<tr><td valign="top"><a href="#size_of-2">size_of/2</a></td><td>Lookup struct type and query it's size.</td></tr>
+<tr><td valign="top"><a href="#type_of-1">type_of/1</a></td><td>Get type of object.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
 <h3 class="function"><a name="data_size-1">data_size/1</a></h3>
 <div class="spec">
-<p><tt>data_size(Struct) -&gt; any()</tt></p>
-</div>
+<p><tt>data_size(Schema_node::<a href="#type-schema_node">schema_node()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p>Get data size of a struct type.</p>
 
 <h3 class="function"><a name="lookup-2">lookup/2</a></h3>
 <div class="spec">
-<p><tt>lookup(Type, Ts) -&gt; any()</tt></p>
-</div>
+<p><tt>lookup(Type::<a href="#type-lookup_type">lookup_type()</a>, Nodes::<a href="#type-lookup_search">lookup_search()</a>) -&gt; {ok, <a href="#type-schema_node">schema_node()</a>} | {unknown_type, Type::<a href="#type-lookup_type">lookup_type()</a>}</tt><br></p>
+</div><p>Find schema node for type.</p>
 
 <h3 class="function"><a name="ptrs_size-1">ptrs_size/1</a></h3>
 <div class="spec">
-<p><tt>ptrs_size(Struct) -&gt; any()</tt></p>
-</div>
+<p><tt>ptrs_size(Schema_node::<a href="#type-schema_node">schema_node()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p>Get pointer count for a struct type.</p>
 
 <h3 class="function"><a name="set_ref_to-2">set_ref_to/2</a></h3>
 <div class="spec">
-<p><tt>set_ref_to(Type, Ref) -&gt; any()</tt></p>
-</div>
+<p><tt>set_ref_to(Type::<a href="#type-lookup_type">lookup_type()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Set reference kind.</p>
+ 
+  <p>Lookup struct <code>Type</code> and return an updated <a href="#type-ref">ref</a>.</p>
+ 
+  Note: it is only the record that is updated, the change is not
+  committed to the message.</p>
 
 <h3 class="function"><a name="size_of-1">size_of/1</a></h3>
 <div class="spec">
-<p><tt>size_of(Struct) -&gt; any()</tt></p>
-</div>
+<p><tt>size_of(Node::<a href="#type-schema_node">schema_node()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p><p>Query size of a struct type.</p>
+ 
+  Will crash with <code>function_clause</code> if <code>Node</code> is not a struct node.</p>
 
 <h3 class="function"><a name="size_of-2">size_of/2</a></h3>
 <div class="spec">
-<p><tt>size_of(Type, Store) -&gt; any()</tt></p>
-</div>
+<p><tt>size_of(Type::<a href="#type-lookup_type">lookup_type()</a>, Store::<a href="#type-lookup_search">lookup_search()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p>Lookup struct type and query it's size.</p>
 
 <h3 class="function"><a name="type_of-1">type_of/1</a></h3>
 <div class="spec">
-<p><tt>type_of(Object) -&gt; any()</tt></p>
-</div>
+<p><tt>type_of(Object::<a href="#type-object">object()</a>) -&gt; <a href="#type-schema_node">schema_node()</a></tt><br></p>
+</div><p>Get type of object.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
+<p><i>Generated by EDoc, Oct 15 2013, 14:21:02.</i></p>
 </body>
 </html>

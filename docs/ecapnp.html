@@ -21,57 +21,179 @@
   exposing the highlevel functions from the other modules.
 <h2><a name="types">Data Types</a></h2>
 
+<h3 class="typedecl"><a name="type-annotation">annotation()</a></h3>
+<p><tt>annotation() = #annotation{type = integer(), targets = [boolean()]}</tt></p>
+<p>  Describes an annotation type.</p>
+
+<h3 class="typedecl"><a name="type-bit_count">bit_count()</a></h3>
+<p><tt>bit_count() = non_neg_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-const">const()</a></h3>
+<p><tt>const() = #const{type = integer(), value = undefined | any()}</tt></p>
+<p>  A schema const value.</p>
+
+<h3 class="typedecl"><a name="type-data">data()</a></h3>
+<p><tt>data() = pid()</tt></p>
+<p>  Pid of the data server for a reference pointer.</p>
+
 <h3 class="typedecl"><a name="type-element_size">element_size()</a></h3>
 <p><tt>element_size() = empty | bit | byte | twoBytes | fourBytes | eightBytes | pointer | inlineComposite</tt></p>
+<p><p>  The data size for the values in a list.</p>
+ 
+  In case of <code>inlineComposite</code> the list data is prefixed with a <code>tag</code>
+  word describing the layout of the element data. The <code>tag</code> is in the
+  same format as a struct ref, except the <code>offset</code> field indicates
+  the number of elements in the list.</p>
+
+<h3 class="typedecl"><a name="type-enum">enum()</a></h3>
+<p><tt>enum() = #enum{values = <a href="ecapnp.html#type-enum_values">ecapnp:enum_values()</a>}</tt></p>
+<p>  Describes the schema for a enum type.</p>
+
+<h3 class="typedecl"><a name="type-enum_values">enum_values()</a></h3>
+<p><tt>enum_values() = [{integer(), atom()}]</tt></p>
+<p>  A list of tuples, pairing the enumerants ordinal value with its name.</p>
+
+<h3 class="typedecl"><a name="type-far_ref">far_ref()</a></h3>
+<p><tt>far_ref() = #far_ref{segment = non_neg_integer(), double_far = boolean()}</tt></p>
 
 
 <h3 class="typedecl"><a name="type-field_name">field_name()</a></h3>
 <p><tt>field_name() = atom()</tt></p>
 
 
-<h3 class="typedecl"><a name="type-field_value">field_value()</a></h3>
-<p><tt>field_value() = <a href="#type-value">value()</a> | <a href="#type-object">object()</a></tt></p>
+<h3 class="typedecl"><a name="type-field_type">field_type()</a></h3>
+<p><tt>field_type() = #data{type = undefined | term(), align = <a href="ecapnp.html#type-bit_count">ecapnp:bit_count()</a>, default = undefined | <a href="ecapnp.html#type-value">ecapnp:value()</a>} | #ptr{type = undefined | term(), idx = <a href="ecapnp.html#type-ptr_index">ecapnp:ptr_index()</a>, default = <a href="ecapnp.html#type-value">ecapnp:value()</a>} | #group{id = <a href="ecapnp.html#type-type_id">ecapnp:type_id()</a>}</tt></p>
 
+
+<h3 class="typedecl"><a name="type-field_value">field_value()</a></h3>
+<p><tt>field_value() = any()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-group">group()</a></h3>
+<p><tt>group() = #group{id = <a href="ecapnp.html#type-type_id">ecapnp:type_id()</a>}</tt></p>
+<p>  Declares the type of group for a struct field.</p>
+
+<h3 class="typedecl"><a name="type-interface">interface()</a></h3>
+<p><tt>interface() = #interface{extends = list(), methods = list()}</tt></p>
+<p>  Describes the schema for a interface type.</p>
+
+<h3 class="typedecl"><a name="type-list_ref">list_ref()</a></h3>
+<p><tt>list_ref() = #list_ref{size = <a href="ecapnp.html#type-element_size">ecapnp:element_size()</a>, count = non_neg_integer()}</tt></p>
+<p>  The reference is a pointer to a list.</p>
 
 <h3 class="typedecl"><a name="type-message">message()</a></h3>
 <p><tt>message() = [binary()]</tt></p>
+<p><p>  Holds all the segments in a Cap'n Proto message.</p>
+ 
+  This is the raw segment data, no segment headers or other
+  information is present.</p>
 
-
-<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
-<p><tt>node_type() = #struct{node = undefined | <a href="#type-schema_node">schema_node()</a>, dsize = integer(), psize = integer(), esize = <a href="#type-element_size">element_size()</a>, union_field = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | none, fields = <a href="#type-object_fields">object_fields()</a>, types = <a href="#type-node_types">node_types()</a>} | #enum{node = undefined | <a href="#type-schema_node">schema_node()</a>, values = list(), types = <a href="#type-node_types">node_types()</a>} | #interface{node = undefined | <a href="#type-schema_node">schema_node()</a>, methods = list()} | #const{node = undefined | <a href="#type-schema_node">schema_node()</a>, type = integer(), value = undefined | any()} | #annotation{node = undefined | <a href="#type-schema_node">schema_node()</a>}</tt></p>
-
-
-<h3 class="typedecl"><a name="type-node_types">node_types()</a></h3>
-<p><tt>node_types() = [{atom(), <a href="#type-node_type">node_type()</a>}]</tt></p>
-
+<h3 class="typedecl"><a name="type-msg">msg()</a></h3>
+<p><tt>msg() = #msg{schema = undefined | <a href="ecapnp.html#type-schema">ecapnp:schema()</a>, alloc = [integer()], data = <a href="ecapnp.html#type-message">ecapnp:message()</a>}</tt></p>
+<p>  A message record for the data server.</p>
 
 <h3 class="typedecl"><a name="type-object">object()</a></h3>
-<p><tt>object() = #object{ref = undefined | #ref{segment = undefined | <a href="#type-segment_id">segment_id()</a>, pos = integer(), offset = integer(), kind = <a href="#type-ref_kind">ref_kind()</a>, data = undefined | pid()}, type = <a href="#type-node_type">node_type()</a> | object}</tt></p>
+<p><tt>object() = #object{ref = undefined | <a href="ecapnp.html#type-ref">ecapnp:ref()</a>, schema = object | <a href="ecapnp.html#type-schema_node">ecapnp:schema_node()</a>}</tt></p>
+<p>  A reference paired with schema type information.</p>
+
+<h3 class="typedecl"><a name="type-ptr">ptr()</a></h3>
+<p><tt>ptr() = #ptr{type = undefined | term(), idx = <a href="ecapnp.html#type-ptr_index">ecapnp:ptr_index()</a>, default = <a href="ecapnp.html#type-value">ecapnp:value()</a>}</tt></p>
+<p>  Describes a pointer field within a struct.</p>
+
+<h3 class="typedecl"><a name="type-ptr_count">ptr_count()</a></h3>
+<p><tt>ptr_count() = non_neg_integer()</tt></p>
 
 
-<h3 class="typedecl"><a name="type-object_field">object_field()</a></h3>
-<p><tt>object_field() = #data{type = undefined | term(), align = integer(), default = <a href="#type-value">value()</a>} | #ptr{type = undefined | term(), idx = integer(), default = <a href="#type-value">value()</a>}</tt></p>
+<h3 class="typedecl"><a name="type-ptr_index">ptr_index()</a></h3>
+<p><tt>ptr_index() = non_neg_integer()</tt></p>
 
 
-<h3 class="typedecl"><a name="type-object_fields">object_fields()</a></h3>
-<p><tt>object_fields() = [{<a href="#type-field_name">field_name()</a>, <a href="#type-object_field">object_field()</a>}]</tt></p>
-
+<h3 class="typedecl"><a name="type-ref">ref()</a></h3>
+<p><tt>ref() = #ref{segment = undefined | <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a>, pos = <a href="ecapnp.html#type-segment_pos">ecapnp:segment_pos()</a>, offset = <a href="ecapnp.html#type-segment_offset">ecapnp:segment_offset()</a>, kind = <a href="ecapnp.html#type-ref_kind">ecapnp:ref_kind()</a>, data = undefined | <a href="ecapnp.html#type-data">ecapnp:data()</a>}</tt></p>
+<p><p>  A reference instance.</p>
+ 
+  <p>If <code>pos</code> is <code>-1</code>, then the instance has no allocated space in the
+  message, but may still point to a valid location within a
+  segment. Note, the value of <code>pos</code> should still be used even when <code>pos</code> is <code>-1</code>.</p>
+ 
+  To get the position of the data the reference points to:
+  <code>DataPos = R#ref.pos + R#ref.offset + 1.</code></p>
 
 <h3 class="typedecl"><a name="type-ref_kind">ref_kind()</a></h3>
-<p><tt>ref_kind() = null | #struct_ref{dsize = integer(), psize = integer()} | #list_ref{size = <a href="#type-element_size">element_size()</a>, count = integer()} | #far_ref{segment = integer(), double_far = boolean()}</tt></p>
+<p><tt>ref_kind() = null | <a href="#type-struct_ref">struct_ref()</a> | <a href="#type-list_ref">list_ref()</a> | <a href="#type-far_ref">far_ref()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-schema">schema()</a></h3>
-<p><tt>schema() = #schema{node = undefined | <a href="#type-schema_node">schema_node()</a>, types = <a href="#type-node_types">node_types()</a>}</tt></p>
+<p><tt>schema() = #schema_node{name = undefined | <a href="ecapnp.html#type-type_name">ecapnp:type_name()</a>, id = <a href="ecapnp.html#type-type_id">ecapnp:type_id()</a>, src = <a href="ecapnp.html#type-text">ecapnp:text()</a>, kind = file, nodes = <a href="ecapnp.html#type-schema_nodes">ecapnp:schema_nodes()</a>}</tt></p>
+<p>  The top-level schema node (for the .capnp-file).</p>
+
+<h3 class="typedecl"><a name="type-schema_kind">schema_kind()</a></h3>
+<p><tt>schema_kind() = file | <a href="#type-struct">struct()</a> | <a href="#type-enum">enum()</a> | <a href="#type-interface">interface()</a> | <a href="#type-const">const()</a> | <a href="#type-annotation">annotation()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-schema_node">schema_node()</a></h3>
-<p><tt>schema_node() = #node{name = undefined | <a href="#type-type_name">type_name()</a>, id = <a href="#type-type_id">type_id()</a>, source = binary()}</tt></p>
+<p><tt>schema_node() = #schema_node{name = undefined | <a href="ecapnp.html#type-type_name">ecapnp:type_name()</a>, id = <a href="ecapnp.html#type-type_id">ecapnp:type_id()</a>, src = <a href="ecapnp.html#type-text">ecapnp:text()</a>, kind = undefined | <a href="ecapnp.html#type-schema_kind">ecapnp:schema_kind()</a>, nodes = <a href="ecapnp.html#type-schema_nodes">ecapnp:schema_nodes()</a>}</tt></p>
+<p>  Each schema node within a file.</p>
+
+<h3 class="typedecl"><a name="type-schema_nodes">schema_nodes()</a></h3>
+<p><tt>schema_nodes() = [<a href="#type-schema_node">schema_node()</a>]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-schema_type">schema_type()</a></h3>
+<p><tt>schema_type() = <a href="#type-type_name">type_name()</a> | <a href="#type-type_id">type_id()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
 <p><tt>segment_id() = integer()</tt></p>
 
+
+<h3 class="typedecl"><a name="type-segment_offset">segment_offset()</a></h3>
+<p><tt>segment_offset() = integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-segment_pos">segment_pos()</a></h3>
+<p><tt>segment_pos() = -1 | non_neg_integer()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-struct">struct()</a></h3>
+<p><tt>struct() = #struct{dsize = <a href="ecapnp.html#type-word_count">ecapnp:word_count()</a>, psize = <a href="ecapnp.html#type-ptr_count">ecapnp:ptr_count()</a>, esize = <a href="ecapnp.html#type-element_size">ecapnp:element_size()</a>, union_field = none | <a href="ecapnp.html#type-field_type">ecapnp:field_type()</a>, fields = <a href="ecapnp.html#type-struct_fields">ecapnp:struct_fields()</a>}</tt></p>
+<p><p>  Describes the schema for a struct type.</p>
+ 
+  <dl>
+    <dt><code>dsize</code></dt>
+    <dd>The size of the struct's data section, in words.</dd>
+    <dt><code>psize</code></dt>
+    <dd>The number of pointers in the struct.</dd>
+    <dt><code>esize</code></dt>
+    <dd>The list <a href="#type-element_size">element size</a> for the struct.</dd>
+    <dt><code>union_field</code></dt>
+    <dd>Describes the unnamed union in the struct, or <code>none</code> if there
+        is no unnamed union in the struct.</dd>
+    <dt><code>fields</code></dt>
+    <dd>Describes all the fields in the struct.</dd>
+  </dl></p>
+
+<h3 class="typedecl"><a name="type-struct_fields">struct_fields()</a></h3>
+<p><tt>struct_fields() = [<a href="#type-field_type">field_type()</a>]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-struct_ref">struct_ref()</a></h3>
+<p><tt>struct_ref() = #struct_ref{dsize = <a href="ecapnp.html#type-word_count">ecapnp:word_count()</a>, psize = <a href="ecapnp.html#type-ptr_count">ecapnp:ptr_count()</a>}</tt></p>
+<p><p>  The reference is a pointer to a struct.</p>
+ 
+  <code>dsize</code> and <code>psize</code> specifies the data size and pointer count
+  actually allocated in the message. This may not match those
+  expected by the schema. Any data in the message that is outside of
+  what the schema expects will be unreachable by application code,
+  while any reads outside of the allocated data will result in a
+  default value back. Thus the missmatch is transparent in
+  application code.</p>
+
+<h3 class="typedecl"><a name="type-text">text()</a></h3>
+<p><tt>text() = binary()</tt></p>
+<p>  The required NULL byte suffix is automatically taken care of by
+  <a href="ecapnp_ref.html"><code>ecapnp_ref</code></a> for <code>text</code> values.</p>
 
 <h3 class="typedecl"><a name="type-type_id">type_id()</a></h3>
 <p><tt>type_id() = integer()</tt></p>
@@ -84,6 +206,14 @@
 <h3 class="typedecl"><a name="type-value">value()</a></h3>
 <p><tt>value() = number() | boolean() | [<a href="#type-value">value()</a>] | binary() | null</tt></p>
 
+
+<h3 class="typedecl"><a name="type-value_type">value_type()</a></h3>
+<p><tt>value_type() = void | bool | float32 | float63 | uint8 | uint16 | uint32 | uint64 | int8 | int16 | int32 | int64</tt></p>
+
+
+<h3 class="typedecl"><a name="type-word_count">word_count()</a></h3>
+<p><tt>word_count() = non_neg_integer()</tt></p>
+<p>  Note that in Cap'n Proto, a word is 8 bytes (64 bits).</p>
 
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get-1">get/1</a></td><td>Read the unnamed union value of object.</td></tr>
@@ -141,6 +271,6 @@ This creates a new empty message, ready to be filled with data.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 12 2013, 00:31:51.</i></p>
+<p><i>Generated by EDoc, Oct 15 2013, 14:21:01.</i></p>
 </body>
 </html>
