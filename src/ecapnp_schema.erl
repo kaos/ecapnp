@@ -39,7 +39,7 @@
 %% ===================================================================
 
 -spec lookup(lookup_type(), lookup_search()) ->
-                    {ok, schema_node()} | {unknown_type, Type}.
+                    {ok, schema_node()} | {unknown_type, Type::lookup_type()}.
 %% @doc Find schema node for type.
 %% @todo clean up this mess, as it has evolved over time.
 lookup({struct, Type}, Nodes) ->
