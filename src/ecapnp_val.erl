@@ -14,6 +14,12 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Cap'n Proto value support.
+%%
+%% Everything value.
+
 -module(ecapnp_val).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -26,21 +32,35 @@
 %% API functions
 %% ===================================================================
 
+-spec set(value_type(), number() | boolean()) -> binary().
+%% @doc Encode value to Cap'n Proto format.
 set(ValueType, Value) ->
     value(set, {ValueType, to_value(ValueType, Value)}).
 
+-spec set(value_type(), number() | boolean(), binary()) -> binary().
+%% @doc Encode value to Cap'n Proto format.
+%%
+%% The result is XOR'ed with `Default'.
 set(ValueType, Value, Default) when is_bitstring(Default) ->
     value(set, {ValueType, to_value(ValueType, Value), Default}).
 
+-spec get(value_type(), binary()) -> number() | boolean().
+%% @doc Decode data from Cap'n Proto format.
 get(ValueType, Data) when is_bitstring(Data) ->
     from_value(ValueType, value(get, {ValueType, Data})).
 
+-spec get(value_type(), binary(), binary()) -> number() | boolean().
+%% @doc Decode data from Cap'n Proto format.
+%%
+%% The `Data' is XOR'ed with `Default' prior to decoding.
 get(ValueType, Data, Default)
   when is_bitstring(Data),
        is_bitstring(Default) ->
     Value = value(get, {ValueType, Data, Default}),
     from_value(ValueType, Value).
 
+-spec size(value_type()) -> non_neg_integer().
+%% @doc Get number of bits for `ValueType'.
 size(ValueType) ->
     value(size, ValueType).
 

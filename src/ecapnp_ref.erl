@@ -45,7 +45,7 @@
 %% @doc Allocate data for a reference.
 %%
 %% The allocated data is left empty.
--spec alloc(segment_id(), integer(), pid()) -> #ref{}.
+-spec alloc(segment_id(), integer(), pid()) -> ref().
 alloc(SegmentId, Size, Data) ->
     {Id, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     #ref{ segment=Id, pos=Pos, data=Data }.
@@ -57,7 +57,7 @@ alloc(SegmentId, Size, Data) ->
 %%
 %% @see set/2
 %% @see alloc/3
--spec alloc(ref_kind(), segment_id(), integer(), pid()) -> #ref{}.
+-spec alloc(ref_kind(), segment_id(), integer(), pid()) -> ref().
 alloc(Kind, SegmentId, Size, Data) ->
     set(Kind, alloc(SegmentId, Size, Data)).
 
@@ -78,7 +78,7 @@ set(Kind, Ref0) ->
 %% Will follow far pointers.
 %%
 %% @see get/4
--spec get(segment_id(), integer(), pid()) -> #ref{}.
+-spec get(segment_id(), integer(), pid()) -> ref().
 get(SegmentId, Pos, Data) when is_pid(Data) ->
     get(SegmentId, Pos, Data, true).
 
@@ -90,7 +90,7 @@ get(SegmentId, Pos, Data) when is_pid(Data) ->
 %%
 %% @see read_segment/5
 %% @see ecapnp_data:get_segment/4
--spec get(segment_id(), integer(), pid(), boolean()) -> #ref{}.
+-spec get(segment_id(), integer(), pid(), boolean()) -> ref().
 get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
     read_segment(SegmentId, Pos,
                  ecapnp_data:get_segment(SegmentId, Pos, 1, Data),
@@ -105,7 +105,7 @@ get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
 %% lists, get a reference for the element at `Idx' (either a pointer
 %% or a "unpositioned" ref pointing to where a inlineComposite element
 %% holds its data).
--spec ptr(integer(), #ref{}) -> #ref{}.
+-spec ptr(integer(), ref()) -> ref().
 ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                kind=#struct_ref{ dsize=DSize, psize=PSize } })
   when Idx >= 0, Idx < PSize ->
@@ -131,7 +131,7 @@ ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
 %%
 %% `Align' is number of bits into the data section to read from, and
 %% `Len' is number of bits to read.
--spec read_struct_data(integer(), integer(), #ref{}) -> binary().
+-spec read_struct_data(integer(), integer(), ref()) -> binary().
 read_struct_data(Align, Len, Ref) ->
     read_struct_data(Align, Len, Ref, <<0:Len/integer>>).
 
@@ -139,7 +139,7 @@ read_struct_data(Align, Len, Ref) ->
 %%
 %% `Align' is number of bits into the data section to read from, and
 %% `Len' is number of bits to read.
--spec read_struct_data(integer(), integer(), #ref{}, any()) -> binary() | any().
+-spec read_struct_data(integer(), integer(), ref(), any()) -> binary() | any().
 read_struct_data(_, _, #ref{ kind=null }, Default) -> Default;
 read_struct_data(Align, Len,
                  #ref{ kind=#struct_ref{ dsize=DSize }}=Ref,
@@ -152,11 +152,11 @@ read_struct_data(Align, Len,
     end.
 
 %% @doc Read a refeference from the pointer section of struct ref.
--spec read_struct_ptr(integer(), #ref{}) -> #ref{}.
+-spec read_struct_ptr(integer(), ref()) -> ref().
 read_struct_ptr(Idx, Ref) -> read_struct_ptr(Idx, Ref, null_ref(Ref)).
 
 %% @doc Read a refeference from the pointer section of struct ref.
--spec read_struct_ptr(integer(), #ref{}, any()) -> #ref{} | any().
+-spec read_struct_ptr(integer(), ref(), any()) -> ref() | any().
 read_struct_ptr(_, #ref{ kind=null }, Default) -> Default;
 read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
                            offset=Offset, data=Data,
@@ -169,11 +169,11 @@ read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
     end.
 
 %% @doc Read elements from a list ref.
--spec read_list(#ref{}) -> [#ref{}] | [binary()].
+-spec read_list(ref()) -> [ref()] | [binary()].
 read_list(Ref) -> read_list(Ref, []).
 
 %% @doc Read elements from a list ref.
--spec read_list(#ref{}, any()) -> [#ref{}] | [binary()] | any().
+-spec read_list(ref(), any()) -> [ref()] | [binary()] | any().
 read_list(#ref{ kind=#list_ref{ count=0 } }, _) -> [];
 read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                 kind=#list_ref{ size=Size, count=Count } }, _) ->
@@ -207,32 +207,32 @@ read_list(#ref{ kind=null }, Default) -> Default.
 %%
 %% NOTICE: The required trailing `NULL' byte is silently dropped when
 %% reading the text.
--spec read_text(#ref{}) -> binary().
+-spec read_text(ref()) -> binary().
 read_text(Ref) -> read_text(Ref, <<>>).
 
 %% @doc Read text.
 %%
 %% NOTICE: The required trailing `NULL' byte is silently dropped when
 %% reading the text.
--spec read_text(#ref{}, any()) -> binary() | any().
+-spec read_text(ref(), any()) -> binary() | any().
 read_text(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
     binary_part(get_segment(1 + ((Count - 2) div 8), Ref), 0, Count - 1);
 read_text(#ref{ kind=null }, Default) -> Default.
 
 %% @doc Read data.
--spec read_data(#ref{}) -> binary().
+-spec read_data(ref()) -> binary().
 read_data(Ref) -> read_data(Ref, <<>>).
 
 %% @doc Read data.
--spec read_data(#ref{}, any()) -> binary() | any().
+-spec read_data(ref(), any()) -> binary() | any().
 read_data(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
     binary_part(get_segment(1 + ((Count - 1) div 8), Ref), 0, Count);
 read_data(#ref{ kind=null }, Default) -> Default.
 
 %% @doc Write to struct data section.
--spec write_struct_data(integer(), integer(), binary(), #ref{}) -> ok.
+-spec write_struct_data(integer(), integer(), binary(), ref()) -> ok.
 write_struct_data(Align, Len, Value,
                   #ref{ kind=#struct_ref{ dsize=DSize } }=Ref)
   when Align + Len =< DSize * 64 ->
@@ -244,7 +244,7 @@ write_struct_data(Align, Len, Value,
 %%
 %% `Ptr' must be a pointer from `Ref' (i.e. the pointer is within the
 %% data bounds of the reference).
--spec write_struct_ptr(#ref{}, #ref{}) -> ok.
+-spec write_struct_ptr(ref(), ref()) -> ok.
 write_struct_ptr(Ptr, Ref) ->
     check_ptr(Ptr, Ref),
     write(Ptr).
@@ -256,7 +256,7 @@ write_struct_ptr(Ptr, Ref) ->
 %%
 %% NOTICE: An additional `NULL' byte is appended to `Text' to stay
 %% conformant with Cap'n Proto specifications.
--spec write_text(binary(), #ref{}, #ref{}) -> ok.
+-spec write_text(binary(), ref(), ref()) -> ok.
 write_text(Text, Ptr, Ref) ->
     write_data(<<Text/binary, 0>>, Ptr, Ref).
 
@@ -264,7 +264,7 @@ write_text(Text, Ptr, Ref) ->
 %%
 %% Allocates data for `Data' and updates the `Ptr' in `Ref' to point
 %% to the newly allocated (and updated) data.
--spec write_data(binary(), #ref{}, #ref{}) -> ok.
+-spec write_data(binary(), ref(), ref()) -> ok.
 write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
     check_ptr(Ptr, Ref),
     Count = size(Data),
@@ -287,7 +287,7 @@ write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
 %%
 %% Returns an updated reference with the offset field updated to point
 %% at the newly allocated data.
--spec alloc_data(#ref{}) -> #ref{}.
+-spec alloc_data(ref()) -> ref().
 alloc_data(#ref{ segment=SegmentId, data=Data }=Ref) ->
     Size = ref_data_size(Ref),
     {Seg, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
@@ -304,7 +304,7 @@ alloc_data(#ref{ segment=SegmentId, data=Data }=Ref) ->
 %% rather than the total word count.
 %% 
 %% @see alloc_data/1
--spec alloc_list(integer(), ref_kind(), #ref{}) -> #ref{}.
+-spec alloc_list(integer(), ref_kind(), ref()) -> ref().
 alloc_list(Idx, #list_ref{ size=#struct_ref{ dsize=DSize, psize=PSize }=Tag,
                            count=Count }=Kind,
            Ref) ->
@@ -319,7 +319,7 @@ alloc_list(Idx, Kind, Ref) ->
     alloc_data(Ptr#ref{ kind=Kind }).
 
 %% @doc Write list element.
--spec write_list(integer(), integer(), binary(), #ref{}) -> ok.
+-spec write_list(integer(), integer(), binary(), ref()) -> ok.
 write_list(Idx, ElementIdx, Value, Ref) ->
     #ref{ kind=#list_ref{ size=Size, count=_Count }}=Ptr
         = read_struct_ptr(Idx, Ref, undefined),
@@ -338,7 +338,7 @@ write_list(Idx, ElementIdx, Value, Ref) ->
 %% @doc Resolve a far pointer.
 %%
 %% Usually this is done automatically when reading ref's.
--spec follow_far(#ref{}) -> #ref{}.
+-spec follow_far(ref()) -> ref().
 follow_far(#ref{ offset=Offset, data=Data,
                  kind=#far_ref{ segment=SegmentId, double_far=Double } }) ->
     Pad = get(SegmentId, Offset, Data, false),
@@ -354,7 +354,7 @@ follow_far(#ref{ offset=Offset, data=Data,
 %% Recursively follows all pointers and copies them as well. So
 %% copying a root object will effectively defragment a fragmented
 %% message.
--spec copy(#ref{}) -> binary().
+-spec copy(ref()) -> binary().
 copy(Ref) ->
     iolist_to_binary(
       flatten_ref_copy(copy_ref(Ref))).
@@ -365,7 +365,7 @@ copy(Ref) ->
 %% `#ref{}' record on its own is that the null reference returned by
 %% this function knows about the schema and segment data of the
 %% message for which it was based.
--spec null_ref(#ref{}) -> #ref{}.
+-spec null_ref(ref()) -> ref().
 null_ref(#ref{ data=Data }) -> #ref{ pos=-1, data=Data }.
 
 

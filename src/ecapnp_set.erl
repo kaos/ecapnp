@@ -14,6 +14,12 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Write support.
+%%
+%% Everything for writing data into a message.
+
 -module(ecapnp_set).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -26,14 +32,20 @@
 %% API functions
 %% ===================================================================
 
+-spec root(type_name(), schema()) -> {ok, object()}.
+%% @doc Get root object for a new message.
 root(Type, Schema) ->
     {ok, ecapnp_obj:alloc(Type, 0, ecapnp_data:new({Schema, 100}))}.
 
+-spec field(field_name(), field_value(), object()) -> ok | list().
+%% @doc Write field value to object.
 field(FieldName, Value, Object) ->
     set_field(
       ecapnp_obj:field(FieldName, Object),
       Value, Object#object.ref).
 
+-spec union({field_name(), field_value()} | field_name(), object()) -> ok.
+%% @doc Write unnamed union value in object.
 union(Value, #object{ ref=Ref,
                       schema=#schema_node{
                                 kind=#struct{ union_field=Union }}

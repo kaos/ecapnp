@@ -14,6 +14,14 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @reference <a href="http://kentonv.github.io/capnproto/encoding.html#packing">Cap'n
+%% Proto packing</a>.
+%% @doc Serialize messages.
+%%
+%% Currently, only the packing scheme is implemented.
+
 -module(ecapnp_serialize).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -23,10 +31,22 @@
 %% API functions
 %% ===================================================================
 
+-spec pack(binary()) -> binary().
+%% @doc Pack message data.
+%%
+%% Pack the final message data using the <a
+%% href="http://kentonv.github.io/capnproto/encoding.html#packing">Cap'n
+%% Proto packing</a> scheme.
 pack(Data)
   when is_binary(Data) ->
     pack_data(Data).
 
+-spec unpack(binary()) -> binary().
+%% @doc Unpack message data.
+%%
+%% Unpack data using the <a
+%% href="http://kentonv.github.io/capnproto/encoding.html#packing">Cap'n
+%% Proto packing</a> scheme.
 unpack(Data)
   when is_binary(Data) ->
     unpack_data(Data).

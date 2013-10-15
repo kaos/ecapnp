@@ -43,8 +43,8 @@
               schema_kind/0, schema_node/0, schema_nodes/0,
               schema_type/0, segment_id/0, segment_offset/0,
               segment_pos/0, struct/0, struct_fields/0, struct_ref/0,
-              text/0, type_id/0, type_name/0, value/0, word_count/0
-              ]).
+              text/0, type_id/0, type_name/0, value/0,
+              value_type/0, word_count/0 ]).
 
 
 -type annotation() :: #annotation{}.
@@ -173,6 +173,9 @@
 -type type_id() :: integer().
 -type type_name() :: atom().
 -type value() :: number() | boolean() | list(value()) | binary() | null.
+-type value_type() :: void | bool | float32 | float63
+                    | uint8 | uint16 | uint32 | uint64
+                    | int8 | int16 | int32 | int64.
 -type word_count() :: non_neg_integer().
 %% Note that in Cap'n Proto, a word is 8 bytes (64 bits).
 

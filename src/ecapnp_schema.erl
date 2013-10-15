@@ -14,6 +14,13 @@
 %%   limitations under the License.
 %%  
 
+%% @copyright 2013, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Schema functions.
+%%
+%% This module exports functions for interacting with a compiled
+%% schema.
+
 -module(ecapnp_schema).
 -author("Andreas Stenius <kaos@astekk.se>").
 
@@ -22,12 +29,19 @@
 
 -include("ecapnp.hrl").
 
+-type lookup_type() :: type_id() | type_name() | object | schema_node().
+%% The various types that can be looked up.
+-type lookup_search() :: object() | ref() | schema_nodes() | schema_node().
+%% Where to search for the type being looked up.
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
-%% Lookup type in schema
+-spec lookup(lookup_type(), lookup_search()) ->
+                    {ok, schema_node()} | {unknown_type, Type}.
+%% @doc Find schema node for type.
+%% @todo clean up this mess, as it has evolved over time.
 lookup({struct, Type}, Nodes) ->
     lookup(Type, Nodes);
 lookup({list, Type}, Nodes) ->
@@ -68,18 +82,39 @@ lookup(Type, #schema_node{ nodes=Nodes }) ->
 lookup(Type, null) ->
     {unknown_type, Type}.
 
+-spec type_of(object()) -> schema_node().
+%% @doc Get type of object.
+%% @todo Doesn't this belong in ecapnp_obj?
 type_of(#object{ schema=Type }) -> Type.
 
+-spec size_of(lookup_type(), lookup_search()) -> non_neg_integer().
+%% @doc Lookup struct type and query it's size.
 size_of(Type, Store) ->    
     {ok, T} = lookup(Type, Store),
     size_of(T).
 
+-spec size_of(Node::schema_node()) -> non_neg_integer().
+%% @doc Query size of a struct type.
+%%
+%% Will crash with `function_clause' if `Node' is not a struct node.
 size_of(#schema_node{ kind=#struct{ dsize=DSize, psize=PSize } }) ->
     DSize + PSize.
 
+-spec data_size(schema_node()) -> non_neg_integer().
+%% @doc Get data size of a struct type.
 data_size(#schema_node{ kind=#struct{ dsize=Size } }) -> Size.
+
+-spec ptrs_size(schema_node()) -> non_neg_integer().
+%% @doc Get pointer count for a struct type.
 ptrs_size(#schema_node{ kind=#struct{ psize=Size } }) -> Size.
 
+-spec set_ref_to(lookup_type(), ref()) -> ref().
+%% @doc Set reference kind.
+%%
+%% Lookup struct `Type' and return an updated {@link ref(). ref}.
+%%
+%% Note: it is only the record that is updated, the change is not
+%% committed to the message.
 set_ref_to(Type, Ref) ->
     case lookup(Type, Ref) of
         {ok, #schema_node{ kind=#struct{ dsize=DSize, psize=PSize } }} ->
@@ -89,9 +124,3 @@ set_ref_to(Type, Ref) ->
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-
-%% keyfind(_Key, _N, []) -> false;
-%% keyfind(Key, N, [T|Ts]) ->
-%%     if element(N, element(#schema.node, T)) == Key -> T;
-%%        true -> keyfind(Key, N, Ts)
-%%     end.
