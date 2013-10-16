@@ -63,6 +63,9 @@ schema(schema) ->
   #schema_node{ %% 0xa93fc509624c72d9
       name=schema, id=12195682960037147353, src= <<"schema.capnp">>,
       kind=file,
+      annotations=
+        [{13386661402618388268,<<"capnp::schema">>}
+        ],
       nodes=
         [#schema_node{ %% 0xe682ab4cf923a417
            name='Node', id=16610026722781537303, src= <<"schema.capnp:Node">>,
@@ -166,6 +169,9 @@ schema(schema) ->
                     fields=
                       [{methods,
                         #ptr{ type={list,{struct,10736806783679155584}}, idx=3,
+                              default= <<0,0,0,0,0,0,0,0>> }},
+                       {extends,
+                        #ptr{ type={list,uint64}, idx=4,
                               default= <<0,0,0,0,0,0,0,0>> }}
                       ]}},
               #schema_node{ %% 0xb54ab3364333f598
@@ -276,7 +282,10 @@ schema(schema) ->
                               default= <<0,0,0,0,0,0,0,0>> }},
                        {defaultValue,
                         #ptr{ type={struct,14853958794117909659}, idx=3,
-                              default= <<0,0,0,0,0,0,0,0>> }}
+                              default= <<0,0,0,0,0,0,0,0>> }},
+                       {hadExplicitDefault,
+                        #data{ type=bool, align=135,
+                               default= <<0:1>> }}
                       ]}}
              ]},
          #schema_node{ %% 0x978a7cebdc549a4d
@@ -296,7 +305,7 @@ schema(schema) ->
                  ]}},
          #schema_node{ %% 0x9500cce23b334d80
            name='Method', id=10736806783679155584, src= <<"schema.capnp:Method">>,
-           kind=#struct{ dsize=1, psize=4, esize=inlineComposite,
+           kind=#struct{ dsize=3, psize=2, esize=inlineComposite,
                union_field=none,
                fields=
                  [{name,
@@ -305,39 +314,16 @@ schema(schema) ->
                   {codeOrder,
                    #data{ type=uint16, align=0,
                           default= <<0,0>> }},
-                  {params,
-                   #ptr{ type={list,{struct,14681955158633610486}}, idx=1,
-                         default= <<0,0,0,0,0,0,0,0>> }},
-                  {requiredParamCount,
-                   #data{ type=uint16, align=16,
-                          default= <<0,0>> }},
-                  {returnType,
-                   #ptr{ type={struct,15020482145304562784}, idx=2,
-                         default= <<0,0,0,0,0,0,0,0>> }},
+                  {paramStructType,
+                   #data{ type=uint64, align=64,
+                          default= <<0,0,0,0,0,0,0,0>> }},
+                  {resultStructType,
+                   #data{ type=uint64, align=128,
+                          default= <<0,0,0,0,0,0,0,0>> }},
                   {annotations,
-                   #ptr{ type={list,{struct,17422339044421236034}}, idx=3,
+                   #ptr{ type={list,{struct,17422339044421236034}}, idx=1,
                          default= <<0,0,0,0,0,0,0,0>> }}
-                 ]},
-           nodes=
-             [#schema_node{ %% 0xcbc0c86dae91fcf6
-                name='Param', id=14681955158633610486, src= <<"schema.capnp:Method.Param">>,
-                kind=#struct{ dsize=0, psize=4, esize=inlineComposite,
-                    union_field=none,
-                    fields=
-                      [{name,
-                        #ptr{ type=text, idx=0,
-                              default= <<>> }},
-                       {type,
-                        #ptr{ type={struct,15020482145304562784}, idx=1,
-                              default= <<0,0,0,0,0,0,0,0>> }},
-                       {defaultValue,
-                        #ptr{ type={struct,14853958794117909659}, idx=2,
-                              default= <<0,0,0,0,0,0,0,0>> }},
-                       {annotations,
-                        #ptr{ type={list,{struct,17422339044421236034}}, idx=3,
-                              default= <<0,0,0,0,0,0,0,0>> }}
-                      ]}}
-             ]},
+                 ]}},
          #schema_node{ %% 0xd07378ede1f9cc60
            name='Type', id=15020482145304562784, src= <<"schema.capnp:Type">>,
            kind=#struct{ dsize=2, psize=1, esize=inlineComposite,

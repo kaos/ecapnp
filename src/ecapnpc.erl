@@ -188,6 +188,7 @@ export_items([], _, _) -> ok.
 
 export_item(#schema_node{ name=Name, id=Id, 
                           src=Src, kind=Kind,
+                          annotations=Annotations,
                           nodes=Nodes },
             Out, Indent) ->
     I = Indent + 2,
@@ -197,6 +198,7 @@ export_item(#schema_node{ name=Name, id=Id,
          Id, I, "",
          Name, Id, Src, I, ""]),
     export_item(Kind, Out, I + 2),
+    export_list("annotations", Annotations, Out, I),
     export_list("nodes", Nodes, Out, I),
     Out(["}"]);
 export_item(#struct{ dsize=DSize, psize=PSize, esize=ESize,
@@ -222,9 +224,12 @@ export_item(#const{ field=Field }, Out, Indent) ->
     Out(["#const{ field=~n~*s", I, ""]),
     export_item(Field, Out, I),
     Out(["}"]);
-export_item(#annotation{}, Out, Indent) ->
+export_item(#annotation{ type=Type, targets=Targets }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#annotation{ %% NYI..~n~*s}", I, ""]);
+    Out(["#annotation{~n~*stype=", I, ""]),
+    export_item(Type, Out, I),
+    export_list("targets", Targets, Out, I),
+    Out(["}"]);
 export_item(#data{ type={union, L}, align=A, default=D }, Out, Indent) ->
     I = Indent + 2,
     Out(["#data{ align=~p, default= ~w, type=~n~*s"
@@ -273,7 +278,10 @@ create_output_file(FileName) ->
 compile_root(Root) ->
     Nodes = [compile_node(N) || N <- schema(get, nodes, Root)],
     Files = schema(get, requestedFiles, Root),
-    [link_node(schema(get, id, File), root, Nodes) || File <- Files].
+    [compile_file(File, Nodes) || File <- Files].
+
+compile_file(File, Nodes) ->
+    link_node(schema(get, id, File), root, Nodes).
 
 compile_node(Node) ->
     {schema(get, id, Node),
@@ -312,17 +320,20 @@ compile_node({enum, Enum}, Node) ->
 compile_node({interface, _Interface}, Node) ->
     Node#schema_node{ kind=#interface{} };
 compile_node({const, Const}, Node) ->
-    Type = schema(get, schema(get, type, Const)),
-    Value = schema(get, schema(get, value, Const)),
-    Field = case capnp_type_info(Type) of
-                {data_field, DataType} ->
-                    data_field(DataType, 0, Value);
-                {ptr_field, PtrType} ->
-                    ptr_field(PtrType, 0, Value)
-            end,
-    Node#schema_node{ kind=#const{ field=Field }};
-compile_node({annotation, _Annotation}, Node) ->
-    Node#schema_node{ kind=#annotation{} };
+    Type = schema(get, type, Const),
+    Value = schema(get, value, Const),
+    Node#schema_node{ kind=#const{ field=field(Type, 0, Value) }};
+compile_node({annotation, Annotation}, Node) ->
+    Node#schema_node{
+      kind=#annotation{
+              type=field(schema(get, type, Annotation), 0, null),
+              targets=[T || T <- [targetsFile, targetsConst, targetsEnum,
+                                  targetsEnumerant, targetsStruct, targetsField,
+                                  targetsUnion, targetsGroup, targetsInterface,
+                                  targetsMethod, targetsParam, targetsAnnotation
+                                 ],
+                            schema(get, T, Annotation)
+                      ]} };
 compile_node({What, _}, Node) ->
     throw({unknown_node, What, Node}).
 
@@ -352,14 +363,30 @@ compile_union(Union, Struct) ->
               {union, 0})
     end.
 
+compile_annotations(Annotations, AllNodes) ->
+    [compile_annotation(A, AllNodes) || A <- Annotations].
+
+compile_annotation(Annotation, AllNodes) ->
+    Id = schema(get, id, Annotation),
+    {_AnnotationNode, #schema_node{ kind=#annotation{ type=Field } }}
+        = proplists:get_value(Id, AllNodes),
+    Type = case Field of
+               #data{ type=T } -> T;
+               #ptr{ type=T } -> T
+           end,
+    {Id, value(Type, schema(get, value, Annotation))}.
+
 compile_field(Field) ->
     Offset = schema(get, offset, Field),
     Default = schema(get, defaultValue, Field),
-    case capnp_type_info(schema(get, schema(get, type, Field))) of
+    field(schema(get, type, Field), Offset, Default).
+
+field(Type, Offset, Default) ->
+    case capnp_type_info(schema(get, Type)) of
         {data_field, DataType} -> data_field(DataType, Offset, Default);
         {ptr_field, PtrType} -> ptr_field(PtrType, Offset, Default)
     end.
-
+    
 data_field(void, _Offset, _Default) -> void;
 data_field({Type, 1}, Offset, Default) ->
     %% compensate for erlangs big endian bit streams.. yuck!
@@ -371,6 +398,16 @@ data_field({Type, Size}, Offset, Default) ->
 ptr_field(Type, Index, Default) ->
     #ptr{ type=Type, idx=Index, default=value(Type, Default) }.
 
+value(Type, null) ->
+    if Type == text; Type == data -> <<>>;
+       true ->
+            case Type of
+                {Simple, _} when Simple == union; Simple == enum ->
+                    <<0:16/integer>>;
+                _ ->
+                    <<0:64/integer>>
+            end
+    end;
 value(Type, #object{ schema=#schema_node{ name='Value' } }=Object) ->
     value(Type, schema(get, Object));
 value(_Type, {_, Object}) when is_record(Object, object) ->
@@ -439,8 +476,8 @@ link_node(Id, NodeName, AllNodes) ->
                       schema(get, fields, O));
                 _ -> NestedNodes
             end,
-    %%Types = NestedNodes ++ Groups,
     Schema#schema_node{ name=node_name(NodeName, Schema),
+                        annotations=compile_annotations(schema(get, annotations, Node), AllNodes),
                         nodes=Nodes }.
 
 node_name(root, #schema_node{ src=Src }) ->

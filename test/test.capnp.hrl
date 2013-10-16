@@ -63,8 +63,29 @@ test(schema) ->
   #schema_node{ %% 0xe87e0317861d75a1
       name=test, id=16752831063434032545, src= <<"test/test.capnp">>,
       kind=file,
+      annotations=
+        [{17364400218949434058,<<"file anno 2013">>}
+        ],
       nodes=
-        [#schema_node{ %% 0xfa556038e27b336d
+        [#schema_node{ %% 0xf0fabdffa4323aca
+           name=testAnno, id=17364400218949434058, src= <<"test/test.capnp:testAnno">>,
+           kind=#annotation{
+               type=text,
+               targets=
+                 [targetsFile,
+                  targetsConst,
+                  targetsEnum,
+                  targetsEnumerant,
+                  targetsStruct,
+                  targetsField,
+                  targetsUnion,
+                  targetsGroup,
+                  targetsInterface,
+                  targetsMethod,
+                  targetsParam,
+                  targetsAnnotation
+                 ]}},
+         #schema_node{ %% 0xfa556038e27b336d
            name='Test', id=18038429679936549741, src= <<"test/test.capnp:Test">>,
            kind=#struct{ dsize=2, psize=6, esize=inlineComposite,
                union_field=#data{ align=16, default= <<0,0>>, type=
@@ -90,6 +111,9 @@ test(schema) ->
                    #ptr{ type={struct,15091335337902283752}, idx=4,
                          default= <<0,0,0,0,0,0,0,0>> }}
                  ]},
+           annotations=
+             [{17364400218949434058,<<"Test struct anno 2013 too">>}
+             ],
            nodes=
              [#schema_node{ %% 0xaa97a338ed5382c9
                 name=meta, id=12292473172826227401, src= <<"test/test.capnp:Test.meta">>,

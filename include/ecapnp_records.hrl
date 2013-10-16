@@ -5,6 +5,7 @@
           id=0 :: ecapnp:type_id(),
           src = <<>> :: ecapnp:text(),
           kind=file :: ecapnp:schema_kind(),
+          annotations=[] :: list(),
           nodes=[] :: ecapnp:schema_nodes()
          }).
 
@@ -35,7 +36,8 @@
 
 %% Annotation node
 -record(annotation, {
-          targets=[] :: list(boolean())
+          type,
+          targets=[] :: list(atom())
          }).
 
 %% Schema Field types

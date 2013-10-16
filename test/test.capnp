@@ -1,6 +1,8 @@
 # test/test.capnp
 @0xe87e0317861d75a1;
-struct Test @0xfa556038e27b336d {  # 16 bytes, 6 ptrs
+$testAnno("file anno 2013");
+annotation testAnno @0xf0fabdffa4323aca (*) :Text;
+struct Test @0xfa556038e27b336d $testAnno("Test struct anno 2013 too") {  # 16 bytes, 6 ptrs
   intField @0 :UInt8 = 33;  # bits[0, 8)
   textField @1 :Text = "test";  # ptr[0]
   structField @13 :Simple;  # ptr[4]
