@@ -1,3 +1,4 @@
+# Options for erlang.mk
 PROJECT = ecapnp
 
 test%: ERLC_OPTS += -DEUNIT_NOAUTO
@@ -15,10 +16,16 @@ erlang.mk: erlang_mk_url ?= \
 erlang.mk:
 	@echo " GET   " $@; wget -O $@ $(erlang_mk_url)
 
-# compiler schema
-all: include/schema.capnp.hrl
-include/schema.capnp.hrl: /usr/local/include/capnp/schema.capnp
-	$(gen_verbose) capnpc -oerl:$(dir $@) --src-prefix=$(dir $<) $<
+# build rules for .capnp files
+%.capnp.hrl: %.capnp
+	$(gen_verbose) capnpc -oerl $<
+
+# compiler schema dependencies
+all: include/c++.capnp.hrl include/schema.capnp.hrl
+
+# make sure we rebuild on any header file change
+%.erl: include/*.hrl
+	@touch $@
 
 # test schema (for the eunit tests)
 test/test.capnp.hrl: test/test.capnp

@@ -1,3 +1,6 @@
+-ifndef(ecapnp_hrl).
+-define(ecapnp_hrl,1).
+
 -include("ecapnp_records.hrl").
 
 -type annotation() :: ecapnp:annotation().
@@ -43,3 +46,5 @@
 -type value() :: ecapnp:value().
 -type value_type() :: ecapnp:value_type().
 -type word_count() :: ecapnp:word_count().
+
+-endif.

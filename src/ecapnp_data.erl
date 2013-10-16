@@ -136,12 +136,15 @@ data_state({Schema, MsgSize})
 new_state(#msg{ schema=Schema }=Msg) ->
     #state{
        msg=Msg,
-       nodes=list_nodes([Schema], [])
+       nodes=list_nodes(Schema, [])
       }.
 
 list_nodes([#schema_node{ nodes=Nodes }=T|Ts], Acc) ->
     list_nodes(Nodes, list_nodes(Ts, [T|Acc]));
+list_nodes([Import|Ts], Acc) when is_list(Import) ->
+    list_nodes(Ts, list_nodes(Import, Acc));
 list_nodes(_, Acc) -> Acc.
+
 
 
 handle_response({Response, State}, {Request, From}) ->

@@ -118,19 +118,21 @@ schema() -> schema(schema).
 %% internal functions
 %% ===================================================================
 
+-record(import, { id, name }).
+
 export([Schema|Ss]) ->
     ok = export_schema(Schema),
     export(Ss);
 export([]) -> ok.
 
-export_schema(#schema_node{ kind=file, src=Src }=Schema) ->
+export_schema([#schema_node{ kind=file, src=Src }|_]=Compiled) ->
     FileName = get_output_filename(Src),
     {ok, File} = create_output_file(FileName),
     try 
         Out = fun ([Fmt|Args]) ->
                       ok = io:format(File, Fmt, Args) 
               end,
-        [Write(Out, Schema) 
+        [Write(Out, Compiled) 
          || Write <- [fun write_header/2,
                       fun write_api/2,
                       fun export_schema/2
@@ -141,12 +143,14 @@ export_schema(#schema_node{ kind=file, src=Src }=Schema) ->
         file:close(File)
     end.
 
-write_header(Out, _) ->
+write_header(Out, [_|Imports]) ->
     Out(["%%% DO NOT EDIT, this file was generated.~n" 
          %% TODO: include version info: application:get_key(ecapnp, vsn) -> {ok, "vsn"}.
-         "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"]).
+         "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"]),
+    [Out(["-include(\"~s\").~n", get_output_filename(Import)])
+     || #import{ name=Import } <- Imports].
 
-write_api(Out, #schema_node{ name=Name }) ->
+write_api(Out, [#schema_node{ name=Name }|_]) ->
     {ok, Stubs} = file:read_file(
                     filename:join(
                       code:priv_dir(ecapnp), 
@@ -155,14 +159,14 @@ write_api(Out, #schema_node{ name=Name }) ->
             fun ({Re, R}, Subject) ->
                     re:replace(Subject, Re, R, [global])
             end, Stubs, 
-            [{"_name_", atom_to_list(Name)}
+            [{"_name_", io_lib:format("~p", [Name])}
             ]),
     Out(["~s~n", Api]).
 
-export_schema(Out, #schema_node{ name=Name }=Schema) ->
+export_schema(Out, [#schema_node{ name=Name }=Schema|Imports]) ->
     I = 2,
     Out(["~p(schema) ->~n~*s", Name, I, ""]),
-    export_item(Schema, Out, I + 2),
+    export_list(Imports ++ [Schema], Out, I),
     Out([".~n"]).
 
 export_list(_Label, [], _Out, _Indent) -> ok;
@@ -172,7 +176,7 @@ export_list(Label, List, Out, Indent) ->
     export_list(List, Out, Indent).
 
 export_list(List, Out, Indent) ->
-    I = Indent + 2,
+    I = Indent,
     Out(["["]),
     export_items(List, Out, {first, I + 1}),
     Out(["~n~*s]", I, ""]).
@@ -197,10 +201,12 @@ export_item(#schema_node{ name=Name, id=Id,
          "kind=",
          Id, I, "",
          Name, Id, Src, I, ""]),
-    export_item(Kind, Out, I + 2),
+    export_item(Kind, Out, I),
     export_list("annotations", Annotations, Out, I),
     export_list("nodes", Nodes, Out, I),
     Out(["}"]);
+export_item(#import{ name=Name }, Out, _Indent) ->
+    Out(["~p(schema)", source_name_to_identifier(Name)]);
 export_item(#struct{ dsize=DSize, psize=PSize, esize=ESize,
                      fields=Fields, union_field=Union },
             Out, Indent) ->
@@ -267,6 +273,9 @@ export_item({Idx, Tag, Type}, Out, Indent)
 export_item(Item, Out, _Indent) ->
     Out(["~p", Item]).
 
+source_name_to_identifier(Src) ->
+    binary_to_atom(filename:basename(Src, ".capnp"), latin1).
+
 get_output_filename(Src)
   when is_binary(Src) ->
     <<Src/binary, ".hrl">>.
@@ -281,7 +290,13 @@ compile_root(Root) ->
     [compile_file(File, Nodes) || File <- Files].
 
 compile_file(File, Nodes) ->
-    link_node(schema(get, id, File), root, Nodes).
+    [link_node(schema(get, id, File), root, Nodes)
+     |[compile_import(Import)
+       || Import <- schema(get, imports, File)]].
+
+compile_import(Import) ->
+    #import{ id=schema(get, id, Import),
+             name=schema(get, name, Import) }.
 
 compile_node(Node) ->
     {schema(get, id, Node),
@@ -481,5 +496,6 @@ link_node(Id, NodeName, AllNodes) ->
                         nodes=Nodes }.
 
 node_name(root, #schema_node{ src=Src }) ->
-    binary_to_atom(filename:basename(Src, ".capnp"), latin1);
+    source_name_to_identifier(Src);
 node_name(NodeName, _) -> NodeName.
+
