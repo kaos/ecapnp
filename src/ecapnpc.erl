@@ -173,7 +173,7 @@ export_list(_Label, [], _Out, _Indent) -> ok;
 export_list(Label, List, Out, Indent) ->
     I = Indent + 2,
     Out([",~n~*s~s=~n~*s", Indent, "", Label, I, ""]),
-    export_list(List, Out, Indent).
+    export_list(List, Out, I).
 
 export_list(List, Out, Indent) ->
     I = Indent,

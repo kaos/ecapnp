@@ -65,15 +65,15 @@
      kind=file,
      annotations=
        [{13386661402618388268,<<"capnp::annotations">>}
-     ],
+       ],
      nodes=
        [#schema_node{ %% 0xb9c6f99ebf805f2c
-        name=namespace, id=13386661402618388268, src= <<"include/c++.capnp:namespace">>,
-        kind=#annotation{
-          type=#ptr{ type=text, idx=0,
-                default= <<>> },
-          targets=
-            [targetsFile
-          ]}}
-     ]}
+          name=namespace, id=13386661402618388268, src= <<"include/c++.capnp:namespace">>,
+          kind=#annotation{
+            type=#ptr{ type=text, idx=0,
+                  default= <<>> },
+            targets=
+              [targetsFile
+              ]}}
+       ]}
   ].
