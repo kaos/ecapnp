@@ -250,7 +250,7 @@ export_item(#interface{ methods=M, extends=E }, Out, Indent) ->
     Out(["}"]);
 export_item(#method{ name=N, paramType=P, resultType=R }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#method{ name= ~p,~n~*s"
+    Out(["#method{ name=~p,~n~*s"
          "paramType=", N, I, ""]),
     export_item(P, Out, I),
     Out([",~n~*sresultType=", I, ""]),
@@ -305,7 +305,10 @@ export_item(Item, Out, _Indent) ->
     Out(["~p", Item]).
 
 source_name_to_identifier(Src) ->
-    binary_to_atom(filename:basename(Src, ".capnp"), latin1).
+    text_to_atom(filename:basename(Src, ".capnp")).
+
+text_to_atom(Text) when is_binary(Text) ->
+    binary_to_atom(Text, latin1).
 
 get_output_filename(Src)
   when is_binary(Src) ->
@@ -357,7 +360,7 @@ compile_node({struct, Struct}, Node) ->
               union_field = compile_union(Union, Struct)
              }};
 compile_node({enum, Enum}, Node) ->
-    Enumerants = [binary_to_atom(schema(get, name, E), latin1) 
+    Enumerants = [text_to_atom(schema(get, name, E)) 
                   || E <- schema(get, enumerants, Enum)],
     Node#schema_node{
       kind=#enum{ values = lists:zip(
@@ -368,7 +371,7 @@ compile_node({interface, Interface}, Node) ->
       kind=#interface{
               extends=schema(get, extends, Interface),
               methods=[#method{
-                          name=schema(get, name, M),
+                          name=text_to_atom(schema(get, name, M)),
                           paramType=schema(get, paramStructType, M),
                           resultType=schema(get, resultStructType, M)
                          } || M <- schema(get, methods, Interface)]
@@ -392,7 +395,7 @@ compile_node({What, _}, Node) ->
     throw({unknown_node, What, Node}).
 
 compile_struct_field(Field) ->
-    Name = binary_to_atom(schema(get, name, Field), latin1),
+    Name = text_to_atom(schema(get, name, Field)),
     compile_struct_field_type(
       schema(get, Field),
       #field{ name=Name }).
@@ -515,7 +518,7 @@ link_node(Id, NodeName, AllNodes) ->
     {Node, Schema} = proplists:get_value(Id, AllNodes),
     %% link all nested nodes
     NestedNodes = [begin
-                       Name = binary_to_atom(schema(get, name, N), latin1),
+                       Name = text_to_atom(schema(get, name, N)),
                        link_node(schema(get, id, N), Name, AllNodes)
                    end || N <- schema(get, nestedNodes, Node)],
     Nodes = case schema(get, Node) of
@@ -525,7 +528,7 @@ link_node(Id, NodeName, AllNodes) ->
                       fun(F, G) ->
                               case schema(get, F) of
                                   {group, Group} ->
-                                      Name = binary_to_atom(schema(get, name, F), latin1),
+                                      Name = text_to_atom(schema(get, name, F)),
                                       [link_node(schema(get, typeId, Group), Name, AllNodes)|G];
                                   _ -> G
                               end

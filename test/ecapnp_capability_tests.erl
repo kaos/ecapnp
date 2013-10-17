@@ -20,9 +20,46 @@
 -include("test/test.capnp.hrl").
 
 start_stop_server_test() ->
-    {ok, Cap} = ecapnp_schema:lookup('BasicCap', test(schema)),
-    {ok, Server} = ecapnp_capability:start(Cap, []),
+    {ok, Server} = ecapnp_capability:start('BasicCap', [], test(schema)),
     ?assert(is_process_alive(Server)),
-    ok = ecapnp_capability:stop(Server).
+    ok = ecapnp_capability:stop(Server),
+    ?assert(not is_process_alive(Server)).
+
+meck_test() ->
+    setup_meck(foo, [{bar, fun() -> baz end}]),
+    ?assertEqual(baz, foo:bar()),
+    teardown_meck(foo).
+
+basic_server_test() ->
+    %% setup expectations
+    setup_meck(basicCap, [{add,
+                       fun(Params, Results) ->
+                               test(set, result,
+                                    test(get, a, Params)
+                                    + test(get, b, Params),
+                                    Results)
+                       end}
+                     ]),
+    %% prepare request
+    {ok, Request} = ecapnp_capability:request('BasicCap', add, test(schema)),
+    ok = test(set, a, 123, Request),
+    ok = test(set, b, 456, Request),
+    %% start server and send request
+    {ok, Server} = ecapnp_capability:start('BasicCap', basicCap, test(schema)),
+    {ok, Response} = ecapnp_capability:call(Server, Request),
+    %% verify response
+    ?assertEqual(579, test(get, result, Response)),
+    teardown_meck(basicCap).
+
+
+
+setup_meck(Mod, Funs) ->
+    ?assertEqual(ok, meck:new(Mod, [non_strict])),
+    [?assertEqual(ok, meck:expect(Mod, Fun, Impl))
+     || {Fun, Impl} <- Funs].
+
+teardown_meck(Mod) ->
+    ?assert(meck:validate(Mod)),
+    ?assertEqual(ok, meck:unload(Mod)).
 
 -endif.

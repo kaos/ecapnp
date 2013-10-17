@@ -223,7 +223,7 @@ test(schema) ->
           name='BasicCap', id=17521612982906909583, src= <<"test/test.capnp:BasicCap">>,
           kind=#interface{
             methods=
-              [#method{ name= <<"add">>,
+              [#method{ name=add,
                  paramType=10419494484650272988,
                  resultType=13875996178202423621
                  }

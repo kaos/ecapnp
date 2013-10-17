@@ -24,7 +24,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 -behaviour(gen_server).
 
--export([start/2, stop/1]).
+-export([start/3, stop/1, request/3, call/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -32,7 +32,7 @@
 
 -include("ecapnp.hrl").
 
--record(state, { schema, impl }).
+-record(state, { mod, methods, schema }).
 
 
 %% ===================================================================
@@ -46,12 +46,29 @@
 %% @spec start(schema_node(), list()) -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start(#schema_node{ kind=Cap }=Desc, Impl)
-  when is_record(Cap, interface), is_list(Impl) ->
-    gen_server:start(?MODULE, [Desc, Impl], []).
+start(Cap, Impl, Schema) ->
+    {ok, #schema_node{ kind=#interface{ methods=M } }}
+        = ecapnp_schema:lookup(Cap, Schema),
+    gen_server:start(?MODULE, [Impl, M, Schema], []).
 
 stop(Server) when is_pid(Server) ->
     gen_server:call(Server, stop).
+
+request(Cap, Method, Schema) ->
+    {ok, #schema_node{ kind=#interface{ methods=Methods } } }
+        = ecapnp_schema:lookup(Cap, Schema),
+    #method{ paramType=Type }
+        = lists:keyfind(Method, #method.name, Methods),
+    %% TODO: introduce a new "top-level" record for capability
+    %% requests instead of the hacky and rather incomplete name take
+    %% over going on here now..
+    case ecapnp_set:root(Type, Schema) of
+        {ok, #object{ schema=S }=O} ->
+            {ok, O#object{ schema=S#schema_node{ name=Method } }}
+    end.
+
+call(Server, Request) ->
+    gen_server:call(Server, {call, Request}).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -64,8 +81,8 @@ stop(Server) when is_pid(Server) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Desc, Impl|_]) ->
-    {ok, #state{ schema=Desc, impl=Impl }}.
+init([Impl, Methods, Schema|_]) ->
+    {ok, #state{ mod=Impl, methods=Methods, schema=Schema }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -82,6 +99,17 @@ init([Desc, Impl|_]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call(stop, _From, State) -> {stop, normal, ok, State};
+handle_call({call, Request}, _From,
+            #state{ mod=Impl, methods=Methods, schema=Schema }=State) ->
+    Method = (Request#object.schema)#schema_node.name,
+    #method{ resultType=Type }
+        = lists:keyfind(Method, #method.name, Methods),
+    {ok, Response} = ecapnp_set:root(Type, Schema),
+    Reply = case apply(Impl, Method, [Request, Response]) of
+                ok -> {ok, Response};
+                Err -> {error, Err}
+            end,
+    {reply, Reply, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -140,3 +168,4 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+

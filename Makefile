@@ -7,6 +7,13 @@ CT_SUITES = eunit
 PLT_APPS = crypto
 EDOC_OPTS = preprocess
 
+# call `make tests TEST_DEPS=` after the first run in order to skip
+# the `make all` for all test deps.. (which for meck using rebar is
+# sloooow... :/ )
+TEST_DEPS ?= meck
+
+dep_meck = https://github.com/eproxus/meck.git master
+
 include erlang.mk
 
 # erlang.mk bootstrapping
