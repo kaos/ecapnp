@@ -125,7 +125,7 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                         object -> throw(not_yet_implemented);
                         interface -> throw(not_yet_implemented);
                         {list, _} -> throw(not_yet_implemented);
-                        {struct, _} ->
+                        {struct, StructType} ->
                             case element(2, Value) of %% {Idx, {Field, Value}}
                                 {FieldName, FieldValue} ->
                                     List = ecapnp_ref:read_struct_ptr(
@@ -134,7 +134,7 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                                           ecapnp_obj:from_ref(
                                             ecapnp_ref:ptr(
                                               element(1, Value), List),
-                                            ElementType))
+                                            StructType))
                             end;
                         text ->
                             List = ecapnp_ref:read_struct_ptr(Idx, StructRef),
