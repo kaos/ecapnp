@@ -36,8 +36,8 @@ test_schema() ->
                         dsize=1, psize=0, esize=fourBytes,
                         union_field=none,
                         fields=
-                            [{value,
-                              #data{ type=int32, align=0,
+                            [#field{ name=value,
+                                     kind=#data{ type=int32, align=0,
                                      default= <<4,3,2,255>> }}
                             ]}},
              #schema_node{ %% 0x91bf2daf591a2be2
@@ -55,15 +55,15 @@ test_schema() ->
                                                     default= <<"bar">> }}
                                             ]} },
                         fields=
-                            [{boolField,
-                              #data{ type=bool, align=23,
-                                     default= <<1:1>> }},
-                             {intField,
-                              #data{ type=uint32, align=32,
-                                     default= <<1,2,3,4>> }},
-                             {structField,
-                              #ptr{ type={struct,13359986676370636511}, idx=1,
-                                    default= <<0,0,0,0,1,0,0,0,199,207,255,255,0,0,0,0>> }}
+                            [#field{ name=boolField,
+                                     kind=#data{ type=bool, align=23,
+                                                 default= <<1:1>> }},
+                             #field{ name=intField,
+                                     kind=#data{ type=uint32, align=32,
+                                                 default= <<1,2,3,4>> }},
+                             #field{ name=structField,
+                                     kind=#ptr{ type={struct,13359986676370636511}, idx=1,
+                                                default= <<0,0,0,0,1,0,0,0,199,207,255,255,0,0,0,0>> }}
                             ]}}
             ]}].
 

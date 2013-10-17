@@ -41,3 +41,6 @@ struct ListTest @0xed15f6a91b7977a6 {  # 0 bytes, 4 ptrs
   listSimples @2 :List(Simple) = [(message = "first", value = 1), (message = "second", value = 2)];  # ptr[2]
   listText @3 :List(Text);  # ptr[3]
 }
+interface BasicCap @0xf329462caa09f38f {
+  add @0 (a :Int64, b :Int64) -> (result :Int64);
+}

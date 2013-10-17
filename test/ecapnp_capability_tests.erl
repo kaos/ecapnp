@@ -14,21 +14,15 @@
 %%   limitations under the License.
 %%  
 
--module(eunit_SUITE).
+-module(ecapnp_capability_tests).
 -ifdef(TEST).
--export([all/0, run_eunit/1]).
+-include_lib("eunit/include/eunit.hrl").
+-include("test/test.capnp.hrl").
 
-all() ->
-    [run_eunit].
-
-run_eunit(_Config) ->
-    case eunit:test(
-           [ecapnp_val, ecapnp_ref, ecapnp_obj, ecapnp_get,
-            ecapnp_set, ecapnp_capability
-           ])
-    of 
-        ok -> ok;
-        Error -> ct:fail("eunit:test(...) == ~p.", [Error])
-    end.
+start_stop_server_test() ->
+    {ok, Cap} = ecapnp_schema:lookup('BasicCap', test(schema)),
+    {ok, Server} = ecapnp_capability:start(Cap, []),
+    ?assert(is_process_alive(Server)),
+    ok = ecapnp_capability:stop(Server).
 
 -endif.

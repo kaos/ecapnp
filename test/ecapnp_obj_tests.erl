@@ -32,7 +32,7 @@ field_test() ->
     Data = data([]),
     {ok, T} = ecapnp_schema:lookup('Test', Data),
     ?assertEqual(
-       #data{ type=uint32, align=32, default= <<1,2,3,4>> },
+       #field{ name=intField, kind=#data{ type=uint32, align=32, default= <<1,2,3,4>> } },
        ecapnp_obj:field(intField, #object{ schema=T })).
 
 copy_test() ->
