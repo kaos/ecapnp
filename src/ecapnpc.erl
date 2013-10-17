@@ -232,9 +232,23 @@ export_item(#enum{ values=Values }, Out, Indent) ->
     Out(["#enum{ values=~n~*s", I, ""]),
     export_list(Values, Out, I),
     Out(["}"]);
-export_item(#interface{}, Out, Indent) ->
+export_item(#interface{ methods=M, extends=E }, Out, Indent) ->
     I = Indent + 2,
-    Out(["#interface{ %% NYI..~n~*s}", I, ""]);
+    II = I + 2,
+    Out(["#interface{~n~*s"
+         "methods=~n~*s",
+         I, "", II, ""]),
+    export_list(M, Out, II),
+    export_list("extends", E, Out, I),
+    Out(["}"]);
+export_item(#method{ name=N, paramType=P, resultType=R }, Out, Indent) ->
+    I = Indent + 2,
+    Out(["#method{ name= ~p,~n~*s"
+         "paramType=", N, I, ""]),
+    export_item(P, Out, I),
+    Out([",~n~*sresultType=", I, ""]),
+    export_item(R, Out, I),
+    Out(["~n~*s}", I, ""]);
 export_item(#const{ field=Field }, Out, Indent) ->
     I = Indent + 2,
     Out(["#const{ field=~n~*s", I, ""]),
@@ -342,8 +356,16 @@ compile_node({enum, Enum}, Node) ->
       kind=#enum{ values = lists:zip(
                              lists:seq(0, length(Enumerants) - 1),
                              Enumerants)}};
-compile_node({interface, _Interface}, Node) ->
-    Node#schema_node{ kind=#interface{} };
+compile_node({interface, Interface}, Node) ->
+    Node#schema_node{
+      kind=#interface{
+              extends=schema(get, extends, Interface),
+              methods=[#method{
+                          name=schema(get, name, M),
+                          paramType=schema(get, paramStructType, M),
+                          resultType=schema(get, resultStructType, M)
+                         } || M <- schema(get, methods, Interface)]
+             } };
 compile_node({const, Const}, Node) ->
     Type = schema(get, type, Const),
     Value = schema(get, value, Const),
@@ -445,6 +467,7 @@ value(Type, {Type, Value})
 value(Type, {ValueType, Value})
   when Type == ValueType; element(1, Type) == ValueType ->
     ecapnp_val:set(ValueType, Value);
+value({interface, _}, interface) -> <<0:64/integer>>;
 value(Type, Value) -> throw({value_type_mismatch, Type, Value}).
 
 
@@ -485,9 +508,9 @@ link_node(Id, NodeName, AllNodes) ->
                        Name = binary_to_atom(schema(get, name, N), latin1),
                        link_node(schema(get, id, N), Name, AllNodes)
                    end || N <- schema(get, nestedNodes, Node)],
-    %% link all group nodes
     Nodes = case schema(get, Node) of
                 {struct, O} ->
+                    %% link all group nodes in struct
                     lists:foldl(
                       fun(F, G) ->
                               case schema(get, F) of
@@ -499,6 +522,21 @@ link_node(Id, NodeName, AllNodes) ->
                       end,
                       NestedNodes,
                       schema(get, fields, O));
+                {interface, _} ->
+                    %% add all implicit struct types in interface
+                    lists:foldl(
+                      fun (T, G) ->
+                              {P, S} = proplists:get_value(T, AllNodes),
+                              case schema(get, scopeId, P) of
+                                  0 -> [S|G];
+                                  _ -> G
+                              end
+                      end,
+                      NestedNodes,
+                      lists:flatten(
+                        [[M#method.paramType, M#method.resultType]
+                         || M <- (Schema#schema_node.kind)#interface.methods])
+                     );
                 _ -> NestedNodes
             end,
     Schema#schema_node{ name=node_name(NodeName, Schema),

@@ -57,6 +57,13 @@
           id=0 :: ecapnp:type_id()
          }).
 
+%% Interface methods
+-record(method, {
+          name,
+          paramType,
+          resultType
+         }).
+
 
 %% Runtime data
 
