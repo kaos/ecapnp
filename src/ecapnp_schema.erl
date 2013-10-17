@@ -31,7 +31,8 @@
 
 -type lookup_type() :: type_id() | type_name() | object | schema_node().
 %% The various types that can be looked up.
--type lookup_search() :: object() | ref() | schema_nodes() | schema_node().
+-type lookup_search() :: object() | ref() | pid() 
+                       | schema_nodes() | schema_node().
 %% Where to search for the type being looked up.
 
 %% ===================================================================
@@ -41,46 +42,22 @@
 -spec lookup(lookup_type(), lookup_search()) ->
                     {ok, schema_node()} | {unknown_type, Type::lookup_type()}.
 %% @doc Find schema node for type.
-%% @todo clean up this mess, as it has evolved over time.
-lookup({struct, Type}, Nodes) ->
-    lookup(Type, Nodes);
-lookup({list, Type}, Nodes) ->
-    lookup(Type, Nodes);
-lookup(Type, _)
-  when Type == object;
-       is_record(Type, schema_node) ->
-    {ok, Type};
-
-lookup(Type, Nodes)
-  when is_atom(Type),
-       is_list(Nodes) ->
-    lists:keyfind(Type, #schema_node.name, Nodes);
-lookup(Type, Nodes)
-  when is_integer(Type),
-       is_list(Nodes) ->
-    lists:keyfind(Type, #schema_node.id, Nodes);
-
-lookup(Type, Data) when is_pid(Data) ->
-    case ecapnp_data:get_type(Type, Data) of
-        false -> lookup(Type, null);
-        T -> {ok, T}
-    end;
-
-lookup(Type, #object{ ref=Ref }) ->
-    lookup(Type, Ref);
-lookup(Type, #ref{ data=Pid }) ->
+lookup(Id, #schema_node{ id=Id }=N) -> {ok, N};
+lookup(Name, #schema_node{ name=Name }=N) -> {ok, N};
+lookup(Type, #schema_node{ nodes=Ns }) -> lookup(Type, Ns);
+lookup(Type, #object{ ref=#ref{ data=Pid } }) -> lookup(Type, Pid);
+lookup(Type, #ref{ data=Pid }) -> lookup(Type, Pid);
+lookup(Type, Pid) when is_pid(Pid) ->
     case ecapnp_data:get_type(Type, Pid) of
-        false -> lookup(Type, null);
-        T -> {ok, T}
+        false -> {unknown_type, Type};
+        N when is_record(N, schema_node) -> {ok, N}
     end;
-
-lookup(Type, #schema_node{ nodes=Nodes }) ->
-    case lookup(Type, Nodes) of
-        false -> lookup(Type, null);
-        T -> {ok, T}
+lookup(Type, [N|Ns]) -> 
+    Res = lookup(Type, N),
+    if element(1, Res) == ok -> Res;
+       true -> lookup(Type, Ns)
     end;
-lookup(Type, null) ->
-    {unknown_type, Type}.
+lookup(Type, _) -> {unknown_type, Type}.
 
 -spec type_of(object()) -> schema_node().
 %% @doc Get type of object.
@@ -124,3 +101,4 @@ set_ref_to(Type, Ref) ->
 %% ===================================================================
 %% internal functions
 %% ===================================================================
+

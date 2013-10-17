@@ -98,6 +98,7 @@ data_request(Request, Args, Pid)
     Pid ! {self(), Request, Args},
     receive
         {Request, Result} -> Result
+    after 5000 -> timeout
     end.
 
 
@@ -126,7 +127,9 @@ data_state({Pid, Data}) when is_pid(Pid), is_binary(Data) ->
                  data=[Data]
                 });
 data_state({Schema, MsgSize})
-  when is_record(Schema, schema_node), is_integer(MsgSize) ->
+  when is_integer(MsgSize) andalso
+       (is_list(Schema)
+        orelse is_record(Schema, schema_node)) ->
     data_state(new_state(#msg{ 
                             schema=Schema, 
                             alloc=[0],

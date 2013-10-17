@@ -204,8 +204,8 @@ get_root(Type, Schema, [Segment|_]=Segments)
 %% To get the segment data out, call {@link ecapnp_message:write/1}.
 %% @see ecapnp_set:root/2
 set_root(Type, Schema)
-  when is_atom(Type),
-       is_record(Schema, schema_node) ->
+  when is_atom(Type) -> %%,
+       %%is_record(Schema, schema_node) ->
     ecapnp_set:root(Type, Schema).
 
 -spec get(object()) -> {field_name(), field_value()} | field_name().

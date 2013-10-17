@@ -1,5 +1,6 @@
 #!/usr/bin/env escript
 %% -*- mode: erlang -*-
+%%! -pa /usr/local/include
 
 -include("test.capnp.hrl").
 -define(SKIP, 127).

@@ -26,45 +26,45 @@ data(Data) ->
 
 %% ----------------------------------------
 test_schema() ->
-    #schema_node{ %% 0xa3ae19d80d2cfc86
-       name=test, id=11794392889854590086, src= <<"test.capnp">>,
-       kind=file,
-       nodes=
-           [#schema_node{ %% 0xb96835191105fedf
-               name='Embedd', id=13359986676370636511, src= <<"test.capnp:Embedd">>,
-               kind=#struct{ 
-                       dsize=1, psize=0, esize=fourBytes,
-                       union_field=none,
-                       fields=
-                           [{value,
-                             #data{ type=int32, align=0,
-                                    default= <<4,3,2,255>> }}
-                           ]}},
-            #schema_node{ %% 0x91bf2daf591a2be2
-               name='Test', id=10502163087188700130, src= <<"test.capnp:Test">>,
-               kind=#struct{
-                       dsize=1, psize=2, esize=inlineComposite,
-                       union_field=#data{
-                                      align=0, type=
-                                          {union,
-                                           [{foo,
-                                             #ptr{ type=text, idx=0,
-                                                   default= <<"foo">> }},
-                                            {bar,
-                                             #ptr{ type=text, idx=0,
-                                                   default= <<"bar">> }}
-                                           ]} },
-                       fields=
-                           [{boolField,
-                             #data{ type=bool, align=23,
-                                    default= <<1:1>> }},
-                            {intField,
-                             #data{ type=uint32, align=32,
-                                    default= <<1,2,3,4>> }},
-                            {structField,
-                             #ptr{ type={struct,13359986676370636511}, idx=1,
-                                   default= <<0,0,0,0,1,0,0,0,199,207,255,255,0,0,0,0>> }}
-                           ]}}
-           ]}.
+    [#schema_node{ %% 0xa3ae19d80d2cfc86
+        name=test, id=11794392889854590086, src= <<"test.capnp">>,
+        kind=file,
+        nodes=
+            [#schema_node{ %% 0xb96835191105fedf
+                name='Embedd', id=13359986676370636511, src= <<"test.capnp:Embedd">>,
+                kind=#struct{ 
+                        dsize=1, psize=0, esize=fourBytes,
+                        union_field=none,
+                        fields=
+                            [{value,
+                              #data{ type=int32, align=0,
+                                     default= <<4,3,2,255>> }}
+                            ]}},
+             #schema_node{ %% 0x91bf2daf591a2be2
+                name='Test', id=10502163087188700130, src= <<"test.capnp:Test">>,
+                kind=#struct{
+                        dsize=1, psize=2, esize=inlineComposite,
+                        union_field=#data{
+                                       align=0, type=
+                                           {union,
+                                            [{foo,
+                                              #ptr{ type=text, idx=0,
+                                                    default= <<"foo">> }},
+                                             {bar,
+                                              #ptr{ type=text, idx=0,
+                                                    default= <<"bar">> }}
+                                            ]} },
+                        fields=
+                            [{boolField,
+                              #data{ type=bool, align=23,
+                                     default= <<1:1>> }},
+                             {intField,
+                              #data{ type=uint32, align=32,
+                                     default= <<1,2,3,4>> }},
+                             {structField,
+                              #ptr{ type={struct,13359986676370636511}, idx=1,
+                                    default= <<0,0,0,0,1,0,0,0,199,207,255,255,0,0,0,0>> }}
+                            ]}}
+            ]}].
 
 -endif.

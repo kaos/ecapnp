@@ -21,11 +21,10 @@ erlang.mk:
 	$(gen_verbose) capnpc -oerl $<
 
 # compiler schema dependencies
-all: include/c++.capnp.hrl include/schema.capnp.hrl
+all: include/capnp/c++.capnp.hrl include/capnp/schema.capnp.hrl
 
 # make sure we rebuild on any header file change
-%.erl: include/*.hrl
-	@touch $@
+%.erl: include/*.hrl include/*/*.hrl ; @touch $@
 
 # test schema (for the eunit tests)
 test/test.capnp.hrl: test/test.capnp

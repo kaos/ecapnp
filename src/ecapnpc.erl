@@ -75,7 +75,7 @@
          schema/0
         ]).
 
--include_lib("ecapnp/include/schema.capnp.hrl").
+-include("capnp/schema.capnp.hrl").
 
 
 %% ===================================================================
@@ -147,8 +147,18 @@ write_header(Out, [_|Imports]) ->
     Out(["%%% DO NOT EDIT, this file was generated.~n" 
          %% TODO: include version info: application:get_key(ecapnp, vsn) -> {ok, "vsn"}.
          "-include_lib(\"ecapnp/include/ecapnp.hrl\").~n"]),
-    [Out(["-include(\"~s\").~n", get_output_filename(Import)])
+    [write_import(Out, get_output_filename(Import))
      || #import{ name=Import } <- Imports].
+
+write_import(Out, <<"/", AbsFile/binary>>) ->
+    %% This can be made configurable by:
+    %% -include_lib("$CAPNP/include/~s").
+    %% where CAPNP should be set in the environment.
+    %% see: Erlang Ref Manual, User's Guide, Chap 8.1 File Inclusion
+    %% (http://www.erlang.org/doc/reference_manual/macros.html#id80972)
+    Out(["-include_lib(\"ecapnp/include/~s\").~n", AbsFile]);
+write_import(Out, RelFile) ->
+    Out(["-include(\"~s\").~n", RelFile]).
 
 write_api(Out, [#schema_node{ name=Name }|_]) ->
     {ok, Stubs} = file:read_file(

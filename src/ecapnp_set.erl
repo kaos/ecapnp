@@ -183,20 +183,22 @@ default(FieldType) -> {FieldType, undefined}.
 
 list_element_size(text, _) -> pointer;
 list_element_size(data, _) -> pointer;
+list_element_size(object, _) -> pointer;
 list_element_size({list, _}, _) -> pointer;
-list_element_size(Type, Ref) ->
+list_element_size({Simple, _}, _)
+  when Simple == enum; Simple == union -> twoBytes;
+list_element_size({_, Type}, Ref) ->
     case ecapnp_schema:lookup(Type, Ref) of
-        {ok, object} -> pointer;
         {ok, #schema_node{
                 kind=#struct{
                         esize=inlineComposite,
                         dsize=DSize, psize=PSize }}} ->
             #struct_ref{ dsize=DSize, psize=PSize };
         {ok, #schema_node{
-                kind=#struct{ esize=Size }}} -> Size;
-        {ok, _} -> twoBytes; %% enum & union
-        _ -> list_element_size(ecapnp_val:size(Type))
-    end.
+                kind=#struct{ esize=Size }}} -> Size
+        end;
+list_element_size(Type, _) ->
+    list_element_size(ecapnp_val:size(Type)).
 
 list_element_size(0) -> empty;
 list_element_size(1) -> bit;
