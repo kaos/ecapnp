@@ -78,6 +78,7 @@ ref_data(Type, Ref, Default) ->
 %% internal functions
 %% ===================================================================
 
+read_field(#field{ kind=Kind }, StructRef) -> read_field(Kind, StructRef);
 read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
     case Type of
         {enum, EnumType} ->
@@ -86,7 +87,8 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, StructRef) ->
         {union, Fields} ->
             Tag = read_field(D#data{ type=uint16 }, StructRef),
             case lists:keyfind(Tag, 1, Fields) of
-                {Tag, FieldName, void} -> FieldName;
+                {Tag, FieldName, #field{ kind=void }} ->
+                    FieldName;
                 {Tag, FieldName, Field} ->
                     {FieldName, read_field(Field, StructRef)}
             end;

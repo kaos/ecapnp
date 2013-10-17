@@ -61,14 +61,14 @@
 
 'c++'(schema) ->
   [#schema_node{ %% 0xbdf87d7bb8304e81
-     name='c++', id=13688829037717245569, src= <<"include/c++.capnp">>,
+     name='c++', id=13688829037717245569, src= <<"include/capnp/c++.capnp">>,
      kind=file,
      annotations=
        [{13386661402618388268,<<"capnp::annotations">>}
        ],
      nodes=
        [#schema_node{ %% 0xb9c6f99ebf805f2c
-          name=namespace, id=13386661402618388268, src= <<"include/c++.capnp:namespace">>,
+          name=namespace, id=13386661402618388268, src= <<"include/capnp/c++.capnp:namespace">>,
           kind=#annotation{
             type=#ptr{ type=text, idx=0,
                   default= <<>> },

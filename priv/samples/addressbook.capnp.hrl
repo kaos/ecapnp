@@ -74,20 +74,20 @@ addressbook(schema) ->
           kind=#struct{ dsize=1, psize=4, esize=inlineComposite,
             union_field=none,
             fields=
-              [{id,
-                #data{ type=uint32, align=0,
-                       default= <<0,0,0,0>> }},
-               {name,
-                #ptr{ type=text, idx=0,
-                      default= <<>> }},
-               {email,
-                #ptr{ type=text, idx=1,
-                      default= <<>> }},
-               {phones,
-                #ptr{ type={list,{struct,9317543775882349264}}, idx=2,
-                      default= <<0,0,0,0,0,0,0,0>> }},
-               {employment,
-                #group{ id=13477914502553102653 }}
+              [#field{ name=id,
+                 kind=#data{ type=uint32, align=0,
+                        default= <<0,0,0,0>> }},
+               #field{ name=name,
+                 kind=#ptr{ type=text, idx=0,
+                       default= <<>> }},
+               #field{ name=email,
+                 kind=#ptr{ type=text, idx=1,
+                       default= <<>> }},
+               #field{ name=phones,
+                 kind=#ptr{ type={list,{struct,9317543775882349264}}, idx=2,
+                       default= <<0,0,0,0,0,0,0,0>> }},
+               #field{ name=employment,
+                 kind=#group{ id=13477914502553102653 }}
               ]},
           nodes=
             [#schema_node{ %% 0xbb0b2bd4bdc3693d
@@ -95,26 +95,32 @@ addressbook(schema) ->
                kind=#struct{ dsize=1, psize=4, esize=inlineComposite,
                  union_field=#data{ align=32, default= <<0,0>>, type=
                    {union,
-                     [{0,unemployed,void},
+                     [{0,unemployed,
+                       #field{ name=unemployed,
+                         kind=void}},
                       {1,employer,
-                       #ptr{ type=text, idx=3,
-                             default= <<>> }},
+                       #field{ name=employer,
+                         kind=#ptr{ type=text, idx=3,
+                               default= <<>> }}},
                       {2,school,
-                       #ptr{ type=text, idx=3,
-                             default= <<>> }},
-                      {3,selfEmployed,void}
+                       #field{ name=school,
+                         kind=#ptr{ type=text, idx=3,
+                               default= <<>> }}},
+                      {3,selfEmployed,
+                       #field{ name=selfEmployed,
+                         kind=void}}
                    ]}}}},
              #schema_node{ %% 0x814e90b29c9e8ad0
                name='PhoneNumber', id=9317543775882349264, src= <<"addressbook.capnp:Person.PhoneNumber">>,
                kind=#struct{ dsize=1, psize=1, esize=inlineComposite,
                  union_field=none,
                  fields=
-                   [{number,
-                     #ptr{ type=text, idx=0,
-                           default= <<>> }},
-                    {type,
-                     #data{ type={enum,10511609358742521391}, align=0,
-                            default= <<0,0>> }}
+                   [#field{ name=number,
+                      kind=#ptr{ type=text, idx=0,
+                            default= <<>> }},
+                    #field{ name=type,
+                      kind=#data{ type={enum,10511609358742521391}, align=0,
+                             default= <<0,0>> }}
                    ]},
                nodes=
                  [#schema_node{ %% 0x91e0bd04d585062f
@@ -131,9 +137,9 @@ addressbook(schema) ->
           kind=#struct{ dsize=0, psize=1, esize=pointer,
             union_field=none,
             fields=
-              [{people,
-                #ptr{ type={list,{struct,10988939875124296728}}, idx=0,
-                      default= <<0,0,0,0,0,0,0,0>> }}
+              [#field{ name=people,
+                 kind=#ptr{ type={list,{struct,10988939875124296728}}, idx=0,
+                       default= <<0,0,0,0,0,0,0,0>> }}
               ]}}
        ]}
   ].

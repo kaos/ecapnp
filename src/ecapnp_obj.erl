@@ -112,6 +112,7 @@ to_data(#object{ ref=#ref{ kind=Kind }=Ref})
 %% internal functions
 %% ===================================================================
 
-find_field(FieldName, [{FieldName, FieldType}|_]) -> FieldType;
+find_field(FieldName, [#field{ name=FieldName }=FieldType|_]) -> FieldType;
+%%find_field(FieldName, [{FieldName, FieldType}|_]) -> FieldType;
 find_field(FieldName, [_|Fields]) -> find_field(FieldName, Fields);
 find_field(FieldName, []) -> throw({unknown_field, FieldName}).

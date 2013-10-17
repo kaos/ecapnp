@@ -31,13 +31,20 @@
 
 %% Const node
 -record(const, {
-          field :: ecapnp:field_type()
+          field
          }).
 
 %% Annotation node
 -record(annotation, {
           type,
           targets=[] :: list(atom())
+         }).
+
+%% Struct field
+-record(field, {
+          name,
+          kind,
+          annotations=[]
          }).
 
 %% Schema Field types

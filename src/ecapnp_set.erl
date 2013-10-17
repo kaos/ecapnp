@@ -59,6 +59,8 @@ union(Value, #object{ ref=Ref,
 %% internal functions
 %% ===================================================================
 
+set_field(#field{ kind=Kind }, Value, StructRef) ->
+    set_field(Kind, Value, StructRef);
 set_field(#data{ type=Type, align=Align, default=Default }=D,
           Value0, StructRef) ->
     Value = if Value0 == undefined -> Default;
@@ -178,7 +180,7 @@ union_tag(Tag, [{Tag, _, FieldType}|_]) ->
 union_tag(Value, [_|Fields]) ->
     union_tag(Value, Fields).
 
-default(void) -> void;
+default(#field{ kind=void }) -> void;
 default(FieldType) -> {FieldType, undefined}.
 
 list_element_size(text, _) -> pointer;

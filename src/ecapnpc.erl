@@ -227,6 +227,13 @@ export_item(#struct{ dsize=DSize, psize=PSize, esize=ESize,
     export_item(Union, Out, I),
     export_list("fields", Fields, Out, I),
     Out(["}"]);
+export_item(#field{ name=N, kind=K, annotations=A }, Out, Indent) ->
+    I = Indent + 2,
+    Out(["#field{ name=~p,~n~*s"
+         "kind=", N, I, ""]),
+    export_item(K, Out, I),
+    export_list("annotations", A, Out, I),
+    Out(["}"]);
 export_item(#enum{ values=Values }, Out, Indent) ->
     I = Indent + 2,
     Out(["#enum{ values=~n~*s", I, ""]),
@@ -369,11 +376,11 @@ compile_node({interface, Interface}, Node) ->
 compile_node({const, Const}, Node) ->
     Type = schema(get, type, Const),
     Value = schema(get, value, Const),
-    Node#schema_node{ kind=#const{ field=field(Type, 0, Value) }};
+    Node#schema_node{ kind=#const{ field=slot_field(Type, 0, Value) } };
 compile_node({annotation, Annotation}, Node) ->
     Node#schema_node{
       kind=#annotation{
-              type=field(schema(get, type, Annotation), 0, null),
+              type=slot_field(schema(get, type, Annotation), 0, null),
               targets=[T || T <- [targetsFile, targetsConst, targetsEnum,
                                   targetsEnumerant, targetsStruct, targetsField,
                                   targetsUnion, targetsGroup, targetsInterface,
@@ -385,13 +392,15 @@ compile_node({What, _}, Node) ->
     throw({unknown_node, What, Node}).
 
 compile_struct_field(Field) ->
-    {binary_to_atom(schema(get, name, Field), latin1),
-     compile_struct_field_type(schema(get, Field))}.
+    Name = binary_to_atom(schema(get, name, Field), latin1),
+    compile_struct_field_type(
+      schema(get, Field),
+      #field{ name=Name }).
 
-compile_struct_field_type({slot, Field}) ->
-    compile_field(Field);
-compile_struct_field_type({group, Group}) ->
-    #group{ id=schema(get, typeId, Group) }.
+compile_struct_field_type({slot, Slot}, Field) ->
+    Field#field{ kind=compile_slot(Slot) };
+compile_struct_field_type({group, Group}, Field) ->
+    Field#field{ kind=#group{ id=schema(get, typeId, Group) } }.
 
 compile_union(Union, Struct) ->
     case schema(get, discriminantCount, Struct) of
@@ -403,7 +412,7 @@ compile_union(Union, Struct) ->
             data_field(
               {{union,
                 [begin
-                     {N, T} = compile_struct_field(F),
+                     #field{ name=N }=T = compile_struct_field(F),
                      {I, N, T}
                  end || {I, F} <- UnionFields]}, 16},
               schema(get, discriminantOffset, Struct),
@@ -423,12 +432,13 @@ compile_annotation(Annotation, AllNodes) ->
            end,
     {Id, value(Type, schema(get, value, Annotation))}.
 
-compile_field(Field) ->
-    Offset = schema(get, offset, Field),
-    Default = schema(get, defaultValue, Field),
-    field(schema(get, type, Field), Offset, Default).
+compile_slot(Slot) ->
+    Type = schema(get, type, Slot),
+    Offset = schema(get, offset, Slot),
+    Default = schema(get, defaultValue, Slot),
+    slot_field(Type, Offset, Default).
 
-field(Type, Offset, Default) ->
+slot_field(Type, Offset, Default) ->
     case capnp_type_info(schema(get, Type)) of
         {data_field, DataType} -> data_field(DataType, Offset, Default);
         {ptr_field, PtrType} -> ptr_field(PtrType, Offset, Default)
