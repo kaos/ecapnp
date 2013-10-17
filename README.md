@@ -11,3 +11,7 @@ Web Site
 
 Head over to [ecapnp.astekk.se](http://ecapnp.astekk.se) for documentation etc.
 
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/kaos/ecapnp/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
