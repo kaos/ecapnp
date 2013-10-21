@@ -24,16 +24,15 @@
 -module(ecapnp_ref).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/3, get/4, set/2, copy/1, ptr/2, alloc/3, alloc/4,
-         alloc_list/3, alloc_data/1, follow_far/1, null_ref/1,
-         refresh/1, read_struct_data/3, read_struct_ptr/2,
-         read_struct_data/4, read_struct_ptr/3, read_list/1,
-         read_text/1, read_data/1, read_list/2, read_text/2,
-         read_data/2, write_struct_data/4, write_struct_ptr/2,
-         write_list/4, write_text/3, write_data/3, create_ptr/2]).
+-export([alloc/3, alloc/4, alloc_data/1, alloc_data/2, alloc_list/3,
+         copy/1, create_ptr/2, follow_far/1, get/3, get/4, null_ref/1,
+         paste/2, ptr/2, read_data/1, read_data/2, read_list/1,
+         read_list/2, read_struct_data/3, read_struct_data/4,
+         read_struct_ptr/2, read_struct_ptr/3, read_text/1,
+         read_text/2, refresh/1, set/2, write_data/3, write_list/4,
+         write_struct_data/4, write_struct_ptr/2, write_text/3]).
 
 -include("ecapnp.hrl").
-
 
 
 %% ===================================================================
@@ -287,15 +286,19 @@ write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
                                      count=Count }
                            })).
 
+-spec alloc_data(ref()) -> ref().
 %% @doc Allocate data for reference.
 %%
 %% The number of words allocated is deduced from the passed `Ref'erence.
 %%
 %% Returns an updated reference with the offset field updated to point
 %% at the newly allocated data.
--spec alloc_data(ref()) -> ref().
-alloc_data(#ref{ segment=SegmentId, data=Data }=Ref) ->
-    Size = ref_data_size(Ref),
+alloc_data(Ref) ->
+    alloc_data(ref_data_size(Ref), Ref).
+
+-spec alloc_data(word_count(), ref()) -> ref().
+%% @doc Allocate data for reference.
+alloc_data(Size, #ref{ segment=SegmentId, data=Data }=Ref) ->
     {Seg, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     Seg = SegmentId, %% TODO: support far ptrs
     Ref1 = update_offset(Pos, Ref),
@@ -356,15 +359,38 @@ follow_far(#ref{ offset=Offset, data=Data,
        true -> Pad
     end.
 
-%% @doc Copy all data for a reference.
+-spec copy(ref()) -> binary().
+%% @doc Make a deep copy of a reference.
 %%
 %% Recursively follows all pointers and copies them as well. So
 %% copying a root object will effectively defragment a fragmented
 %% message.
--spec copy(ref()) -> binary().
 copy(Ref) ->
     iolist_to_binary(
       flatten_ref_copy(copy_ref(Ref))).
+
+-spec paste(binary(), ref()) -> ref().
+%% @doc Allocate space and write data for reference.
+%%
+%% All data, both data section and pointers section, and any data that
+%% those may refer to (good for saving off a deep copy of another
+%% object).
+%%
+%% Note: `Data' should be whole words (8 bytes). Any fraction of a
+%% word will be truncated.
+paste(<<DataRef:64/bits, Data/binary>>, Ref) ->
+    #ref{ offset=0, kind=Kind } = read_ref(DataRef),
+    if Kind == null -> set(Kind, Ref);
+       is_record(Kind, struct_ref);
+       is_record(Kind, list_ref);
+       is_record(Kind, interface_ref) ->
+            case {size(Data) div 8, ref_data_size(Kind)} of
+                {Size, RefSize} when Size >= RefSize ->
+                    Ref1 = alloc_data(Size, Ref#ref{ kind=Kind }),
+                    ok = set_segment(<<Data:Size/binary-unit:64>>, Ref1),
+                    Ref1
+            end
+    end.
 
 %% @doc Get a null pointer.
 %%
@@ -380,13 +406,14 @@ null_ref(#ref{ data=Data }) -> #ref{ pos=-1, data=Data }.
 %% internal functions
 %% ===================================================================
 
-ref_data_size(#ref{ kind=null }) -> 0;
-ref_data_size(#ref{ kind=#list_ref{ size=Size, count=Count }}) -> 
+ref_data_size(#ref{ kind=Kind }) -> ref_data_size(Kind);
+ref_data_size(null) -> 0;
+ref_data_size(#list_ref{ size=Size, count=Count }) -> 
     case list_element_size(Size) of
         inlineComposite -> Count + 1;
         Bits -> 1 + (((Count * Bits) - 1) div 64)
     end;
-ref_data_size(#ref{ kind={Kind, DSize, PSize} })
+ref_data_size({Kind, DSize, PSize})
   when Kind == struct_ref; Kind == interface_ref -> 
     DSize + PSize.
 
@@ -464,9 +491,8 @@ read_segment(SegmentId, Pos, Segment, Data, FollowFar)
 read_segment(SegmentId, _, _, Data, _) ->
     #ref{ segment=SegmentId, pos=-1, data=Data }.
 
-read_ref(Segment) ->
-    <<OffsetAndKind:32/integer-signed-little,
-      Size:32/integer-little>> = Segment,
+read_ref(<<OffsetAndKind:32/integer-signed-little,
+           Size:32/integer-little>>) ->
     case ptr_type(OffsetAndKind, Size) of
         null -> #ref{};
         struct ->

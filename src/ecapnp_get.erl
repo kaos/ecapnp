@@ -108,13 +108,13 @@ read_field(#ptr{ idx=Idx }=Ptr, StructRef) ->
 read_field(#group{ id=Type }, StructRef) ->
     ecapnp_obj:from_ref(StructRef, Type).
 
-read_ptr(#ptr{ type=Type, default=Default }=Ptr, Ref) ->
+read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
     case Type of
         text -> ecapnp_ref:read_text(Ref, Default);
         data -> ecapnp_ref:read_data(Ref, Default);
-        object -> read_obj(Ref, object, Default);
-        {struct, StructType} -> read_obj(Ptr, Ref, StructType);
-        {interface, InterfaceType} -> read_obj(Ptr, Ref, InterfaceType);
+        object -> read_obj(object, Ref, Default);
+        {struct, StructType} -> read_obj(StructType, Ref, Default);
+        {interface, InterfaceType} -> read_obj(InterfaceType, Ref, Default);
         {list, ElementType} ->
             case ecapnp_ref:read_list(Ref, undefined) of
                 undefined ->
@@ -143,31 +143,13 @@ read_ptr(#ptr{ type=Type, default=Default }=Ptr, Ref) ->
             end
     end.
 
-read_obj(#ptr{ default=Default0 }=Ptr,
-         #ref{ kind=null, data=Data }=Ref,
-         Type) ->
-    Default = if Default0 == null, Type /= object ->
-                      {ok, #struct{
-                              dsize=DSize,
-                              psize=PSize
-                             }} = ecapnp_schema:lookup(Type, Data),
-                      <<0:32/integer,
-                        DSize:16/integer-unsigned-little,
-                        PSize:16/integer-unsigned-little,
-                        0:DSize/integer-unit:64,
-                        0:PSize/integer-unit:64>>;
-                 is_atom(Default0) ->
-                      <<0:64/integer>>;
-                 true ->
-                      Default0
-              end,
+read_obj(Type, #ref{ kind=null }=Ref, Default) ->
     if is_binary(Default) ->
-            DefaultObj = ecapnp_obj:from_data({Data, Default}, Type),
-            {ok, Obj} = ecapnp_set:ref_data();
-       true ->
-            Default
+            ecapnp_obj:from_ref(
+              ecapnp_ref:paste(Default, Ref),
+              Type)
     end;
-read_obj(Ref, Type, _) ->
+read_obj(Type, Ref, _) ->
     ecapnp_obj:from_ref(Ref, Type).
 
 get_enum_value(Type, Tag, Ref) ->

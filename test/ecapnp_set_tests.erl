@@ -27,7 +27,7 @@ root_test() ->
     ?assertEqual(
        <<0:32/integer-little, 2:16/integer-little,
          6:16/integer-little, 0:8/integer-unit:64>>,
-      Data).
+       Data).
 
 data_field_test() ->
     {ok, Root} = ecapnp_set:root('Test', test(schema)),
@@ -39,7 +39,7 @@ data_field_test() ->
        <<0:32/integer-little, 2:16/integer-little, 6:16/integer-little, 
          %% data
          33: 8/integer-little, %% intField
-         
+
          0:24/integer-little,
          0:32/integer-little,
 
@@ -59,7 +59,7 @@ text_field_test() ->
        <<0:32/integer-little, 2:16/integer-little, 6:16/integer-little, 
          %% data
          0: 8/integer-little, %% intField
-         
+
          0:24/integer-little,
          0:32/integer-little,
 
@@ -119,7 +119,7 @@ object_field_test() ->
 
 object_as_struct_test() ->
     {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
-    {ok, Obj} = test(set, listAny, 'Simple', Root),
+    Obj = test(set, listAny, 'Simple', Root),
     ok = test(set, simpleMessage, <<"object text">>, Obj),
     #msg{ alloc=[Alloc], data=[<<Data:10/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
@@ -150,18 +150,18 @@ struct_list_test() ->
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(12, Alloc),
     ?assertEqual(
-      <<0,0,0,0, 0,0,4,0,
-        0:2/integer-little-unit:64,
-        5,0,0,0, 55,0,0,0,
-        0:64/integer-little,
-        8,0,0,0, 1,0,2,0,
-        (222 bxor 332211):32/integer-little,
-        0:32/integer-little,
-        0:2/integer-little-unit:64,
-        0:32/integer-little,
-        (333 bxor 112233):32/integer-little,
-        0:2/integer-little-unit:64
-      >>, Data).
+       <<0,0,0,0, 0,0,4,0,
+         0:2/integer-little-unit:64,
+         5,0,0,0, 55,0,0,0,
+         0:64/integer-little,
+         8,0,0,0, 1,0,2,0,
+         (222 bxor 332211):32/integer-little,
+         0:32/integer-little,
+         0:2/integer-little-unit:64,
+         0:32/integer-little,
+         (333 bxor 112233):32/integer-little,
+         0:2/integer-little-unit:64
+       >>, Data).
 
 text_list_test() ->
     Text1 = <<"abcdefghijklmnopqrstuvwxyz">>,
@@ -189,5 +189,35 @@ text_list_test() ->
     ?assertEqual(15, Alloc),
     ?assertEqual(Msg, Data).
 
+set_struct_test() ->
+    SimpleData =
+        <<0:64/integer-little, %% data
+          0:64/integer-little, %% message
+          1,0,0,0, 98,0,0,0, %% ref to 12 bytes of text
+          "object text", 0,
+          0:32/integer-little %% padding
+        >>,
+    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
+    Obj = test(set, listAny,
+               {{struct, 'Simple'},
+                <<0,0,0,0, 1,0,2,0,
+                  SimpleData/binary>>},
+               Root),
+    ?assertEqual(#struct_ref{ dsize=1, psize=2 },
+                 (Obj#object.ref)#ref.kind),
+    #msg{ alloc=[Alloc], data=[<<Data:10/binary-unit:64, _/binary>>]}
+        = ecapnp_data:get_message((Root#object.ref)#ref.data),
+    ?assertEqual(10, Alloc),
+    ?assertEqual(
+       <<0,0,0,0, 0,0,4,0, %% struct ref off 0, 0 data, 4 ptrs
+         %% pointers
+         0:64/integer-little, %% listInts: null
+         8,0,0,0, 1,0,2,0, %% listAny: 'Simple' struct
+         0:64/integer-little, %% listSimples: null
+         0:64/integer-little, %% listText: null
+
+         %% Simple struct (listAny)
+         SimpleData/binary
+       >>, Data).
 
 -endif.

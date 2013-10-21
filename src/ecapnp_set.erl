@@ -110,28 +110,12 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                     ObjRef = ecapnp_ref:alloc_data(
                                ecapnp_schema:set_ref_to(
                                  ObjType, ecapnp_ref:ptr(Idx, StructRef))),
-                    {ok, ecapnp_obj:from_ref(ObjRef, ObjType)}
+                    ecapnp_obj:from_ref(ObjRef, ObjType)
             end;
+        {struct, StructType} ->
+            write_obj(StructType, Value, ecapnp_ref:ptr(Idx, StructRef));
         {interface, InterfaceType} ->
-            if InterfaceType == (Value#object.schema)#schema_node.id ->
-                    Ref = ecapnp_ref:alloc_data(
-                            ecapnp_schema:set_ref_to(
-                              Value#object.schema,
-                              ecapnp_ref:ptr(Idx, StructRef))),
-                    %% todo: do a proper object copy..  for now, we
-                    %% abuse the knowledge that interfaces hold a
-                    %% single data field.
-                    case ecapnp_ref:read_data(
-                           ecapnp_ref:read_struct_ptr(0, Value#object.ref),
-                           undefined) of
-                        undefined -> ok;
-                        Data -> ecapnp_ref:write_data(
-                                  Data,
-                                  ecapnp_ref:ptr(0, Ref),
-                                  Ref)
-                    end,
-                    {ok, ecapnp_obj:from_ref(Ref, InterfaceType)}
-            end;
+            write_obj(InterfaceType, Value, ecapnp_ref:ptr(Idx, StructRef));
         {list, ElementType} ->
             if is_integer(Value) -> %% init list
                     ecapnp_obj:from_ref(
@@ -187,6 +171,12 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
 set_field(#group{ id=Type }, Value, StructRef) ->
     union(Value, ecapnp_obj:from_ref(StructRef, Type)).
 
+write_obj(Type, Value, Ref) when is_binary(Value) ->
+    ecapnp_obj:from_ref(
+      ecapnp_ref:paste(Value, Ref),
+      Type);
+write_obj(Type, #object{ schema=#schema_node{ id=Type }, ref=Value }, Ref) ->
+    write_obj(Type, ecapnp_ref:copy(Value), Ref).
 
 union_tag({FieldName, Value}, [{Tag, FieldName, FieldType}|_]) ->
     {Tag, {FieldType, Value}};

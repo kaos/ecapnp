@@ -72,7 +72,7 @@ pipeline_test() ->
     setup_meck(pipelines, [{getBasic,
                             fun(_Params, Results) ->
                                     {ok, Basic} = ecapnp_capability:start('BasicCap', basicCap, test(schema)),
-                                    test(set, basic, Basic, Results)
+                                    test(set, basic, Basic, Results), ok
                             end}
                           ]),
     %% start server for capabilities

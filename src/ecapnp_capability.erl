@@ -100,7 +100,12 @@ param(#request{ param=Object }) -> Object.
 data_pid(#object{ ref=#ref{ data=Pid }}) -> Pid.
 
 pid(Object) ->
-    binary_to_term(ecapnp:get('$capability', Object)).
+    Obj = case Object of
+              #object{ ref=#ref{ kind=null } } ->
+                  ecapnp_obj:refresh(Object);
+              _ -> Object
+          end,
+    binary_to_term(ecapnp:get('$capability', Obj)).
 
 pid(Pid, Object) ->
     ecapnp:set('$capability', term_to_binary(Pid), Object).
