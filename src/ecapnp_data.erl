@@ -27,9 +27,9 @@
 -module(ecapnp_data).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([new/1, alloc/3, update_segment/3,
-         get_segment/4, get_segment_size/2,
-         get_message/1, get_type/2]).
+-export([new/1, alloc/3, update_segment/3, get_segment/4,
+         get_segment_size/2, get_message/1, get_type/2, promise/1,
+         promise/2]).
 
 -include("ecapnp.hrl").
 
@@ -40,8 +40,8 @@
 
 %% @doc Start a new data process.
 -spec new(#msg{}
-          |{schema(), SegmentSize::integer()}
-          |{pid(), Data::binary()}) -> pid().
+          |{schema()|pid(), SegmentSize::integer()}
+          |{schema()|pid(), Data::binary()}) -> pid().
 new(Init) ->
     spawn_link(fun() -> data_state(Init) end).
 
@@ -85,6 +85,12 @@ get_type(Type, Pid)
        is_integer(Type) ->
     data_request(get_type, Type, Pid).
 
+promise(Pid) ->
+    data_request(get_promise, [], Pid).
+
+promise(Promise, Pid) ->
+    data_request(set_promise, Promise, Pid).
+
 
 %% ===================================================================
 %% internal functions
@@ -92,6 +98,9 @@ get_type(Type, Pid)
 
 empty_message(Size) -> [empty_segment(Size)].
 empty_segment(Size) -> <<0:Size/integer-unit:64>>.
+
+get_state(Pid) ->
+    data_request(get_state, [], Pid).
 
 data_request(Request, Args, Pid) 
   when is_pid(Pid) ->
@@ -106,7 +115,7 @@ data_request(Request, Args, Pid)
 %% Data state functions, should only be called from the data process
 %% ===================================================================
 
--record(state, { msg, nodes }).
+-record(state, { promise, msg, nodes }).
 
 data_state(State)
   when is_record(State, state) ->
@@ -120,21 +129,22 @@ data_state(State)
 data_state(Message)
   when is_record(Message, msg) ->
     data_state(new_state(Message));
-data_state({Pid, Data}) when is_pid(Pid), is_binary(Data) ->
-    Msg = get_message(Pid),
-    data_state(Msg#msg{
-                 alloc=[size(Data)],
-                 data=[Data]
-                });
-data_state({Schema, MsgSize})
-  when is_integer(MsgSize) andalso
-       (is_list(Schema)
-        orelse is_record(Schema, schema_node)) ->
-    data_state(new_state(#msg{ 
-                            schema=Schema, 
-                            alloc=[0],
-                            data=empty_message(MsgSize)
-                           })).
+data_state({Schema, Data}) ->
+    S1 = if is_pid(Schema) ->
+                 get_state(Schema);
+            true ->
+                 new_state(#msg{ schema=Schema })
+         end,
+    S2 = if is_integer(Data) ->
+                 S1#state{ msg=(S1#state.msg)#msg{
+                                 alloc=[0],
+                                 data=empty_message(Data) } };
+            true ->
+                 S1#state{ msg=(S1#state.msg)#msg{
+                                 alloc=[size(Data)],
+                                 data=[Data] } }
+         end,
+    data_state(S2).
 
 new_state(#msg{ schema=Schema }=Msg) ->
     #state{
@@ -156,7 +166,7 @@ handle_response({Response, State}, {Request, From}) ->
 handle_response(State, {Request, From}) ->
     From ! {Request, ok},
     data_state(State).
-    
+
 handle_request(alloc, {Id, Size}, State) ->
     do_alloc(Id, Size, State);
 handle_request(update_segment, {Id, Offset, Data}, State) ->
@@ -167,12 +177,18 @@ handle_request(get_segment_size, Id, State) ->
     do_get_segment_size(Id, State);
 handle_request(get_message, _, State) ->
     {State#state.msg, State};
+handle_request(get_state, _, State) ->
+    {State, State};
 handle_request(get_type, Type, State) ->
     do_get_type(Type, State);
+handle_request(set_promise, Promise, State) ->
+    State#state{ promise=Promise };
+handle_request(get_promise, _, State) ->
+    {State#state.promise, State};
 handle_request(Req, _Args, State) ->
     {{bad_request, Req}, State}.
 
-                             
+
 do_alloc([Id|Ids], Size, State0) ->
     case do_alloc_data(Id, Size, State0) of
         {false, State} -> do_alloc(Ids, Size, State);
@@ -180,7 +196,7 @@ do_alloc([Id|Ids], Size, State0) ->
     end;
 do_alloc([], _Size, State) ->
     {false, State}; %% TODO: add new segment
-                     
+
 do_alloc(Id, Size, State) ->
     case do_alloc_data(Id, Size, State) of
         {false, State} ->
@@ -189,7 +205,7 @@ do_alloc(Id, Size, State) ->
               Size, State);
         Result -> Result
     end.
-    
+
 do_alloc_data(Id, Size, State) ->
     Segment = get_segment(Id, State),
     SegSize = size(Segment),

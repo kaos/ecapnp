@@ -108,12 +108,13 @@ read_field(#ptr{ idx=Idx }=Ptr, StructRef) ->
 read_field(#group{ id=Type }, StructRef) ->
     ecapnp_obj:from_ref(StructRef, Type).
 
-read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
+read_ptr(#ptr{ type=Type, default=Default }=Ptr, Ref) ->
     case Type of
         text -> ecapnp_ref:read_text(Ref, Default);
         data -> ecapnp_ref:read_data(Ref, Default);
         object -> read_obj(Ref, object, Default);
-        {struct, StructType} -> read_obj(Ref, StructType, Default);
+        {struct, StructType} -> read_obj(Ptr, Ref, StructType);
+        {interface, InterfaceType} -> read_obj(Ptr, Ref, InterfaceType);
         {list, ElementType} ->
             case ecapnp_ref:read_list(Ref, undefined) of
                 undefined ->
@@ -142,7 +143,9 @@ read_ptr(#ptr{ type=Type, default=Default }, Ref) ->
             end
     end.
 
-read_obj(#ref{ kind=null, data=Data }, Type, Default0) ->
+read_obj(#ptr{ default=Default0 }=Ptr,
+         #ref{ kind=null, data=Data }=Ref,
+         Type) ->
     Default = if Default0 == null, Type /= object ->
                       {ok, #struct{
                               dsize=DSize,
@@ -159,7 +162,8 @@ read_obj(#ref{ kind=null, data=Data }, Type, Default0) ->
                       Default0
               end,
     if is_binary(Default) ->
-            ecapnp_obj:from_data({Data, Default}, Type);
+            DefaultObj = ecapnp_obj:from_data({Data, Default}, Type),
+            {ok, Obj} = ecapnp_set:ref_data();
        true ->
             Default
     end;

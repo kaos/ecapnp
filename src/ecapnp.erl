@@ -191,10 +191,7 @@
 %% @see ecapnp_get:root/3
 %% @see ecapnp_serialize:unpack/1
 %% @see ecapnp_message:read/1
-get_root(Type, Schema, [Segment|_]=Segments) 
-  when is_atom(Type),
-       %%is_record(Schema, schema_node),
-       is_binary(Segment) ->
+get_root(Type, Schema, Segments) ->
     ecapnp_get:root(Type, Schema, Segments).
 
 -spec set_root(type_name(), schema()) -> {ok, Root::object()}.
@@ -203,9 +200,7 @@ get_root(Type, Schema, [Segment|_]=Segments)
 %%
 %% To get the segment data out, call {@link ecapnp_message:write/1}.
 %% @see ecapnp_set:root/2
-set_root(Type, Schema)
-  when is_atom(Type) -> %%,
-       %%is_record(Schema, schema_node) ->
+set_root(Type, Schema) ->
     ecapnp_set:root(Type, Schema).
 
 -spec get(object()) -> {field_name(), field_value()} | field_name().
@@ -214,29 +209,25 @@ set_root(Type, Schema)
 %% is, and its associated value, or just the tag name, if the value is
 %% void.
 %% @see ecapnp_get:union/1
-get(Object)
-  when is_record(Object, object) ->
+get(Object) ->
     ecapnp_get:union(Object).
 
 -spec get(field_name(), object()) -> field_value().
 %% @doc Read the field value of object.
 %% @see ecapnp_get:field/2
-get(Field, Object)
-  when is_atom(Field), is_record(Object, object) ->
+get(Field, Object) ->
     ecapnp_get:field(Field, Object).
 
 -spec set({field_name(), field_value()}|field_name(), object()) -> ok.
 %% @doc Write union value to the unnamed union of object.
 %% @see ecapnp_set:union/2
-set(Value, Object)
-  when is_record(Object, object) ->
+set(Value, Object) ->
     ecapnp_set:union(Value, Object).
 
 -spec set(field_name(), field_value(), object()) -> ok.
 %% @doc Write value to a field of object.
 %% @see ecapnp_set:field/3
-set(Field, Value, Object)
-  when is_atom(Field), is_record(Object, object) ->
+set(Field, Value, Object) ->
     ecapnp_set:field(Field, Value, Object).
 
 

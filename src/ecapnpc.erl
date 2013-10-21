@@ -239,7 +239,7 @@ export_item(#enum{ values=Values }, Out, Indent) ->
     Out(["#enum{ values=~n~*s", I, ""]),
     export_list(Values, Out, I),
     Out(["}"]);
-export_item(#interface{ methods=M, extends=E }, Out, Indent) ->
+export_item(#interface{ methods=M, extends=E, struct=S }, Out, Indent) ->
     I = Indent + 2,
     II = I + 2,
     Out(["#interface{~n~*s"
@@ -247,6 +247,8 @@ export_item(#interface{ methods=M, extends=E }, Out, Indent) ->
          I, "", II, ""]),
     export_list(M, Out, II),
     export_list("extends", E, Out, I),
+    Out([",~n~*sstruct=", I, ""]),
+    export_item(S, Out, I),
     Out(["}"]);
 export_item(#method{ name=N, paramType=P, resultType=R }, Out, Indent) ->
     I = Indent + 2,
@@ -355,9 +357,9 @@ compile_node({struct, Struct}, Node) ->
               dsize = schema(get, dataWordCount, Struct),
               psize = schema(get, pointerCount, Struct),
               esize = schema(get, preferredListEncoding, Struct),
+              union_field = compile_union(Union, Struct),
               fields = [compile_struct_field(M)
-                        || M <- Fields],
-              union_field = compile_union(Union, Struct)
+                        || M <- Fields]
              }};
 compile_node({enum, Enum}, Node) ->
     Enumerants = [text_to_atom(schema(get, name, E)) 
@@ -367,6 +369,7 @@ compile_node({enum, Enum}, Node) ->
                              lists:seq(0, length(Enumerants) - 1),
                              Enumerants)}};
 compile_node({interface, Interface}, Node) ->
+    Undef = term_to_binary(undefined),
     Node#schema_node{
       kind=#interface{
               extends=schema(get, extends, Interface),
@@ -374,8 +377,18 @@ compile_node({interface, Interface}, Node) ->
                           name=text_to_atom(schema(get, name, M)),
                           paramType=schema(get, paramStructType, M),
                           resultType=schema(get, resultStructType, M)
-                         } || M <- schema(get, methods, Interface)]
-             } };
+                         } || M <- schema(get, methods, Interface)],
+              struct=#struct{
+                        dsize=0,
+                        psize=1,
+                        esize=pointer,
+                        union_field=none,
+                        fields=
+                            [#field{
+                                name='$capability',
+                                kind=#ptr{ type=data, idx=0, 
+                                           default= <<Undef/binary>> }}
+                            ]} } };
 compile_node({const, Const}, Node) ->
     Type = schema(get, type, Const),
     Value = schema(get, value, Const),
@@ -446,7 +459,7 @@ slot_field(Type, Offset, Default) ->
         {data_field, DataType} -> data_field(DataType, Offset, Default);
         {ptr_field, PtrType} -> ptr_field(PtrType, Offset, Default)
     end.
-    
+
 data_field(void, _Offset, _Default) -> void;
 data_field({Type, 1}, Offset, Default) ->
     %% compensate for erlangs big endian bit streams.. yuck!

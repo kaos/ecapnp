@@ -23,9 +23,8 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([from_ref/2, from_data/2, field/2, copy/1,
-         to_struct/2, to_list/2, to_text/1, to_data/1,
-         alloc/3]).
+-export([alloc/3, from_ref/2, from_data/2, field/2, copy/1, refresh/1,
+         to_struct/2, to_list/2, to_text/1, to_data/1 ]).
 
 -include("ecapnp.hrl").
 
@@ -39,10 +38,7 @@
 alloc(Type, SegmentId, Data) when is_pid(Data) ->
     {ok, T} = ecapnp_schema:lookup(Type, Data),
     Ref = ecapnp_ref:alloc(
-            #struct_ref{
-               dsize=ecapnp_schema:data_size(T),
-               psize=ecapnp_schema:ptrs_size(T)
-              },
+            ecapnp_schema:get_ref_kind(T),
             SegmentId, 1 + ecapnp_schema:size_of(T), Data),
     #object{ ref=Ref, schema=T }.
 
@@ -53,9 +49,9 @@ from_ref(Ref, object) when is_record(Ref, ref) ->
 from_ref(#ref{ kind=Kind }=Ref, {list, _}=Type)
   when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data(Type, Ref, []);
-from_ref(#ref{ kind=Kind }=Ref, Type)
-  when is_record(Kind, struct_ref); Kind == null ->
+from_ref(Ref, Type) ->
     to_struct(Type, #object{ ref=Ref }).
+
 
 %% @doc Get object (or list) from data.
 %% @see from_ref/2
@@ -69,17 +65,36 @@ from_data(Data, Type) ->
 field(FieldName, #object{ schema=#schema_node{
                                   kind=#struct{ fields=Fields }
                                  }}) ->
-    find_field(FieldName, Fields).
+    find_field(FieldName, #field.name, Fields);
+field(FieldName,
+      #object{
+         schema=#schema_node{
+                   kind=#interface{
+                           methods=Methods,
+                           struct=#struct{ fields=Fields } }
+                  }}) ->
+    case lists:keyfind(FieldName, #field.name, Fields) of
+        false -> find_field(FieldName, #method.name, Methods);
+        Field -> Field
+    end.
 
 %% @doc Copy object recursively.
 -spec copy(object()) -> binary().
 copy(#object{ ref=Ref }) ->
     ecapnp_ref:copy(Ref).
 
+-spec refresh(object()) -> object().
+%% @doc Reread object reference.
+%% @see ecapnp_ref:refresh
+refresh(#object{ ref=Ref }=Object) ->
+    Object#object{ ref=ecapnp_ref:refresh(Ref) }.
+
 %% @doc Type cast object to another type of object.
 -spec to_struct(type_name(), object()) -> object().
 to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
-  when is_record(Kind, struct_ref); Kind == null ->
+  when Kind == null;
+       is_record(Kind, struct_ref);
+       is_record(Kind, interface_ref) ->
     T = case ecapnp_schema:lookup(Type, Object) of
             {ok, FoundType} -> FoundType;
             _ -> object
@@ -112,6 +127,8 @@ to_data(#object{ ref=#ref{ kind=Kind }=Ref})
 %% internal functions
 %% ===================================================================
 
-find_field(FieldName, [#field{ name=FieldName }=FieldType|_]) -> FieldType;
-find_field(FieldName, [_|Fields]) -> find_field(FieldName, Fields);
-find_field(FieldName, []) -> throw({unknown_field, FieldName}).
+find_field(Name, Idx, List) ->
+    case lists:keyfind(Name, Idx, List) of
+        false -> throw({unknown_field, Name});
+        Field -> Field
+    end.

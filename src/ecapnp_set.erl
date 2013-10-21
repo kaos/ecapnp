@@ -39,10 +39,10 @@ root(Type, Schema) ->
 
 -spec field(field_name(), field_value(), object()) -> ok | list().
 %% @doc Write field value to object.
-field(FieldName, Value, Object) ->
+field(FieldName, Value, #object{ ref=Ref }=Object) ->
     set_field(
       ecapnp_obj:field(FieldName, Object),
-      Value, Object#object.ref).
+      Value, Ref).
 
 -spec union({field_name(), field_value()} | field_name(), object()) -> ok.
 %% @doc Write unnamed union value in object.
@@ -109,9 +109,28 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                 ObjType ->
                     ObjRef = ecapnp_ref:alloc_data(
                                ecapnp_schema:set_ref_to(
-                                 ObjType, ecapnp_ref:ptr(
-                                            Idx, StructRef))),
+                                 ObjType, ecapnp_ref:ptr(Idx, StructRef))),
                     {ok, ecapnp_obj:from_ref(ObjRef, ObjType)}
+            end;
+        {interface, InterfaceType} ->
+            if InterfaceType == (Value#object.schema)#schema_node.id ->
+                    Ref = ecapnp_ref:alloc_data(
+                            ecapnp_schema:set_ref_to(
+                              Value#object.schema,
+                              ecapnp_ref:ptr(Idx, StructRef))),
+                    %% todo: do a proper object copy..  for now, we
+                    %% abuse the knowledge that interfaces hold a
+                    %% single data field.
+                    case ecapnp_ref:read_data(
+                           ecapnp_ref:read_struct_ptr(0, Value#object.ref),
+                           undefined) of
+                        undefined -> ok;
+                        Data -> ecapnp_ref:write_data(
+                                  Data,
+                                  ecapnp_ref:ptr(0, Ref),
+                                  Ref)
+                    end,
+                    {ok, ecapnp_obj:from_ref(Ref, InterfaceType)}
             end;
         {list, ElementType} ->
             if is_integer(Value) -> %% init list
@@ -198,7 +217,7 @@ list_element_size({_, Type}, Ref) ->
             #struct_ref{ dsize=DSize, psize=PSize };
         {ok, #schema_node{
                 kind=#struct{ esize=Size }}} -> Size
-        end;
+    end;
 list_element_size(Type, _) ->
     list_element_size(ecapnp_val:size(Type)).
 

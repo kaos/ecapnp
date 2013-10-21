@@ -227,7 +227,14 @@ test(schema) ->
                  paramType=10419494484650272988,
                  resultType=13875996178202423621
                  }
-              ]},
+              ],
+            struct=#struct{ dsize=0, psize=1, esize=pointer,
+              union_field=none,
+              fields=
+                [#field{ name='$capability',
+                   kind=#ptr{ type=data, idx=0,
+                         default= <<131,100,0,9,117,110,100,101,102,105,110,101,100>> }}
+                ]}},
           nodes=
             [#schema_node{ %% 0xc0917101826ef145
                name=undefined, id=13875996178202423621, src= <<"test/test.capnp:BasicCap.add$Results">>,
@@ -250,6 +257,37 @@ test(schema) ->
                       kind=#data{ type=int64, align=64,
                              default= <<0,0,0,0,0,0,0,0>> }}
                    ]}}
+            ]},
+        #schema_node{ %% 0xde7af08d2279ac69
+          name='Pipelines', id=16031390312538156137, src= <<"test/test.capnp:Pipelines">>,
+          kind=#interface{
+            methods=
+              [#method{ name=getBasic,
+                 paramType=14869749728248688780,
+                 resultType=14503907271725109646
+                 }
+              ],
+            struct=#struct{ dsize=0, psize=1, esize=pointer,
+              union_field=none,
+              fields=
+                [#field{ name='$capability',
+                   kind=#ptr{ type=data, idx=0,
+                         default= <<131,100,0,9,117,110,100,101,102,105,110,101,100>> }}
+                ]}},
+          nodes=
+            [#schema_node{ %% 0xc9483ad19261518e
+               name=undefined, id=14503907271725109646, src= <<"test/test.capnp:Pipelines.getBasic$Results">>,
+               kind=#struct{ dsize=0, psize=1, esize=pointer,
+                 union_field=none,
+                 fields=
+                   [#field{ name=basic,
+                      kind=#ptr{ type={interface,17521612982906909583}, idx=0,
+                            default= <<0,0,0,0,0,0,0,0>> }}
+                   ]}},
+             #schema_node{ %% 0xce5bf6983339708c
+               name=undefined, id=14869749728248688780, src= <<"test/test.capnp:Pipelines.getBasic$Params">>,
+               kind=#struct{ dsize=0, psize=0, esize=empty,
+                 union_field=none}}
             ]}
        ]}
   ].

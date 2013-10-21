@@ -24,7 +24,8 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 -behaviour(gen_server).
 
--export([start/3, stop/1, request/3, call/2]).
+-export([start/3, start_link/3, stop/1, data_pid/1, pid/1, pid/2,
+         request/2, send/1, wait/1, param/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -32,7 +33,7 @@
 
 -include("ecapnp.hrl").
 
--record(state, { mod, methods, schema }).
+-record(state, { mod }).
 
 
 %% ===================================================================
@@ -47,28 +48,62 @@
 %% @end
 %%--------------------------------------------------------------------
 start(Cap, Impl, Schema) ->
-    {ok, #schema_node{ kind=#interface{ methods=M } }}
-        = ecapnp_schema:lookup(Cap, Schema),
-    gen_server:start(?MODULE, [Impl, M, Schema], []).
+    {ok, Pid} = gen_server:start(?MODULE, [Impl], []),
+    started(Pid, Cap, Schema).
 
-stop(Server) when is_pid(Server) ->
-    gen_server:call(Server, stop).
+start_link(Cap, Impl, Schema) ->
+    {ok, Pid} = gen_server:start_link(?MODULE, [Impl], []),
+    started(Pid, Cap, Schema).
 
-request(Cap, Method, Schema) ->
-    {ok, #schema_node{ kind=#interface{ methods=Methods } } }
-        = ecapnp_schema:lookup(Cap, Schema),
-    #method{ paramType=Type }
-        = lists:keyfind(Method, #method.name, Methods),
-    %% TODO: introduce a new "top-level" record for capability
-    %% requests instead of the hacky and rather incomplete name take
-    %% over going on here now..
-    case ecapnp_set:root(Type, Schema) of
-        {ok, #object{ schema=S }=O} ->
-            {ok, O#object{ schema=S#schema_node{ name=Method } }}
-    end.
+stop(Object) ->
+    gen_server:call(pid(Object), stop).
 
-call(Server, Request) ->
-    gen_server:call(Server, {call, Request}).
+request(Method, Object) ->
+    #method{ paramType=Type } = ecapnp_obj:field(Method, Object),
+    {ok, Param} = ecapnp_set:root(Type, data_pid(Object)),
+    {ok, #request{
+            method=Method,
+            param=Param,
+            interface=Object
+           }}.
+
+send(#request{ method=Method, param=Param, interface=Object }=Request) ->
+    #method{ resultType=Type } = ecapnp_obj:field(Method, Object),
+    {ok, Result} = ecapnp_set:root(Type, data_pid(Object)),
+    Worker = case pid(Object) of
+                 undefined -> spawn_link(
+                                fun() -> 
+                                        try_call_later(Request, Result)
+                                end);
+                 Pid when is_pid(Pid) -> 
+                     gen_server:call(Pid, {call, Method, Param, Result})
+             end,
+    ok = ecapnp_data:promise(Worker, data_pid(Result)),
+    {ok, Result}.
+
+wait(Pid) when is_pid(Pid) ->
+    Ref = monitor(process, Pid),
+    receive
+        {'DOWN', Ref, process, _, Exit}
+          when Exit == normal; Exit == noproc -> ok;
+        {'DOWN', Ref, process, _, Error} -> {error, Error}
+    after 5000 ->
+            demonitor(Ref, [flush]), timeout
+    end;
+wait(Object) when is_record(Object, object) ->
+    Promise = ecapnp_data:promise(data_pid(Object)),
+    wait(Promise).
+
+param(#request{ param=Object }) -> Object.
+
+%% belongs in ecapnp_obj, and/or ecapnp_ref
+data_pid(#object{ ref=#ref{ data=Pid }}) -> Pid.
+
+pid(Object) ->
+    binary_to_term(ecapnp:get('$capability', Object)).
+
+pid(Pid, Object) ->
+    ecapnp:set('$capability', term_to_binary(Pid), Object).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -81,8 +116,8 @@ call(Server, Request) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Impl, Methods, Schema|_]) ->
-    {ok, #state{ mod=Impl, methods=Methods, schema=Schema }}.
+init([Impl|_]) ->
+    {ok, #state{ mod=Impl }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -99,16 +134,12 @@ init([Impl, Methods, Schema|_]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call(stop, _From, State) -> {stop, normal, ok, State};
-handle_call({call, Request}, _From,
-            #state{ mod=Impl, methods=Methods, schema=Schema }=State) ->
-    Method = (Request#object.schema)#schema_node.name,
-    #method{ resultType=Type }
-        = lists:keyfind(Method, #method.name, Methods),
-    {ok, Response} = ecapnp_set:root(Type, Schema),
-    Reply = case apply(Impl, Method, [Request, Response]) of
-                ok -> {ok, Response};
-                Err -> {error, Err}
-            end,
+handle_call({call, Method, Param, Result}, {From,_}, #state{ mod=Impl }=State) ->
+    Reply = spawn(
+              fun() ->
+                      link(From),
+                      ok = apply(Impl, Method, [Param, Result])
+              end),
     {reply, Reply, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -169,3 +200,20 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+started(Pid, Intf, Schema) ->
+    Cap = ecapnp_obj:alloc(
+            Intf, 0,
+            ecapnp_data:new({Schema, 10})),
+    ok = pid(Pid, Cap),
+    {ok, Cap}.
+    
+try_call_later(#request{ method=Method, param=Param,
+                         interface=Promise }=Request,
+               Result) ->
+    ok = wait(Promise),
+    case pid(Promise) of
+        undefined -> throw({promise_not_fulfilled, Request});
+        Pid when is_pid(Pid) ->
+            Worker = gen_server:call(Pid, {call, Method, Param, Result}),
+            ok = wait(Worker)
+    end.

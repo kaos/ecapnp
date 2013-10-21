@@ -26,7 +26,10 @@
 %% Interface node
 -record(interface, {
           extends=[] :: list(),
-          methods=[] :: list()
+          methods=[] :: list(),
+          
+          %% implementation specifics
+          struct :: ecapnp:struct()
          }).
 
 %% Const node
@@ -82,9 +85,14 @@
           data :: pid()
          }).
 
+-define(struct_ref_data,
+        %% DON'T TOUCH
+        dsize=0 :: ecapnp:word_count(),
+        psize=0 :: ecapnp:ptr_count()
+                   ).
+
 -record(struct_ref, {
-          dsize=0 :: ecapnp:word_count(),
-          psize=0 :: ecapnp:ptr_count()
+          ?struct_ref_data
          }).
 
 -record(list_ref, {
@@ -97,9 +105,23 @@
           double_far=false :: boolean()
          }).
 
+-record(interface_ref, {
+          ?struct_ref_data
+         }).
+
 -record(object, {
           ref=null :: ecapnp:ref(),
           schema=object :: object | ecapnp:schema_node()
+         }).
+
+-undef(struct_ref_data).
+
+%% Capability & RPC
+
+-record(request, {
+          method :: ecapnp:field_name(),
+          param :: ecapnp:object(),
+          interface :: ecapnp:schema_node()
          }).
 
 %% Internal message struct for the data server

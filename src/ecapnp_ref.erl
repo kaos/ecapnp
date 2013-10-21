@@ -24,15 +24,13 @@
 -module(ecapnp_ref).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([get/3, get/4, set/2, copy/1, ptr/2,
-         alloc/3, alloc/4, alloc_list/3,
-         alloc_data/1, follow_far/1, null_ref/1,
-         read_struct_data/3, read_struct_ptr/2,
-         read_struct_data/4, read_struct_ptr/3,
-         read_list/1, read_text/1, read_data/1,
-         read_list/2, read_text/2, read_data/2,
-         write_struct_data/4, write_struct_ptr/2,
-         write_list/4, write_text/3, write_data/3]).
+-export([get/3, get/4, set/2, copy/1, ptr/2, alloc/3, alloc/4,
+         alloc_list/3, alloc_data/1, follow_far/1, null_ref/1,
+         refresh/1, read_struct_data/3, read_struct_ptr/2,
+         read_struct_data/4, read_struct_ptr/3, read_list/1,
+         read_text/1, read_data/1, read_list/2, read_text/2,
+         read_data/2, write_struct_data/4, write_struct_ptr/2,
+         write_list/4, write_text/3, write_data/3, create_ptr/2]).
 
 -include("ecapnp.hrl").
 
@@ -82,6 +80,7 @@ set(Kind, Ref0) ->
 get(SegmentId, Pos, Data) when is_pid(Data) ->
     get(SegmentId, Pos, Data, true).
 
+-spec get(segment_id(), integer(), pid(), boolean()) -> ref().
 %% @doc Get reference from segment data.
 %%
 %% Read segment, and parse it for a reference pointer.
@@ -90,12 +89,17 @@ get(SegmentId, Pos, Data) when is_pid(Data) ->
 %%
 %% @see read_segment/5
 %% @see ecapnp_data:get_segment/4
--spec get(segment_id(), integer(), pid(), boolean()) -> ref().
 get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
     read_segment(SegmentId, Pos,
                  ecapnp_data:get_segment(SegmentId, Pos, 1, Data),
                  Data, FollowFar).
 
+-spec refresh(ref()) -> ref().
+%% @doc Reread reference from message.
+refresh(#ref{ segment=SegmentId, pos=Pos, data=Data }) ->
+    get(SegmentId, Pos, Data).
+
+-spec ptr(integer(), ref()) -> ref().
 %% @doc Get indexed reference (unintialized).
 %%
 %% NOTICE: That by 'uninitialized', the returned reference is a null
@@ -105,10 +109,10 @@ get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
 %% lists, get a reference for the element at `Idx' (either a pointer
 %% or a "unpositioned" ref pointing to where a inlineComposite element
 %% holds its data).
--spec ptr(integer(), ref()) -> ref().
 ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
-               kind=#struct_ref{ dsize=DSize, psize=PSize } })
-  when Idx >= 0, Idx < PSize ->
+               kind={Kind, DSize, PSize} })
+  when (Kind == struct_ref orelse Kind == interface_ref),
+       Idx >= 0, Idx < PSize ->
     #ref{ segment=SegmentId,
           pos=Pos + 1 + Offset + DSize + Idx,
           data=Data };
@@ -142,8 +146,9 @@ read_struct_data(Align, Len, Ref) ->
 -spec read_struct_data(integer(), integer(), ref(), any()) -> binary() | any().
 read_struct_data(_, _, #ref{ kind=null }, Default) -> Default;
 read_struct_data(Align, Len,
-                 #ref{ kind=#struct_ref{ dsize=DSize }}=Ref,
-                 Default) ->
+                 #ref{ kind={Kind, DSize, _}}=Ref,
+                 Default)
+  when Kind == struct_ref; Kind == interface_ref ->
     if Align + Len =< DSize * 64 ->
             <<_:Align/bits, Value:Len/bits, _/bits>>
                 = get_segment(1 + ((Align + Len - 1) div 64), Ref),
@@ -160,9 +165,9 @@ read_struct_ptr(Idx, Ref) -> read_struct_ptr(Idx, Ref, null_ref(Ref)).
 read_struct_ptr(_, #ref{ kind=null }, Default) -> Default;
 read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
                            offset=Offset, data=Data,
-                           kind=#struct_ref{
-                                   dsize=DSize, psize=PSize } },
-                Default) ->
+                           kind={Kind, DSize, PSize} },
+                Default)
+  when Kind == struct_ref; Kind == interface_ref ->
     if Idx >= 0 andalso Idx < PSize ->
             get(SegmentId, Pos + 1 + Offset + DSize + Idx, Data);
        true -> Default
@@ -234,8 +239,9 @@ read_data(#ref{ kind=null }, Default) -> Default.
 %% @doc Write to struct data section.
 -spec write_struct_data(integer(), integer(), binary(), ref()) -> ok.
 write_struct_data(Align, Len, Value,
-                  #ref{ kind=#struct_ref{ dsize=DSize } }=Ref)
-  when Align + Len =< DSize * 64 ->
+                  #ref{ kind={Kind, DSize, _} }=Ref)
+  when (Kind == struct_ref orelse Kind == interface_ref),
+       Align + Len =< DSize * 64 ->
     <<Pre:Align/bits, _:Len/bits, Post/bits>>
         = get_segment(1 + ((Align + Len - 1) div 64), Ref),
     set_segment(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref).
@@ -273,13 +279,13 @@ write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
                            1 + ((Count - 1) div 8),
                            Pid),
     Seg = SegmentId, %% TODO: support far ptrs
-    ok = ecapnp_data:update_segment(Segment, <<Data/binary, 0>>, Pid),
+    ok = ecapnp_data:update_segment(Segment, Data, Pid),
     write(
       update_offset(Pos,
                     Ptr#ref{ kind=#list_ref{
                                      size=byte,
-                                     count=Count
-                                    } })).
+                                     count=Count }
+                           })).
 
 %% @doc Allocate data for reference.
 %%
@@ -305,9 +311,10 @@ alloc_data(#ref{ segment=SegmentId, data=Data }=Ref) ->
 %% 
 %% @see alloc_data/1
 -spec alloc_list(integer(), ref_kind(), ref()) -> ref().
-alloc_list(Idx, #list_ref{ size=#struct_ref{ dsize=DSize, psize=PSize }=Tag,
+alloc_list(Idx, #list_ref{ size={RefKind, DSize, PSize}=Tag,
                            count=Count }=Kind,
-           Ref) ->
+           Ref)
+  when RefKind == struct_ref; RefKind == interface_ref ->
     #ref{ pos=Pos, offset=Offset }=List
         = alloc_list(Idx, Kind#list_ref{ size=inlineComposite,
                                          count=Count * (DSize + PSize) },
@@ -379,7 +386,8 @@ ref_data_size(#ref{ kind=#list_ref{ size=Size, count=Count }}) ->
         inlineComposite -> Count + 1;
         Bits -> 1 + (((Count * Bits) - 1) div 64)
     end;
-ref_data_size(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize }}) -> 
+ref_data_size(#ref{ kind={Kind, DSize, PSize} })
+  when Kind == struct_ref; Kind == interface_ref -> 
     DSize + PSize.
 
 ptr_type(0, 0) -> null;
@@ -389,7 +397,7 @@ ptr_type(Offset, _) ->
 ptr_type(0) -> struct;
 ptr_type(1) -> list;
 ptr_type(2) -> far_ptr;
-ptr_type(3) -> reserved_ptr_type.
+ptr_type(3) -> interface.
 
 list_element_size(0) -> empty;
 list_element_size(1) -> bit;
@@ -426,8 +434,9 @@ write(#ref{ segment=SegmentId, pos=Pos,
 
 check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
           #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
-                kind=#struct_ref{ dsize=DSize, psize=PSize } })
-  when Ptr >= (Pos + 1 + Offset + DSize),
+                kind={Kind, DSize, PSize} })
+  when (Kind == struct_ref orelse Kind == interface_ref),
+       Ptr >= (Pos + 1 + Offset + DSize),
        Ptr <  (Pos + 1 + Offset + DSize + PSize) -> ok;
 check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
           #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
@@ -475,7 +484,12 @@ read_ref(Segment) ->
                   kind=#far_ref{
                           segment=Size,
                           double_far=OffsetAndKind band 4 > 0
-                         }}
+                         }};
+        interface ->
+            #ref{ offset=OffsetAndKind bsr 2,
+                  kind=#interface_ref{
+                          dsize=Size band 16#ffff,
+                          psize=Size bsr 16 }}
     end.
 
 read_list_elements(_, _, 0, Acc) -> lists:reverse(Acc);
@@ -495,7 +509,8 @@ read_list_element_bits(Bits, Left, Count, Rest, Acc) ->
     read_list_element_bits(Next, Left - 1, Count - 1, Rest, [Bit|Acc]).
 
 copy_ref(#ref{ kind=null }=Ref) -> {Ref, 0, []};
-copy_ref(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }=Ref) ->
+copy_ref(#ref{ kind={Kind, DSize, PSize} }=Ref) 
+  when Kind == struct_ref; Kind == interface_ref ->
     StructData = read_struct_data(0, DSize * 64, Ref),
     StructPtrs = [copy_ref(read_struct_ptr(Idx, Ref))
                   || Idx <- lists:seq(0, PSize - 1)],
@@ -553,7 +568,13 @@ create_ptr(Offset, #list_ref{ size=Size, count=Count }) ->
     Off = (Offset bsl 2) + 1,
     Sz = (Count bsl 3) + element_size(Size),
     <<Off:32/integer-little,
-      Sz:32/integer-little>>.
+      Sz:32/integer-little>>;
+create_ptr(Offset, #interface_ref{ dsize=DSize, psize=PSize }) ->
+    Off = (Offset bsl 2) + 3,
+    <<Off:32/integer-signed-little,
+      DSize:16/integer-little,
+      PSize:16/integer-little>>.
+
 
 %% element size encoded value
 element_size(empty) -> 0;

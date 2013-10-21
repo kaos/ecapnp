@@ -24,8 +24,8 @@
 -module(ecapnp_schema).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([type_of/1, lookup/2, size_of/1, size_of/2,
-         data_size/1, ptrs_size/1, set_ref_to/2]).
+-export([type_of/1, lookup/2, size_of/1, size_of/2, data_size/1,
+         ptrs_size/1, get_ref_kind/1, get_ref_kind/2, set_ref_to/2]).
 
 -include("ecapnp.hrl").
 
@@ -74,17 +74,37 @@ size_of(Type, Store) ->
 %% @doc Query size of a struct type.
 %%
 %% Will crash with `function_clause' if `Node' is not a struct node.
-size_of(#schema_node{ kind=#struct{ dsize=DSize, psize=PSize } }) ->
-    DSize + PSize.
+size_of(#struct{ dsize=DSize, psize=PSize }) ->
+    DSize + PSize;
+size_of(#schema_node{ kind=Kind }) ->
+    size_of(Kind);
+size_of(#interface{ struct=Struct }) ->
+    size_of(Struct).
 
 -spec data_size(schema_node()) -> non_neg_integer().
 %% @doc Get data size of a struct type.
-data_size(#schema_node{ kind=#struct{ dsize=Size } }) -> Size.
+data_size(Node) ->
+    struct_value(Node, #struct.dsize).
 
 -spec ptrs_size(schema_node()) -> non_neg_integer().
 %% @doc Get pointer count for a struct type.
-ptrs_size(#schema_node{ kind=#struct{ psize=Size } }) -> Size.
+ptrs_size(Node) ->
+    struct_value(Node, #struct.psize).
 
+get_ref_kind(#struct{ dsize=DSize, psize=PSize }) ->
+    #struct_ref{ dsize=DSize, psize=PSize };
+get_ref_kind(#schema_node{ kind=Kind }) ->
+    get_ref_kind(Kind);
+get_ref_kind(#interface{ struct=Struct }) ->
+    setelement(1, get_ref_kind(Struct), interface_ref).
+
+get_ref_kind(Type, Ref) when is_atom(Type); is_number(Type) ->
+    {ok, T} = lookup(Type, Ref),
+    get_ref_kind(T);
+get_ref_kind(Type, _) ->
+    get_ref_kind(Type).
+
+    
 -spec set_ref_to(lookup_type(), ref()) -> ref().
 %% @doc Set reference kind.
 %%
@@ -93,12 +113,15 @@ ptrs_size(#schema_node{ kind=#struct{ psize=Size } }) -> Size.
 %% Note: it is only the record that is updated, the change is not
 %% committed to the message.
 set_ref_to(Type, Ref) ->
-    case lookup(Type, Ref) of
-        {ok, #schema_node{ kind=#struct{ dsize=DSize, psize=PSize } }} ->
-            Ref#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }
-    end.
+    Ref#ref{ kind=get_ref_kind(Type, Ref) }.
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
 
+struct_value(Struct, Idx) when is_record(Struct, struct) ->
+    element(Idx, Struct);
+struct_value(#schema_node{ kind=Kind }, Idx) ->
+    struct_value(Kind, Idx);
+struct_value(#interface{ struct=Struct }, Idx) ->
+    struct_value(Struct, Idx).
