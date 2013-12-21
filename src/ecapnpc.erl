@@ -95,7 +95,16 @@ compile_file(FileName) ->
 compile_data(Data)
   when is_binary(Data) ->
     {ok, Message} = ecapnp_message:read(Data),
-    compile_message(Message).
+    {ok, Compiled} = ecapnp_compiler:compile(Message),
+    %% Save to .erl sources, for now..
+    [begin
+         Filename = <<File/binary, ".erl">>,
+         {Filename,
+          file:write_file(
+            Filename,
+            erl_prettypr:format(
+              Ast, [{ribbon, 100}, {paper, 200}]))}
+     end || {File, Ast} <- Compiled].
 
 %% @doc Compile the `CodeGeneratorRequest' message. The `Message'
 %% argument holds the raw segments data to process, no futher

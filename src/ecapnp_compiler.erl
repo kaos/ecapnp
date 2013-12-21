@@ -32,19 +32,18 @@
 
 -include("capnp/schema.capnp.hrl").
 
--type compiled_message() :: list({file, erl_syntax:syntaxTree()}).
+-type compiled_message() :: {file, erl_syntax:syntaxTree()}.
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
 %% @doc Compile a `CodeGeneratorRequest' message.
--spec compile( message() ) -> {ok, compiled_message()}.
+-spec compile( message() ) -> {ok, [compiled_message()]}.
 compile(Message)
   when is_list(Message), is_binary(hd(Message)) ->
     {ok, Root} = schema(root, 'CodeGeneratorRequest', Message),
-    Compiled = compile_root(Root),
-    Compiled.
+    compile_root(Root).
 
 
 %% ===================================================================
@@ -52,7 +51,6 @@ compile(Message)
 %% ===================================================================
 
 compile_root(Root) ->
-    %% Nodes = [compile_node(N) || N <- schema(get, nodes, Root)],
     Nodes = schema(get, nodes, Root),
     Files = schema(get, requestedFiles, Root),
     {ok, [compile_file(File, Nodes) || File <- Files]}.
@@ -60,7 +58,7 @@ compile_root(Root) ->
 compile_file(File, Nodes) ->
     Id = schema(get, id, File),
     ExportedNodes = get_exported_nodes(Id, Nodes),
-    Filename = schema(get, filename, File),
+    Filename = filename:rootname(schema(get, filename, File), <<".capnp">>),
 
     {Filename,
      form_list(
@@ -72,10 +70,11 @@ compile_file(File, Nodes) ->
        ])}.
 
 compile_modulename(Filename) ->
-    Module = filename:basename(Filename, <<".capnp">>),
     atom(
       binary_to_list(
-        binary:replace(Module, <<".">>, <<"_">>, [global])
+        binary:replace(
+          filename:basename(Filename),
+          <<".">>, <<"_">>, [global])
        )).
 
 compile_exports(ExportedNodes) ->

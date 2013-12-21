@@ -17,7 +17,7 @@
 
 tmpfile=`mktemp capnpc-erl.XXXXXXXXXX`
 cat > $tmpfile && erl -noshell -eval \
-    'ok = ecapnpc:compile_file("'$tmpfile'")' -s init stop
+    '[R = ok || {_, R} <- ecapnpc:compile_file("'$tmpfile'")]' -s init stop
 RET=$?
 rm $tmpfile
 exit $RET
