@@ -27,7 +27,8 @@
 -import(erl_syntax, [atom/1, function/2, clause/2, record_expr/2,
                      clause/3, record_field/2, binary/1, underscore/0,
                      binary_field/1, application/2, form_list/1,
-                     string/1, integer/1, tuple/1, arity_qualifier/2,
+                     set_precomments/2, comment/1, string/1,
+                     integer/1, tuple/1, arity_qualifier/2,
                      binary_field/3, list/1, attribute/2]).
 
 -include("capnp/schema.capnp.hrl").
@@ -60,9 +61,28 @@ compile_file(File, Nodes) ->
     ExportedNodes = get_exported_nodes(Id, Nodes),
     Filename = filename:rootname(schema(get, filename, File), <<".capnp">>),
 
+    Vsn =
+        case application:get_key(ecapnp, vsn) of
+            undefined ->
+                ok = application:load(ecapnp),
+                {ok, V} = application:get_key(ecapnp, vsn),
+                V;
+            {ok, V} -> V
+        end,
+    {{Y,M,D},{H,Mm,S}} = calendar:universal_time(),
+
     {Filename,
      form_list(
-       [attribute(atom(module), [compile_modulename(Filename)]),
+       [set_precomments(
+          attribute(atom(module), [compile_modulename(Filename)]),
+          [comment(
+             [io_lib:format(
+                "% This file was generated "
+                "~4b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b"
+                " UTC by ecapnp ~s.",
+                [Y, M, D, H, Mm, S, Vsn]),
+              "% http://github.com/kaos/ecapnp"])
+          ]),
         attribute(atom(vsn), [integer(Id)]),
         attribute(atom(export), [compile_exports(ExportedNodes)]),
         attribute(atom(include_lib), [string("ecapnp/include/ecapnp.hrl")])

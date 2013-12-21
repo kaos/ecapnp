@@ -1,7 +1,7 @@
 %% -*- mode: erlang -*-
 {application, ecapnp,
  [{description, "Cap'n Proto library for Erlang"},
-  {vsn, "0.1"},
+  {vsn, "0.2"},
   {registered, []},
   {applications, [ kernel, stdlib, crypto ]},
   {modules, []},
