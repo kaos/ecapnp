@@ -25,8 +25,9 @@
 -export([compile/1]).
 
 -import(erl_syntax, [atom/1, function/2, clause/2, record_expr/2,
-                     record_field/2, binary/1, binary_field/1, application/2,
-                     form_list/1, string/1, integer/1, tuple/1, arity_qualifier/2,
+                     clause/3, record_field/2, binary/1, underscore/0,
+                     binary_field/1, application/2, form_list/1,
+                     string/1, integer/1, tuple/1, arity_qualifier/2,
                      binary_field/3, list/1, attribute/2]).
 
 -include("capnp/schema.capnp.hrl").
@@ -71,9 +72,10 @@ compile_file(File, Nodes) ->
        ])}.
 
 compile_modulename(Filename) ->
+    Module = filename:basename(Filename, <<".capnp">>),
     atom(
       binary_to_list(
-        binary:replace(Filename, <<".">>, <<"_">>, [global])
+        binary:replace(Module, <<".">>, <<"_">>, [global])
        )).
 
 compile_exports(ExportedNodes) ->
@@ -82,7 +84,7 @@ compile_exports(ExportedNodes) ->
                         [arity_qualifier(NameAst, integer(0)),
                          arity_qualifier(IdAst, integer(0))|Acc]
                 end, [], ExportedNodes),
-    list(Exports).
+    list([arity_qualifier(atom(schema), integer(1))|Exports]).
 
 compile_nodes(ExportedNodes) ->
     lists:foldr(
@@ -92,7 +94,25 @@ compile_nodes(ExportedNodes) ->
                  [clause(none, [application(IdAst, [])]) ]),
                compile_node(Node)
                |Acc]
-      end, [], ExportedNodes).
+      end,
+      [function(
+         atom(schema),
+         lists:foldr(
+           fun ({IdAst, NameAst, Schema}, Acc) ->
+                   Id = schema(get, id, Schema),
+                   [clause(
+                      [NameAst],
+                      none,
+                      [application(atom(schema), [integer(Id)])]),
+                    clause(
+                      [integer(Id)],
+                      none,
+                      [tuple([atom(ok), application(IdAst, [])])])
+                    |Acc]
+           end,
+           [clause([underscore()], none, [atom(undefined)])],
+           ExportedNodes))
+      ], ExportedNodes).
     
 compile_node({IdAst, NameAst, Node}) ->
     Id = schema(get, id, Node),
