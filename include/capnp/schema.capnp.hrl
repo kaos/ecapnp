@@ -300,7 +300,12 @@ schema(schema) ->
                     #field{ name=hadExplicitDefault,
                       kind=#data{ type=bool, align=135,
                              default= <<0:1>> }}
-                   ]}}
+                   ]}},
+             #schema_node{ %% 0x97b14cbe7cfec712
+               name=noDiscriminant, id=10930602151629473554, src= <<"include/capnp/schema.capnp:Field.noDiscriminant">>,
+               kind=#const{ field=
+                 #data{ type=uint16, align=0,
+                        default= <<255,255>> }}}
             ]},
         #schema_node{ %% 0x978a7cebdc549a4d
           name='Enumerant', id=10919677598968879693, src= <<"include/capnp/schema.capnp:Enumerant">>,
@@ -397,8 +402,8 @@ schema(schema) ->
                  {17,interface,
                   #field{ name=interface,
                     kind=#group{ id=17116997365232503999 }}},
-                 {18,object,
-                  #field{ name=object,
+                 {18,anyPointer,
+                  #field{ name=anyPointer,
                     kind=void}}
               ]}}},
           nodes=
@@ -514,8 +519,8 @@ schema(schema) ->
                  {17,interface,
                   #field{ name=interface,
                     kind=void}},
-                 {18,object,
-                  #field{ name=object,
+                 {18,anyPointer,
+                  #field{ name=anyPointer,
                     kind=#ptr{ type=object, idx=0,
                           default= <<0,0,0,0,0,0,0,0>> }}}
               ]}}}},
