@@ -1,9 +1,9 @@
 # Options for erlang.mk
 PROJECT = ecapnp
 
-test%: ERLC_OPTS += -DEUNIT_NOAUTO
+test%: TEST_ERLC_OPTS += -DEUNIT_NOAUTO
 
-CT_SUITES = eunit
+CT_SUITES = proper
 PLT_APPS = crypto
 EDOC_OPTS = preprocess
 
