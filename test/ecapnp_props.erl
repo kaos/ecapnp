@@ -27,51 +27,54 @@
 
 -define(T(E), ?TRACE(E)).
 
+
 %%% ----------------------------------------
 %% property types
+%%% ----------------------------------------
 
 value() -> union(
              [?LET(B, boolean(), {bool, B}),
               ?LET(I, integer(-128, 127), {int8, I})
              ]).
 
-%% generate struct def with valid offset and size
-struct_data() -> ?SIZED(D, struct_data(D)).
-struct_data(0) -> struct_data(1); %% we need at least 1 word of data to work with
-struct_data(D) -> ?SIZED(P, struct_data(D, P)).
-struct_data(D, P) -> ?LET(O, range(0, (D*64) - 2),
-                         ?LET(S, range(1, (D*64) - O),
-                             ?LET(V, bitstring(S),
-                                 {D, P, O, S, V}))).
+%% struct ref with at least one word of data
+struct_ref_data() -> struct_ref(range(1, inf), range(0, inf)).
+%% struct ref with at least one pointer
+struct_ref_ptr() -> struct_ref(range(0, inf), range(1, inf)).
 
-struct_ptr() -> ?SIZED(D, struct_ptr(D)).
-struct_ptr(D) -> ?SIZED(P, struct_ptr(D, P)).
-struct_ptr(D, 0) -> struct_ptr(D, 1); %% we need at least 1 ptr to work with
-struct_ptr(D, P) -> ?LET(I, range(0, P - 1),
-                         ?LET(K, ref_kind(), {D, P, I, K})).
+%% any struct ref, even null
+struct_ref() -> struct_ref(range(0, inf), range(0, inf)).
 
+%% generate struct ref in a given size range for data and pointer sections
+struct_ref(Td, Tp) -> ?LET([D, P], [Td, Tp], #struct_ref{ dsize=D, psize=P }).
+
+%% generate offset and size for struct ref
+struct_data() -> ?LET(R, struct_ref_data(),
+                      ?LET(O, range(0, (R#struct_ref.dsize * 64) - 2),
+                           ?LET(S, range(1, (R#struct_ref.dsize * 64) - O),
+                                ?LET(V, bitstring(S),
+                                     {R, O, S, V})))).
+
+%% generate ptr ref and idx for struct ref
+struct_ptr() -> ?LET(R, struct_ref_ptr(),
+                    ?LET([I, K], [range(0, R#struct_ref.psize - 1), ref_kind()],
+                        {R, I, K})).
+
+%% generate a ref
 ref_kind() -> union(
                 [struct_ref()
                  %% TODO: list_ref(), far_ref()
                 ]).
 
-struct_ref() -> ?SUCHTHAT(R, struct_ref1(),
-                          begin
-                              #struct_ref{ dsize=D, psize=P } = R,
-                              D + P > 0
-                          end).
+%% generate text and idx for struct ref
+text_data() -> ?LET([R, T], [struct_ref_ptr(), binary()],
+                    ?LET(I, range(0, R#struct_ref.psize - 1),
+                         {R, I, T})).
 
-struct_ref1() -> ?SIZED(D, struct_ref1(D)).
-struct_ref1(D) -> ?SIZED(P, struct_ref1(D, P)).
-struct_ref1(D, P) -> #struct_ref{ dsize=D, psize=P }.
 
-%% this is awfully similiar to the struct_ptr() type..
-text_data() -> ?SIZED(D, text_data(D)).
-text_data(D) -> ?SIZED(P, text_data(D, P)).
-text_data(D, 0) -> text_data(D, 1);
-text_data(D, P) -> ?LET(I, range(0, P - 1),
-                       ?LET(T, binary(), {D, P, I, T})).
-
+%%% ----------------------------------------
+%% property tests
+%%% ----------------------------------------
 
 %%% ----------------------------------------
 prop_capnp_value() ->
@@ -82,7 +85,8 @@ prop_capnp_value() ->
 %%% ----------------------------------------
 prop_struct_data() ->
     ?FORALL(
-       {Data, Ptr, Off, Size, Value}, struct_data(),
+       {#struct_ref{ dsize=Data, psize=Ptr },
+        Off, Size, Value}, struct_data(),
        begin
            D = data(Data, Ptr),
            Ref = ecapnp_ref:get(0, 0, D),
@@ -93,36 +97,50 @@ prop_struct_data() ->
 %%% ----------------------------------------
 prop_struct_ptr() ->
     ?FORALL(
-       {Data, Ptr, Idx, Kind}, struct_ptr(),
+       {#struct_ref{ dsize=Data, psize=Ptr },
+        Idx, Kind}, struct_ptr(),
        begin
-           D = data(Data, Ptr),
-           Root = ecapnp_ref:get(0, 0, D),
+           Root = root(data(Data, Ptr)),
            #ref{ kind=null }=Ref = ecapnp_ref:read_struct_ptr(Idx, Root),
            ok = ecapnp_ref:write_struct_ptr(Ref#ref{ kind=Kind }, Root),
-           #ref{ kind=Kind } = ecapnp_ref:read_struct_ptr(Idx, Root),
-           true
+           case ecapnp_ref:read_struct_ptr(Idx, Root) of
+               #ref{ kind=Kind } -> true;
+               #ref{ kind=null }
+                 when Kind#struct_ref.dsize == 0,
+                      Kind#struct_ref.psize == 0 ->
+                   true;
+               _ ->
+                   false
+           end
        end).
 
 
 %%% ----------------------------------------
 prop_text_data() ->
     ?FORALL(
-       {Data, Ptr, Idx, Text}, text_data(),
+       {#struct_ref{ dsize=Data, psize=Ptr},
+        Idx, Text}, text_data(),
        begin
            S = size(Text) + 8,
            Root = root(data(Data, Ptr, <<0:S/integer-unit:8>>)),
            %% TODO: if write_text would take a ptr index, we wouldn't
            %% need to get the ref for the text first!
            Ref0 = ecapnp_ref:read_struct_ptr(Idx, Root),
-           ok = ?T(ecapnp_ref:write_text(?T(Text), ?T(Ref0), ?T(Root))),
+           ok = ecapnp_ref:write_text(Text, Ref0, Root),
            %% TODO: if read_text would take a ptr index, we wouldn't
            %% need to get the ref for the text first!
            Ref1 = ecapnp_ref:read_struct_ptr(Idx, Root),
-           Text =:= ?T(ecapnp_ref:read_text(?T(Ref1)))
+           Text =:= ecapnp_ref:read_text(Ref1)
        end).
 
+
 %%% ----------------------------------------
+
+
 %%% ----------------------------------------
+%% helpers
+%%% ----------------------------------------
+
 %% create new message with provided data segments
 data(Data) ->
     data(Data, [size(S) || S <- Data]).
