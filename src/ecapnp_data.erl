@@ -1,18 +1,18 @@
-%%  
+%%
 %%  Copyright 2013, Andreas Stenius <kaos@astekk.se>
-%%  
+%%
 %%   Licensed under the Apache License, Version 2.0 (the "License");
 %%   you may not use this file except in compliance with the License.
 %%   You may obtain a copy of the License at
-%%  
+%%
 %%     http://www.apache.org/licenses/LICENSE-2.0
-%%  
+%%
 %%   Unless required by applicable law or agreed to in writing, software
 %%   distributed under the License is distributed on an "AS IS" BASIS,
 %%   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %%   See the License for the specific language governing permissions and
 %%   limitations under the License.
-%%  
+%%
 
 %% @copyright 2013, Andreas Stenius
 %% @author Andreas Stenius <kaos@astekk.se>
@@ -51,7 +51,7 @@ new(Init) ->
 %% fail, as new segments are added in case there is not enough free
 %% space left.
 -spec alloc(segment_id(), integer(), pid()) -> {segment_id(), Offset::integer()}.
-alloc(Id, Size, Pid) 
+alloc(Id, Size, Pid)
   when is_integer(Id), is_integer(Size) ->
     data_request(alloc, {Id, Size}, Pid).
 
@@ -102,7 +102,7 @@ empty_segment(Size) -> <<0:Size/integer-unit:64>>.
 get_state(Pid) ->
     data_request(get_state, [], Pid).
 
-data_request(Request, Args, Pid) 
+data_request(Request, Args, Pid)
   when is_pid(Pid) ->
     Pid ! {self(), Request, Args},
     receive
@@ -200,7 +200,7 @@ do_alloc([], _Size, State) ->
 do_alloc(Id, Size, State) ->
     case do_alloc_data(Id, Size, State) of
         {false, State} ->
-            do_alloc_data(
+            do_alloc(
               lists:seq(0, segment_count(State) - 1) -- [Id],
               Size, State);
         Result -> Result
@@ -211,12 +211,13 @@ do_alloc_data(Id, Size, State) ->
     SegSize = size(Segment),
     Msg = State#state.msg,
     Alloc = Msg#msg.alloc,
+    AllocSize = Size * 8,
     {PreA, [Alloced|PostA]} = lists:split(Id, Alloc),
-    if Size =< (SegSize - Alloced) ->
-            {{Id, Alloced}, 
+    if AllocSize =< (SegSize - Alloced) ->
+            {{Id, Alloced div 8},
              State#state{
-               msg=Msg#msg{ 
-                     alloc = PreA ++ [Alloced + Size|PostA] 
+               msg=Msg#msg{
+                     alloc = PreA ++ [Alloced + AllocSize|PostA]
                     }}
             };
        true -> {false, State}
@@ -230,7 +231,7 @@ do_update_segment(Id, Offset, Data, State) ->
     set_segment(
       Id,
       <<Pre/binary,
-        Data/binary, 
+        Data/binary,
         Post/binary>>,
       State).
 
@@ -263,7 +264,7 @@ get_segment(Id, #state{ msg=#msg{ data=Segments } }) ->
 segment_count(#state{ msg=#msg{ alloc=List } }) ->
     length(List).
 
-set_segment(Id, Segment, 
+set_segment(Id, Segment,
             #state{
                msg=#msg{
                       data=Segments }=Msg

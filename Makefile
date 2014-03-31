@@ -48,3 +48,19 @@ bin/test.capnp.hrl: $(DEPS_DIR)/capnp_test/test.capnp
 check: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
 check: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
 	$(MAKE) -C $<
+
+
+# DEV/TEST-only target..
+# call it as `make dbg PROP=text_data LINE=117`
+# will dump you attached to a process running the text_data prop test,
+# on line 117
+# Currently we need ecapnp on the erlang lib path.. will fix that eventually..
+.PHONY: dbg
+dbg:
+	ERL_LIBS=.. erl -pa test -pa deps/proper/ebin -eval \
+		"begin\
+			[i:ii(M) || M <- [ecapnp_props, ecapnp_ref, ecapnp_data]],\
+			i:ib(ecapnp_props, $(LINE)),\
+			i:iaa([break]),\
+			proper:quickcheck(ecapnp_props:prop_$(PROP)())\
+		end"
