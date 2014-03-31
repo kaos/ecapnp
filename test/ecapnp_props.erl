@@ -88,22 +88,19 @@ prop_capnp_value() ->
 %%% ----------------------------------------
 prop_struct_data() ->
     ?FORALL(
-       {#struct_ref{ dsize=Data, psize=Ptr },
-        {Off, Size, Value}}, struct_data(),
+       {Def, {Off, Size, Value}}, struct_data(),
        begin
-           D = data(Data, Ptr),
-           Ref = ecapnp_ref:get(0, 0, D),
-           ok = ecapnp_ref:write_struct_data(Off, Size, Value, Ref),
-           Value =:= ecapnp_ref:read_struct_data(Off, Size, Ref)
+           Root = root(Def),
+           ok = ecapnp_ref:write_struct_data(Off, Size, Value, Root),
+           Value =:= ecapnp_ref:read_struct_data(Off, Size, Root)
        end).
 
 %%% ----------------------------------------
 prop_struct_ptr() ->
     ?FORALL(
-       {#struct_ref{ dsize=Data, psize=Ptr },
-        Idx, Kind}, struct_ptr(),
+       {Def, Idx, Kind}, struct_ptr(),
        begin
-           Root = root(data(Data, Ptr)),
+           Root = root(Def),
            #ref{ kind=null }=Ref = ecapnp_ref:read_struct_ptr(Idx, Root),
            ok = ecapnp_ref:write_struct_ptr(Ref#ref{ kind=Kind }, Root),
            case ecapnp_ref:read_struct_ptr(Idx, Root) of
@@ -121,11 +118,10 @@ prop_struct_ptr() ->
 %%% ----------------------------------------
 prop_text_data() ->
     ?FORALL(
-       {#struct_ref{ dsize=Data, psize=Ptr},
-        Idx, Text}, text_data(),
+       {Def, Idx, Text}, text_data(),
        begin
            S = size(Text) + 8,
-           Root = root(data(Data, Ptr, <<0:S/integer-unit:8>>)),
+           Root = root(Def, <<0:S/integer-unit:8>>),
            %% TODO: if write_text would take a ptr index, we wouldn't
            %% need to get the ref for the text first!
            Ref0 = ecapnp_ref:read_struct_ptr(Idx, Root),
@@ -144,25 +140,26 @@ prop_text_data() ->
 %% helpers
 %%% ----------------------------------------
 
+%% create message with given root ref size
+data(R) when is_record(R, struct_ref) -> data(R, <<>>);
 %% create new message with provided data segments
-data(Data) ->
-    data(Data, [size(S) || S <- Data]).
+data(Data) -> data(Data, [size(S) || S <- Data]).
 
-data(Data, Alloc) when length(Data) =:= length(Alloc) ->
-    ecapnp_data:new(#msg{ data=Data, alloc=Alloc });
-
-%% create new message with empty root of given data and pointer section sizes
-data(Data, Ptr) when is_integer(Data), is_integer(Ptr) -> data(Data, Ptr, <<>>).
-
-data(Data, Ptr, Extra) ->
-    data([<<0:32, Data:16/integer-little, Ptr:16/integer-little,
-            0:Data/integer-unit:64, 0:Ptr/integer-unit:64,
+%% create message with extra free segment data
+data(#struct_ref{ dsize=D, psize=P }, Extra) ->
+    data([<<0:32, D:16/integer-little, P:16/integer-little,
+            0:D/integer-unit:64, 0:P/integer-unit:64,
             Extra/binary>>],
-         [8 * (Data + Ptr + 1)]).
+         [8 * (D + P + 1)]);
+%% create message with segments and alloc info
+data(Data, Alloc) when length(Data) =:= length(Alloc) ->
+    ecapnp_data:new(#msg{ data=Data, alloc=Alloc }).
+
+%% get root ref
+root(Data) when is_pid(Data) ->
+    ecapnp_ref:get(0, 0, Data);
+root(M) ->
+    root(data(M)).
 
 %% create new message and get a ref to the root element
-root(Data) when is_pid(Data) ->
-    ecapnp_ref:get(0, 0, Data).
-
-root(Data, Ptr) ->
-    root(data(Data, Ptr)).
+root(A1, A2) -> root(data(A1, A2)).
