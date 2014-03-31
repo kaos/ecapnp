@@ -48,17 +48,21 @@ struct_ref() -> struct_ref(range(0, inf), range(0, inf)).
 %% generate struct ref in a given size range for data and pointer sections
 struct_ref(Td, Tp) -> ?LET([D, P], [Td, Tp], #struct_ref{ dsize=D, psize=P }).
 
+struct_data_value(R) ->
+    ?LET(O, range(0, (R#struct_ref.dsize * 64) - 2),
+         ?LET(S, range(1, (R#struct_ref.dsize * 64) - O),
+              ?LET(V, bitstring(S),
+                   {O, S, V}))).
+
 %% generate offset and size for struct ref
 struct_data() -> ?LET(R, struct_ref_data(),
-                      ?LET(O, range(0, (R#struct_ref.dsize * 64) - 2),
-                           ?LET(S, range(1, (R#struct_ref.dsize * 64) - O),
-                                ?LET(V, bitstring(S),
-                                     {R, O, S, V})))).
+                      {R, struct_data_value(R)}).
+
+struct_ptr_idx(R) -> ?LET(I, range(0, R#struct_ref.psize - 1), I).
 
 %% generate ptr ref and idx for struct ref
-struct_ptr() -> ?LET(R, struct_ref_ptr(),
-                    ?LET([I, K], [range(0, R#struct_ref.psize - 1), ref_kind()],
-                        {R, I, K})).
+struct_ptr() -> ?LET([R, K], [struct_ref_ptr(), ref_kind()],
+                     {R, struct_ptr_idx(R), K}).
 
 %% generate a ref
 ref_kind() -> union(
@@ -68,8 +72,7 @@ ref_kind() -> union(
 
 %% generate text and idx for struct ref
 text_data() -> ?LET([R, T], [struct_ref_ptr(), binary()],
-                    ?LET(I, range(0, R#struct_ref.psize - 1),
-                         {R, I, T})).
+                    {R, struct_ptr_idx(R), T}).
 
 
 %%% ----------------------------------------
@@ -86,7 +89,7 @@ prop_capnp_value() ->
 prop_struct_data() ->
     ?FORALL(
        {#struct_ref{ dsize=Data, psize=Ptr },
-        Off, Size, Value}, struct_data(),
+        {Off, Size, Value}}, struct_data(),
        begin
            D = data(Data, Ptr),
            Ref = ecapnp_ref:get(0, 0, D),
