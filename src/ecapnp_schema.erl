@@ -42,6 +42,7 @@
 -spec lookup(lookup_type(), lookup_search()) ->
                     {ok, schema_node()} | {unknown_type, Type::lookup_type()}.
 %% @doc Find schema node for type.
+lookup(N, _) when is_record(N, schema_node) -> {ok, N};
 lookup(Id, #schema_node{ id=Id }=N) -> {ok, N};
 lookup(Name, #schema_node{ name=Name }=N) -> {ok, N};
 lookup(Type, #schema_node{ nodes=Ns }) -> lookup(Type, Ns);

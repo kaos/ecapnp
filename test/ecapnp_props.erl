@@ -32,10 +32,11 @@
 %% property types
 %%% ----------------------------------------
 
-value() -> union(
-             [?LET(B, boolean(), {bool, B}),
-              ?LET(I, integer(-128, 127), {int8, I})
-             ]).
+data_value() ->
+    union(
+      [?LET(B, boolean(), {1, bool, B}),
+       ?LET(I, integer(-128, 127), {8, int8, I})
+      ]).
 
 %% struct ref with at least one word of data
 struct_ref_data() -> struct_ref(range(1, inf), range(0, inf)).
@@ -74,6 +75,40 @@ ref_kind() -> union(
 text_data() -> ?LET([R, T], [struct_ref_ptr(), binary()],
                     {R, struct_ptr_idx(R), T}).
 
+data_field(FieldName, Align, Type, Size) ->
+    #field{
+       name = FieldName,
+       kind = #data{ type = Type, align = Align, default = <<0:Size>> }
+      }.
+
+data_fields([], Align, Fs, FVs) -> {Align, Fs, FVs};
+data_fields([FieldName|FieldNames], Align, Fs, FVs) ->
+    ?LET({S, T, V}, data_value(),
+         data_fields(
+           FieldNames, Align + S,
+           [data_field(FieldName, Align, T, S)|Fs],
+           [{FieldName, V}|FVs]
+          )).
+
+struct_node(Size, Fields) ->
+    ?LET(R, struct_ref(range(Size, inf), range(0, inf)),
+         #struct{ dsize = R#struct_ref.dsize,
+                  psize = R#struct_ref.psize,
+                  fields = Fields
+                }).
+
+schema_data_fields(FieldNames) ->
+    ?LET({Size, Fs, FVs}, data_fields(FieldNames, 0, [], []),
+         ?LET(S, struct_node(1 + ((Size - 1) div 8), Fs),
+              {#schema_node{ kind = S }, FVs})).
+
+schema_data_fields() ->
+    ?LET(FieldNames, field_names(), schema_data_fields(FieldNames)).
+
+field_names() ->
+    ?SUCHTHAT(FieldNames, non_empty(list(atom())),
+              lists:sort(FieldNames) =:= lists:usort(FieldNames)).
+
 
 %%% ----------------------------------------
 %% property tests
@@ -82,7 +117,7 @@ text_data() -> ?LET([R, T], [struct_ref_ptr(), binary()],
 %%% ----------------------------------------
 prop_capnp_value() ->
     ?FORALL(
-       {T, V}, value(),
+       {_S, T, V}, data_value(),
        V =:= ecapnp_val:get(T, ecapnp_val:set(T, V))).
 
 %%% ----------------------------------------
@@ -134,26 +169,41 @@ prop_text_data() ->
 
 
 %%% ----------------------------------------
-
+prop_data_field() ->
+    ?FORALL(
+       {Schema, FVs}, schema_data_fields(),
+       begin
+           Root = root(Schema),
+           Obj = ecapnp_obj:from_ref(Root, Schema),
+           lists:foldl(
+             fun (_, false) -> false;
+                 ({F, V}, true) ->
+                     ok = ecapnp:set(F, V, Obj),
+                     V =:= ecapnp:get(F, Obj)
+             end, true, FVs)
+       end).
 
 %%% ----------------------------------------
 %% helpers
 %%% ----------------------------------------
 
-%% create message with given root ref size
-data(R) when is_record(R, struct_ref) -> data(R, <<>>);
 %% create new message with provided data segments
-data(Data) -> data(Data, [size(S) || S <- Data]).
+data(Data) when is_list(Data) -> data(Data, [size(S) || S <- Data]);
+%% create message with given root ref
+data(R) -> data(R, <<>>).
 
-%% create message with extra free segment data
-data(#struct_ref{ dsize=D, psize=P }, Extra) ->
-    data([<<0:32, D:16/integer-little, P:16/integer-little,
-            0:D/integer-unit:64, 0:P/integer-unit:64,
-            Extra/binary>>],
-         [8 * (D + P + 1)]);
+data(#struct_ref{ dsize=D, psize=P }, Extra) -> data(D, P, Extra);
+data(#schema_node{ kind=#struct{ dsize=D, psize=P }}, Extra) -> data(D, P, Extra);
 %% create message with segments and alloc info
 data(Data, Alloc) when length(Data) =:= length(Alloc) ->
     ecapnp_data:new(#msg{ data=Data, alloc=Alloc }).
+
+%% create message with extra free segment data
+data(D, P, Extra) ->
+    data([<<0:32, D:16/integer-little, P:16/integer-little,
+            0:D/integer-unit:64, 0:P/integer-unit:64,
+            Extra/binary>>],
+         [8 * (D + P + 1)]).
 
 %% get root ref
 root(Data) when is_pid(Data) ->

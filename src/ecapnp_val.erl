@@ -123,7 +123,7 @@ from_value(_, Value) when is_number(Value) -> Value;
 from_value(_, void) -> void.
 
 to_value(bool, true) -> <<1:1>>;
-to_value(bool, _) -> <<0:1>>;
+to_value(bool, false) -> <<0:1>>;
 to_value(float32, inf) -> ?INF_NAN_32(0, 0);
 to_value(float32, '-inf') -> ?INF_NAN_32(0, 1);
 to_value(float32, nan) -> ?INF_NAN_32(1, 0);

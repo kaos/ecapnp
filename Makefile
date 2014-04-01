@@ -59,7 +59,8 @@ check: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
 dbg:
 	ERL_LIBS=.. erl -pa test -pa deps/proper/ebin -eval \
 		"begin\
-			[i:ii(M) || M <- [ecapnp_props, ecapnp_ref, ecapnp_data]],\
+			[i:ii(M) || M <- [ecapnp, ecapnp_obj, ecapnp_get, ecapnp_set,\
+				ecapnp_props, ecapnp_ref, ecapnp_data]],\
 			i:ib(ecapnp_props, $(LINE)),\
 			i:iaa([break]),\
 			proper:quickcheck(ecapnp_props:prop_$(PROP)())\
