@@ -52,6 +52,16 @@ data_value() ->
             {S, T, V})
       ]).
 
+ptr_value() ->
+    union(
+      [?LET({T, V}, list_ptr(), {{list, T}, V})
+      ]).
+
+list_ptr() ->
+    union(
+      [{bool, list(boolean())}
+      ]).
+
 %% struct ref with at least one word of data
 struct_ref_data() -> struct_ref(pos_integer(), non_neg_integer()).
 %% struct ref with at least one pointer
@@ -62,6 +72,10 @@ struct_ref() -> struct_ref(range(0, inf), range(0, inf)).
 
 %% generate struct ref in a given size range for data and pointer sections
 struct_ref(Td, Tp) -> ?LET([D, P], [Td, Tp], #struct_ref{ dsize=D, psize=P }).
+
+%% %% generate list ref
+%% list_ref() -> ?LET([S, C], [union([empty]), non_neg_integer()],
+%%                    #list_ref{ size=S, count=C }).
 
 %% generate random field data that will fit in given struct ref
 struct_data_value(R) ->
@@ -77,15 +91,16 @@ struct_data() -> ?LET(R, struct_ref_data(),
 %% generate ptr index for given struct ref
 struct_ptr_idx(R) -> ?LET(I, range(0, R#struct_ref.psize - 1), I).
 
-%% generate struct ref and ptr ref at idx
-struct_ptr() -> ?LET([R, K], [struct_ref_ptr(), ref_kind()],
+%% generate struct ref and ptr ref to another struct at idx
+struct_ptr() -> ?LET([R, K], [struct_ref_ptr(), struct_ref()],
                      {R, struct_ptr_idx(R), K}).
 
-%% generate a ptr ref
-ref_kind() -> union(
-                [struct_ref()
-                 %% TODO: list_ref(), far_ref()
-                ]).
+%% %% generate a ptr ref
+%% ref_kind() -> union(
+%%                 [struct_ref(),
+%%                  list_ref()
+%%                  %% TODO: far_ref, interface_ref
+%%                 ]).
 
 %% generate struct ref and text at idx
 text_data() -> ?LET([R, T], [struct_ref_ptr(), binary()],
@@ -108,9 +123,26 @@ data_fields([FieldName|FieldNames], Align, Fs, FVs) ->
            [{FieldName, V}|FVs]
           )).
 
+%% generate struct ptr field
+ptr_field(FieldName, T, I) ->
+    #field{
+       name = FieldName,
+       kind = #ptr{ type = T, idx = I, default = <<0,0,0,0,0,0,0,0>> }
+      }.
+
+%% generate list of ptr fields with given field names
+ptr_fields([], Fs, FVs) -> {Fs, FVs};
+ptr_fields([FieldName|FieldNames], Fs, FVs) ->
+    ?LET({T, V}, ptr_value(),
+         ptr_fields(
+           FieldNames,
+           [ptr_field(FieldName, T, length(Fs))|Fs],
+           [{FieldName, V}|FVs]
+          )).
+
 %% generate schema for a struct with given data size and fields
-struct_node(Size, Fields) ->
-    ?LET(R, struct_ref(range(Size, inf), range(0, inf)),
+struct_node({DSize, PSize}, Fields) ->
+    ?LET(R, struct_ref(range(DSize, inf), range(PSize, inf)),
          #struct{ dsize = R#struct_ref.dsize,
                   psize = R#struct_ref.psize,
                   fields = Fields
@@ -119,7 +151,12 @@ struct_node(Size, Fields) ->
 %% generate schema node for struct with given names for data fields
 schema_data_fields(FieldNames) ->
     ?LET({Size, Fs, FVs}, data_fields(FieldNames, 0, [], []),
-         ?LET(S, struct_node(1 + ((Size - 1) div 8), Fs),
+         ?LET(S, struct_node({1 + ((Size - 1) div 8), 0}, Fs),
+              {#schema_node{ kind = S }, FVs})).
+
+schema_ptr_fields(FieldNames) ->
+    ?LET({Fs, FVs}, ptr_fields(FieldNames, [], []),
+         ?LET(S, struct_node({0, length(Fs)}, Fs),
               {#schema_node{ kind = S }, FVs})).
 
 %% generate schema node for struct
@@ -130,6 +167,9 @@ schema_data_fields() ->
 field_names() ->
     ?SUCHTHAT(FieldNames, non_empty(list(atom())),
               lists:sort(FieldNames) =:= lists:usort(FieldNames)).
+
+schema_ptr_fields() ->
+    ?LET(FieldNames, field_names(), schema_ptr_fields(FieldNames)).
 
 
 %%% ----------------------------------------
@@ -206,6 +246,22 @@ prop_data_field() ->
                      compare_value(V, ecapnp:get(F, Obj))
              end, true, FVs)
        end).
+
+%%% ----------------------------------------
+prop_ptr_field() ->
+    ?FORALL(
+       {Schema, FVs}, schema_ptr_fields(),
+       begin
+           Root = root(Schema),
+           Obj = ecapnp_obj:from_ref(Root, Schema),
+           lists:foldl(
+             fun (_, false) -> false;
+                 ({F, V}, true) ->
+                     ok = ecapnp:set(F, V, Obj),
+                     compare_value(?T(V), ?T(ecapnp:get(F, Obj)))
+             end, true, FVs)
+       end).
+
 
 %%% ----------------------------------------
 %% helpers

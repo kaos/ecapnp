@@ -277,7 +277,7 @@ write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
                            SegmentId,
                            1 + ((Count - 1) div 8),
                            Pid),
-    Seg = SegmentId, %% TODO: support far ptrs
+    SegmentId = Seg, %% TODO: support far ptrs
     ok = ecapnp_data:update_segment(Segment, Data, Pid),
     write(
       update_offset(Pos,
@@ -300,9 +300,23 @@ alloc_data(Ref) ->
 %% @doc Allocate data for reference.
 alloc_data(Size, #ref{ segment=SegmentId, data=Data }=Ref) ->
     {Seg, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
-    Seg = SegmentId, %% TODO: support far ptrs
-    Ref1 = update_offset(Pos, Ref),
-    ok = write(Ref1), Ref1.
+    Ref1 = if Seg =:= SegmentId ->
+                   update_offset(Pos, Ref);
+              true ->
+                   %% write far ptr
+                   ok = write(
+                          Ref#ref{
+                            offset = Pos,
+                            kind = #far_ref{ segment = Seg }
+                           }),
+                   %% move target ptr (one extra word was allocated to
+                   %% hold the landing pad due to far ptr)
+                   Ref#ref{ segment = Seg, pos = Pos, offset = 0 }
+           end,
+    %% write updated ref
+    ok = write(Ref1),
+    Ref1.
+
 
 %% @doc Allocate data for list.
 %%
@@ -585,21 +599,29 @@ flatten_copy(Copy, Offset) ->
 create_ptr(_Offset, #ref{ pos=-1 }) -> <<>>;
 create_ptr(_Offset, null) -> <<0:64/integer>>;
 create_ptr(Offset, #ref{ kind=Kind }) -> create_ptr(Offset, Kind);
+%% struct ptr
 create_ptr(Offset, #struct_ref{ dsize=DSize, psize=PSize }) ->
-    Off = (Offset bsl 2),
+    Off = (Offset bsl 2) + 0,
     <<Off:32/integer-signed-little,
       DSize:16/integer-little,
       PSize:16/integer-little>>;
+%% list ptr
 create_ptr(Offset, #list_ref{ size=Size, count=Count }) ->
     Off = (Offset bsl 2) + 1,
     Sz = (Count bsl 3) + element_size(Size),
     <<Off:32/integer-little,
       Sz:32/integer-little>>;
+%% far ptr
+create_ptr(Offset, #far_ref{ segment=Seg, double_far = false }) ->
+    Off = (Offset bsl 3) + 2,
+    <<Off:32/integer-little, Seg:32/integer-little>>;
+%% capability ptr
 create_ptr(Offset, #interface_ref{ dsize=DSize, psize=PSize }) ->
     Off = (Offset bsl 2) + 3,
     <<Off:32/integer-signed-little,
       DSize:16/integer-little,
       PSize:16/integer-little>>.
+
 
 
 %% element size encoded value

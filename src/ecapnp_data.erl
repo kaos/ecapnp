@@ -97,6 +97,8 @@ promise(Promise, Pid) ->
 %% ===================================================================
 
 empty_message(Size) -> [empty_segment(Size)].
+
+empty_segment(Size) when Size < 100 -> empty_segment(100);
 empty_segment(Size) -> <<0:Size/integer-unit:64>>.
 
 get_state(Pid) ->
@@ -194,15 +196,23 @@ do_alloc([Id|Ids], Size, State0) ->
         {false, State} -> do_alloc(Ids, Size, State);
         Result -> Result
     end;
-do_alloc([], _Size, State) ->
-    {false, State}; %% TODO: add new segment
+do_alloc([], Size, #state{ msg = #msg{ data = Segments, alloc = Alloc }=Msg }=State) ->
+    do_alloc([length(Segments)|fail],
+             Size,
+             State#state{ msg=Msg#msg{
+                                data = Segments ++ [empty_segment((length(Segments) + 1) * Size)],
+                                alloc = Alloc ++ [0]
+                               }
+                        });
+do_alloc(fail, _Size, State) ->
+    {false, State};
 
 do_alloc(Id, Size, State) ->
     case do_alloc_data(Id, Size, State) of
         {false, State} ->
             do_alloc(
               lists:seq(0, segment_count(State) - 1) -- [Id],
-              Size, State);
+              Size + 1, State); %% add one for far ptr landing pad
         Result -> Result
     end.
 

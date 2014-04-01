@@ -55,9 +55,13 @@ check: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
 # will dump you attached to a process running the text_data prop test,
 # on line 117
 # Currently we need ecapnp on the erlang lib path.. will fix that eventually..
-.PHONY: dbg
-dbg:
-	ERL_LIBS=.. erl -pa test -pa deps/proper/ebin -eval \
+.PHONY: bld dbg tst
+bld: TEST_DEPS=
+bld: TEST_ERLC_OPTS += -DEUNIT_NOAUTO
+bld: app build-tests
+
+dbg: bld
+	erl -pa test -pa deps/proper/ebin -eval \
 		"begin\
 			[i:ii(M) || M <- [ecapnp, ecapnp_obj, ecapnp_get, ecapnp_set,\
 				ecapnp_props, ecapnp_ref, ecapnp_data]],\
@@ -65,3 +69,7 @@ dbg:
 			i:iaa([break]),\
 			proper:quickcheck(ecapnp_props:prop_$(PROP)())\
 		end"
+
+tst: bld
+	erl -pa test -pa deps/proper/ebin -noinput \
+		-eval "proper:module(ecapnp_props), init:stop()"
