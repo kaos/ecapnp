@@ -270,33 +270,11 @@ write_text(Text, Ptr, Ref) ->
 %% Allocates data for `Data' and updates the `Ptr' in `Ref' to point
 %% to the newly allocated (and updated) data.
 -spec write_data(binary(), ref(), ref()) -> ok.
-write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
+write_data(Data, Ptr, Ref) ->
     check_ptr(Ptr, Ref),
-    Count = size(Data),
-    List = #list_ref{ size = byte, count = Count },
-    {Seg, Pos} = ecapnp_data:alloc(
-                           SegmentId,
-                           1 + ((Count - 1) div 8),
-                           Pid),
-    {Ref1, Pos1} = if Seg =:= SegmentId ->
-                              {update_offset(
-                                 Pos, Ptr#ref{ kind = List }),
-                               Pos};
-                         true ->
-                              %% write far ptr
-                              ok = write(
-                                    Ptr#ref{
-                                      offset = Pos,
-                                      kind = #far_ref{ segment = Seg }
-                                     }),
-                              %% move target ptr
-                              {Ptr#ref{ segment = Seg, pos = Pos,
-                                        offset = 0, kind = List },
-                               Pos + 1}
-                      end,
-    %% write data and updated ref
-    ok = ecapnp_data:update_segment({Seg, Pos1}, Data, Pid),
-    write(Ref1).
+    ListRef = #list_ref{ size = byte, count = size(Data) },
+    Ptr1 = alloc_data(Ptr#ref{ kind = ListRef }),
+    write(Data, Ptr1).
 
 -spec alloc_data(ref()) -> ref().
 %% @doc Allocate data for reference.
@@ -478,12 +456,14 @@ set_segment(Value, #ref{ segment=SegmentId, pos=Pos,
     ecapnp_data:update_segment({SegmentId, Pos + 1 + Offset}, Value, Data).
 
 write(#ref{ pos=-1 }) -> ok;
-write(#ref{ segment=SegmentId, pos=Pos,
-            offset=Offset, data=Data }=Ref) ->
-    ecapnp_data:update_segment(
-      {SegmentId, Pos},
-      create_ptr(Offset, Ref),
-      Data).
+write(#ref{ offset=Offset }=Ref) ->
+    write(create_ptr(Offset, Ref), 0, Ref).
+
+write(Bin, #ref{ offset=Offset }=Ref) ->
+    write(Bin, Offset + 1, Ref).
+
+write(Bin, Offset, #ref{ segment=SegmentId, pos=Pos, data=Data }) ->
+    ecapnp_data:update_segment({SegmentId, Pos + Offset}, Bin, Data).
 
 check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
           #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
