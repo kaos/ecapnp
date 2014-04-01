@@ -32,6 +32,7 @@
 %% property types
 %%% ----------------------------------------
 
+%% generate any kind of primitive value that capnp can represent.
 data_value() ->
     union(
       [?LET(B, boolean(), {1, bool, B}),
@@ -52,9 +53,9 @@ data_value() ->
       ]).
 
 %% struct ref with at least one word of data
-struct_ref_data() -> struct_ref(range(1, inf), range(0, inf)).
+struct_ref_data() -> struct_ref(pos_integer(), non_neg_integer()).
 %% struct ref with at least one pointer
-struct_ref_ptr() -> struct_ref(range(0, inf), range(1, inf)).
+struct_ref_ptr() -> struct_ref(non_neg_integer(), pos_integer()).
 
 %% any struct ref, even null
 struct_ref() -> struct_ref(range(0, inf), range(0, inf)).
@@ -62,38 +63,42 @@ struct_ref() -> struct_ref(range(0, inf), range(0, inf)).
 %% generate struct ref in a given size range for data and pointer sections
 struct_ref(Td, Tp) -> ?LET([D, P], [Td, Tp], #struct_ref{ dsize=D, psize=P }).
 
+%% generate random field data that will fit in given struct ref
 struct_data_value(R) ->
     ?LET(O, range(0, (R#struct_ref.dsize * 64) - 2),
          ?LET(S, range(1, (R#struct_ref.dsize * 64) - O),
               ?LET(V, bitstring(S),
                    {O, S, V}))).
 
-%% generate offset and size for struct ref
+%% generate struct ref and random field data at some offset
 struct_data() -> ?LET(R, struct_ref_data(),
                       {R, struct_data_value(R)}).
 
+%% generate ptr index for given struct ref
 struct_ptr_idx(R) -> ?LET(I, range(0, R#struct_ref.psize - 1), I).
 
-%% generate ptr ref and idx for struct ref
+%% generate struct ref and ptr ref at idx
 struct_ptr() -> ?LET([R, K], [struct_ref_ptr(), ref_kind()],
                      {R, struct_ptr_idx(R), K}).
 
-%% generate a ref
+%% generate a ptr ref
 ref_kind() -> union(
                 [struct_ref()
                  %% TODO: list_ref(), far_ref()
                 ]).
 
-%% generate text and idx for struct ref
+%% generate struct ref and text at idx
 text_data() -> ?LET([R, T], [struct_ref_ptr(), binary()],
                     {R, struct_ptr_idx(R), T}).
 
+%% generate struct data field def
 data_field(FieldName, Align, Type, Size) ->
     #field{
        name = FieldName,
        kind = #data{ type = Type, align = Align, default = <<0:Size>> }
       }.
 
+%% generate list of data fields with given field names
 data_fields([], Align, Fs, FVs) -> {Align, Fs, FVs};
 data_fields([FieldName|FieldNames], Align, Fs, FVs) ->
     ?LET({S, T, V}, data_value(),
@@ -103,6 +108,7 @@ data_fields([FieldName|FieldNames], Align, Fs, FVs) ->
            [{FieldName, V}|FVs]
           )).
 
+%% generate schema for a struct with given data size and fields
 struct_node(Size, Fields) ->
     ?LET(R, struct_ref(range(Size, inf), range(0, inf)),
          #struct{ dsize = R#struct_ref.dsize,
@@ -110,14 +116,17 @@ struct_node(Size, Fields) ->
                   fields = Fields
                 }).
 
+%% generate schema node for struct with given names for data fields
 schema_data_fields(FieldNames) ->
     ?LET({Size, Fs, FVs}, data_fields(FieldNames, 0, [], []),
          ?LET(S, struct_node(1 + ((Size - 1) div 8), Fs),
               {#schema_node{ kind = S }, FVs})).
 
+%% generate schema node for struct
 schema_data_fields() ->
     ?LET(FieldNames, field_names(), schema_data_fields(FieldNames)).
 
+%% generate field names
 field_names() ->
     ?SUCHTHAT(FieldNames, non_empty(list(atom())),
               lists:sort(FieldNames) =:= lists:usort(FieldNames)).
@@ -187,6 +196,7 @@ prop_data_field() ->
     ?FORALL(
        {Schema, FVs}, schema_data_fields(),
        begin
+           %% Schema is a generated #shema_node{} record
            Root = root(Schema),
            Obj = ecapnp_obj:from_ref(Root, Schema),
            lists:foldl(
