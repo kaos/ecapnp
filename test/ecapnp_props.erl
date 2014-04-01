@@ -59,7 +59,18 @@ ptr_value() ->
 
 list_ptr() ->
     union(
-      [{bool, list(boolean())}
+      [{bool, list(boolean())},
+       {int8, list(integer(-16#80, 16#7f))},
+       {int16, list(integer(-16#8000, 16#7fff))},
+       {int32, list(integer(-16#80000000, 16#7fffffff))},
+       {int64, list(integer(-16#8000000000000000, 16#7fffffffffffffff))},
+       {uint8, list(integer(0, 16#ff))},
+       {uint16, list(integer(0, 16#ffff))},
+       {uint32, list(integer(0, 16#ffffffff))},
+       {uint64, list(integer(0, 16#ffffffffffffffff))}
+       %% avoid floats, as they don't compare well..
+       %%{float32, list(float(-3.4e38, 3.4e38))},
+       %%{float64, list(float())}
       ]).
 
 %% struct ref with at least one word of data
@@ -258,7 +269,7 @@ prop_ptr_field() ->
              fun (_, false) -> false;
                  ({F, V}, true) ->
                      ok = ecapnp:set(F, V, Obj),
-                     compare_value(?T(V), ?T(ecapnp:get(F, Obj)))
+                     compare_value(V, ecapnp:get(F, Obj))
              end, true, FVs)
        end).
 
