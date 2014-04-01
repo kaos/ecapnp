@@ -244,34 +244,20 @@ prop_text_data() ->
 
 %%% ----------------------------------------
 prop_data_field() ->
-    ?FORALL(
-       {Schema, FVs}, schema_data_fields(),
-       begin
-           %% Schema is a generated #shema_node{} record
-           Root = root(Schema),
-           Obj = ecapnp_obj:from_ref(Root, Schema),
-           lists:foldl(
-             fun (_, false) -> false;
-                 ({F, V}, true) ->
-                     ok = ecapnp:set(F, V, Obj),
-                     compare_value(V, ecapnp:get(F, Obj))
-             end, true, FVs)
-       end).
+    ?FORALL(Data, schema_data_fields(), test_field_access(Data)).
 
-%%% ----------------------------------------
 prop_ptr_field() ->
-    ?FORALL(
-       {Schema, FVs}, schema_ptr_fields(),
-       begin
-           Root = root(Schema),
-           Obj = ecapnp_obj:from_ref(Root, Schema),
-           lists:foldl(
-             fun (_, false) -> false;
-                 ({F, V}, true) ->
-                     ok = ecapnp:set(F, V, Obj),
-                     compare_value(V, ecapnp:get(F, Obj))
-             end, true, FVs)
-       end).
+    ?FORALL(Data, schema_ptr_fields(), test_field_access(Data)).
+
+test_field_access({Schema, FVs}) ->
+    %% Schema is a generated #shema_node{} record
+    Root = root(Schema),
+    Obj = ecapnp_obj:from_ref(Root, Schema),
+    lists:all(
+      fun ({F, V}) ->
+              ok = ecapnp:set(F, V, Obj),
+              compare_value(V, ecapnp:get(F, Obj))
+      end, FVs).
 
 
 %%% ----------------------------------------
