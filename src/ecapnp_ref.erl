@@ -150,7 +150,7 @@ read_struct_data(Align, Len,
   when Kind == struct_ref; Kind == interface_ref ->
     if Align + Len =< DSize * 64 ->
             <<_:Align/bits, Value:Len/bits, _/bits>>
-                = get_segment(1 + ((Align + Len - 1) div 64), Ref),
+                = read(1 + ((Align + Len - 1) div 64), Ref),
             Value;
        true -> Default
     end.
@@ -221,7 +221,7 @@ read_text(Ref) -> read_text(Ref, <<>>).
 -spec read_text(ref(), any()) -> binary() | any().
 read_text(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
-    binary_part(get_segment(1 + ((Count - 2) div 8), Ref), 0, Count - 1);
+    binary_part(read(1 + ((Count - 2) div 8), Ref), 0, Count - 1);
 read_text(#ref{ kind=null }, Default) -> Default.
 
 %% @doc Read data.
@@ -232,7 +232,7 @@ read_data(Ref) -> read_data(Ref, <<>>).
 -spec read_data(ref(), any()) -> binary() | any().
 read_data(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
 read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
-    binary_part(get_segment(1 + ((Count - 1) div 8), Ref), 0, Count);
+    binary_part(read(1 + ((Count - 1) div 8), Ref), 0, Count);
 read_data(#ref{ kind=null }, Default) -> Default.
 
 %% @doc Write to struct data section.
@@ -242,8 +242,8 @@ write_struct_data(Align, Len, Value,
   when (Kind == struct_ref orelse Kind == interface_ref),
        Align + Len =< DSize * 64 ->
     <<Pre:Align/bits, _:Len/bits, Post/bits>>
-        = get_segment(1 + ((Align + Len - 1) div 64), Ref),
-    set_segment(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref).
+        = read(1 + ((Align + Len - 1) div 64), Ref),
+    write(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref).
 
 %% @doc Write pointer reference.
 %%
@@ -346,8 +346,8 @@ write_list(Idx, ElementIdx, Value, Ref) ->
                true -> ElementIdx * Len
             end,
     <<Pre:Align/bits, _:Len/bits, Post/bits>>
-        = get_segment(1 + ((Align + Len - 1) div 64), Ptr),
-    set_segment(<<Pre/bits, Value:Len/bits, Post/bits>>, Ptr).
+        = read(1 + ((Align + Len - 1) div 64), Ptr),
+    write(<<Pre/bits, Value:Len/bits, Post/bits>>, Ptr).
 
 %% @doc Resolve a far pointer.
 %%
@@ -391,7 +391,7 @@ paste(<<DataRef:64/bits, Data/binary>>, Ref) ->
             case {size(Data) div 8, ref_data_size(Kind)} of
                 {Size, RefSize} when Size >= RefSize ->
                     Ref1 = alloc_data(Size, Ref#ref{ kind=Kind }),
-                    ok = set_segment(<<Data:Size/binary-unit:64>>, Ref1),
+                    ok = write(<<Data:Size/binary-unit:64>>, Ref1),
                     Ref1
             end
     end.
@@ -447,23 +447,18 @@ list_element_size(eightBytes) -> 64;
 list_element_size(pointer) -> 64;
 list_element_size(inlineComposite) -> inlineComposite.
 
-get_segment(Len, #ref{ segment=SegmentId, pos=Pos,
-                       offset=Offset, data=Data }) ->
-    ecapnp_data:get_segment(SegmentId, Pos + 1 + Offset, Len, Data).
+read(Len, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data }) ->
+    ecapnp_data:get_segment(SegmentId, Pos + Offset + 1, Len, Data).
 
-set_segment(Value, #ref{ segment=SegmentId, pos=Pos,
-                         offset=Offset, data=Data }) ->
-    ecapnp_data:update_segment({SegmentId, Pos + 1 + Offset}, Value, Data).
-
-write(#ref{ pos=-1 }) -> ok;
-write(#ref{ offset=Offset }=Ref) ->
-    write(create_ptr(Offset, Ref), 0, Ref).
+write(Bin, Offset, #ref{ segment=SegmentId, pos=Pos, data=Data }) ->
+    ecapnp_data:update_segment({SegmentId, Pos + Offset}, Bin, Data).
 
 write(Bin, #ref{ offset=Offset }=Ref) ->
     write(Bin, Offset + 1, Ref).
 
-write(Bin, Offset, #ref{ segment=SegmentId, pos=Pos, data=Data }) ->
-    ecapnp_data:update_segment({SegmentId, Pos + Offset}, Bin, Data).
+write(#ref{ pos=-1 }) -> ok;
+write(#ref{ offset=Offset }=Ref) ->
+    write(create_ptr(Offset, Ref), 0, Ref).
 
 check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
           #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
@@ -565,7 +560,7 @@ copy_ref(#ref{ kind=#list_ref{ size=Size, count=Count } }=Ref) ->
         _ ->
             ElementSize = list_element_size(Size),
             Len = 1 + (((ElementSize * Count) - 1) div 64),
-            {Ref, Len, [get_segment(Len, Ref)]}
+            {Ref, Len, [read(Len, Ref)]}
     end.
 
 flatten_ref_copy({Ref, Len, Copy}) ->
