@@ -35,7 +35,20 @@
 data_value() ->
     union(
       [?LET(B, boolean(), {1, bool, B}),
-       ?LET(I, integer(-128, 127), {8, int8, I})
+       ?LET(I, integer(-16#80, 16#7f), {8, int8, I}),
+       ?LET(I, integer(-16#8000, 16#7fff), {16, int16, I}),
+       ?LET(I, integer(-16#80000000, 16#7fffffff), {32, int32, I}),
+       ?LET(I, integer(-16#8000000000000000, 16#7fffffffffffffff), {64, int64, I}),
+       ?LET(I, integer(0, 16#ff), {8, uint8, I}),
+       ?LET(I, integer(0, 16#ffff), {16, uint16, I}),
+       ?LET(I, integer(0, 16#ffffffff), {32, uint32, I}),
+       ?LET(I, integer(0, 16#ffffffffffffffff), {64, uint64, I}),
+       ?LET(F, float(-3.4e38, 3.4e38), {32, float32, F}), %% bound it to just under 32 bit
+       ?LET(F, float(), {64, float64, F}), %% erlang floats are 64 bit
+       ?LET([{S, T}, V], %% test infinity and NaN values..
+            [union([{32, float32}, {64, float64}]),
+             union([nan, inf, '-inf'])],
+            {S, T, V})
       ]).
 
 %% struct ref with at least one word of data
@@ -118,7 +131,7 @@ field_names() ->
 prop_capnp_value() ->
     ?FORALL(
        {_S, T, V}, data_value(),
-       V =:= ecapnp_val:get(T, ecapnp_val:set(T, V))).
+       compare_value(V, ecapnp_val:get(T, ecapnp_val:set(T, V)))).
 
 %%% ----------------------------------------
 prop_struct_data() ->
@@ -126,6 +139,7 @@ prop_struct_data() ->
        {Def, {Off, Size, Value}}, struct_data(),
        begin
            Root = root(Def),
+           %% note: value is binary
            ok = ecapnp_ref:write_struct_data(Off, Size, Value, Root),
            Value =:= ecapnp_ref:read_struct_data(Off, Size, Root)
        end).
@@ -179,7 +193,7 @@ prop_data_field() ->
              fun (_, false) -> false;
                  ({F, V}, true) ->
                      ok = ecapnp:set(F, V, Obj),
-                     V =:= ecapnp:get(F, Obj)
+                     compare_value(V, ecapnp:get(F, Obj))
              end, true, FVs)
        end).
 
@@ -213,3 +227,11 @@ root(M) ->
 
 %% create new message and get a ref to the root element
 root(A1, A2) -> root(data(A1, A2)).
+
+compare_value(V, V) -> true;
+compare_value(V, W)
+  when is_float(V), is_float(W) ->
+    %% allow "minor" rounding error due to representation limitations
+    Err = (V-W)/V,
+    (Err > -0.1e-5) and (Err < 0.1e-5);
+compare_value(_V, _W) -> false.
