@@ -273,18 +273,30 @@ write_text(Text, Ptr, Ref) ->
 write_data(Data, Ptr, #ref{ segment=SegmentId, data=Pid }=Ref) ->
     check_ptr(Ptr, Ref),
     Count = size(Data),
-    {Seg, Pos}=Segment = ecapnp_data:alloc(
+    List = #list_ref{ size = byte, count = Count },
+    {Seg, Pos} = ecapnp_data:alloc(
                            SegmentId,
                            1 + ((Count - 1) div 8),
                            Pid),
-    SegmentId = Seg, %% TODO: support far ptrs
-    ok = ecapnp_data:update_segment(Segment, Data, Pid),
-    write(
-      update_offset(Pos,
-                    Ptr#ref{ kind=#list_ref{
-                                     size=byte,
-                                     count=Count }
-                           })).
+    {Ref1, Pos1} = if Seg =:= SegmentId ->
+                              {update_offset(
+                                 Pos, Ptr#ref{ kind = List }),
+                               Pos};
+                         true ->
+                              %% write far ptr
+                              ok = write(
+                                    Ptr#ref{
+                                      offset = Pos,
+                                      kind = #far_ref{ segment = Seg }
+                                     }),
+                              %% move target ptr
+                              {Ptr#ref{ segment = Seg, pos = Pos,
+                                        offset = 0, kind = List },
+                               Pos + 1}
+                      end,
+    %% write data and updated ref
+    ok = ecapnp_data:update_segment({Seg, Pos1}, Data, Pid),
+    write(Ref1).
 
 -spec alloc_data(ref()) -> ref().
 %% @doc Allocate data for reference.

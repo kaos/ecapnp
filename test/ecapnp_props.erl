@@ -54,7 +54,8 @@ data_value() ->
 
 ptr_value() ->
     union(
-      [?LET({T, V}, list_ptr(), {{list, T}, V})
+      [?LET({T, V}, list_ptr(), {{list, T}, V, <<0,0,0,0,0,0,0,0>>}),
+       ?LET(V, binary(), {text, V, <<>>})
       ]).
 
 list_ptr() ->
@@ -135,19 +136,19 @@ data_fields([FieldName|FieldNames], Align, Fs, FVs) ->
           )).
 
 %% generate struct ptr field
-ptr_field(FieldName, T, I) ->
+ptr_field(FieldName, T, I, D) ->
     #field{
        name = FieldName,
-       kind = #ptr{ type = T, idx = I, default = <<0,0,0,0,0,0,0,0>> }
+       kind = #ptr{ type = T, idx = I, default = D }
       }.
 
 %% generate list of ptr fields with given field names
 ptr_fields([], Fs, FVs) -> {Fs, FVs};
 ptr_fields([FieldName|FieldNames], Fs, FVs) ->
-    ?LET({T, V}, ptr_value(),
+    ?LET({T, V, D}, ptr_value(),
          ptr_fields(
            FieldNames,
-           [ptr_field(FieldName, T, length(Fs))|Fs],
+           [ptr_field(FieldName, T, length(Fs), D)|Fs],
            [{FieldName, V}|FVs]
           )).
 
