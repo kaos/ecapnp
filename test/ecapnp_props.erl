@@ -68,10 +68,11 @@ list_ptr() ->
        {uint8, list(integer(0, 16#ff))},
        {uint16, list(integer(0, 16#ffff))},
        {uint32, list(integer(0, 16#ffffffff))},
-       {uint64, list(integer(0, 16#ffffffffffffffff))}
+       {uint64, list(integer(0, 16#ffffffffffffffff))},
        %% avoid floats, as they don't compare well..
        %%{float32, list(float(-3.4e38, 3.4e38))},
-       %%{float64, list(float())}
+       %%{float64, list(float())},
+       {text, list(binary())}
       ]).
 
 %% struct ref with at least one word of data
