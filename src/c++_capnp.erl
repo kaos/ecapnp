@@ -1,4 +1,4 @@
-%% This file was generated 2014-04-02 08:38:45 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-02 09:44:05 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module('c++_capnp').
 
@@ -17,5 +17,5 @@ namespace() -> '13386661402618388268'().
 		 kind = #annotation{type = #ptr{type = text, idx = 0, default = <<>>}, targets = [targetsFile]}}.
 
 schema(namespace) -> schema(13386661402618388268);
-schema(13386661402618388268) -> {ok, '13386661402618388268'()};
+schema(13386661402618388268) -> '13386661402618388268'();
 schema(_) -> undefined.

@@ -36,7 +36,7 @@
 %% @doc Allocate data for a new object.
 -spec alloc(type_name(), segment_id(), pid()) -> object().
 alloc(Type, SegmentId, Data) when is_pid(Data) ->
-    {ok, T} = ecapnp_schema:lookup(Type, Data),
+    T = ecapnp_schema:get(Type, Data),
     Ref = ecapnp_ref:alloc(
             ecapnp_schema:get_ref_kind(T),
             SegmentId, 1 + ecapnp_schema:size_of(T), Data),
@@ -95,10 +95,7 @@ to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
   when Kind == null;
        is_record(Kind, struct_ref);
        is_record(Kind, interface_ref) ->
-    T = case ecapnp_schema:lookup(Type, Object) of
-            {ok, FoundType} -> FoundType;
-            _ -> object
-        end,
+    T = ecapnp_schema:lookup(Type, Object, object),
     Object#object{ schema=T }.
 
 %% @doc Type cast object to list of type.

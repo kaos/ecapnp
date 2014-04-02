@@ -24,8 +24,9 @@
 -module(ecapnp_schema).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([type_of/1, lookup/2, size_of/1, size_of/2, data_size/1,
-         ptrs_size/1, get_ref_kind/1, get_ref_kind/2, set_ref_to/2]).
+-export([type_of/1, get/2, lookup/2, lookup/3, size_of/1, size_of/2,
+         data_size/1, ptrs_size/1, get_ref_kind/1, get_ref_kind/2,
+         set_ref_to/2]).
 
 -include("ecapnp.hrl").
 
@@ -39,12 +40,28 @@
 %% API functions
 %% ===================================================================
 
+get(Type, Schema) ->
+    case lookup(Type, Schema) of
+        undefined -> throw({schema_not_found, Type, Schema});
+        Node -> Node
+    end.
+
+lookup(Type, Schema, Default) ->
+    case lookup(Type, Schema) of
+        undefined -> Default;
+        Node -> Node
+    end.
+
 -spec lookup(lookup_type(), lookup_search()) ->
                     {ok, schema_node()} | {unknown_type, Type::lookup_type()}.
 %% @doc Find schema node for type.
-lookup(N, _) when is_record(N, schema_node) -> {ok, N};
-lookup(Id, #schema_node{ id=Id }=N) -> {ok, N};
-lookup(Name, #schema_node{ name=Name }=N) -> {ok, N};
+lookup(N, _) when is_record(N, schema_node) -> N;
+lookup(Type, Schema) when is_atom(Schema) -> Schema:schema(Type);
+lookup(Id, #schema_node{ id=Id }=N) -> N;
+lookup(Name, #schema_node{ name=Name }=N) -> N;
+lookup(Type, #schema_node{ module=Module }) when Module /= undefined -> lookup(Type, Module);
+
+%% deprecated clauses..
 lookup(Type, #schema_node{ nodes=Ns }) -> lookup(Type, Ns);
 lookup(Type, #object{ ref=#ref{ data=Pid } }) -> lookup(Type, Pid);
 lookup(Type, #ref{ data=Pid }) -> lookup(Type, Pid);

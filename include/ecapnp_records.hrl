@@ -1,6 +1,7 @@
 
 %% Common record for all schema nodes
 -record(schema_node, {
+          module :: atom(),
           name :: ecapnp:type_name(),
           id=0 :: ecapnp:type_id(),
           src = <<>> :: ecapnp:text(),

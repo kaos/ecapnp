@@ -29,7 +29,8 @@
                      binary_field/1, application/2, form_list/1,
                      set_precomments/2, comment/1, string/1,
                      integer/1, tuple/1, arity_qualifier/2,
-                     binary_field/3, list/1, attribute/2]).
+                     binary_field/3, list/1, attribute/2, macro/1,
+                     variable/1]).
 
 -include("capnp/schema.capnp.hrl").
 
@@ -135,7 +136,7 @@ compile_nodes(ExportedNodes) ->
                     clause(
                       [integer(Id)],
                       none,
-                      [tuple([atom(ok), application(IdAst, [])])])
+                      [application(IdAst, [])])
                     |Acc]
            end,
            [clause([underscore()], none, [atom(undefined)])],
@@ -151,7 +152,8 @@ compile_node({IdAst, NameAst, Node}) ->
          none,
          [record_expr(
             atom(schema_node),
-            [record_field(atom(name), NameAst),
+            [record_field(atom(module), macro(variable('MODULE'))),
+             record_field(atom(name), NameAst),
              record_field(atom(id), integer(Id)),
              record_field(atom(src),
                           binary(

@@ -4,6 +4,6 @@
   {vsn, "0.2"},
   {registered, []},
   {applications, [ kernel, stdlib, crypto ]},
-  {modules, []},
+  {modules, [ecapnp_capability, ecapnpc, ecapnp_val, ecapnp_obj, ecapnp_schema, ecapnp_compiler, ecapnp_get, ecapnp_ref, ecapnp_serialize, ecapnp, ecapnp_message, ecapnp_data, ecapnp_set, 'c++_capnp', schema_capnp]},
   {env, []}
  ]}.

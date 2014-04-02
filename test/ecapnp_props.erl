@@ -185,6 +185,8 @@ schema_ptr_fields() ->
     ?LET(FieldNames, field_names(), schema_ptr_fields(FieldNames)).
 
 
+
+
 %%% ----------------------------------------
 %% property tests
 %%% ----------------------------------------
@@ -225,7 +227,6 @@ prop_struct_ptr() ->
            end
        end).
 
-
 %%% ----------------------------------------
 prop_text_data() ->
     ?FORALL(
@@ -243,7 +244,6 @@ prop_text_data() ->
            Text =:= ecapnp_ref:read_text(Ref1)
        end).
 
-
 %%% ----------------------------------------
 prop_data_field() ->
     ?FORALL(Data, schema_data_fields(), test_field_access(Data)).
@@ -260,6 +260,39 @@ test_field_access({Schema, FVs}) ->
               ok = ecapnp:set(F, V, Obj),
               compare_value(V, ecapnp:get(F, Obj))
       end, FVs).
+
+%%% ----------------------------------------
+prop_find_schema() ->
+    ?FORALL(
+       {IdOrType, S}, schema(),
+       begin
+           %% find by schema module name
+           ByModule = S =:= ecapnp_schema:lookup(IdOrType, schema_capnp),
+           %% find by schema from same schema file
+           BySchema = S =:= ecapnp_schema:lookup(IdOrType, schema_capnp:'Type'()),
+           %% already got the schema..
+           NoOp = S =:= ecapnp_schema:lookup(IdOrType, S),
+           NoOp2 = S =:= ecapnp_schema:lookup(S, no_matter),
+           ?WHENFAIL(
+              io:format("Type: ~p failed lookup by: ~p~n",
+                        [IdOrType,
+                         [By || {By, false} <- [{module, ByModule},
+                                                {schema, BySchema},
+                                                {no_op, NoOp},
+                                                {no_op2, NoOp2}
+                                               ]]]),
+              ByModule and BySchema and NoOp and NoOp2
+             )
+       end).
+
+schema() ->
+    union(
+     [?LET({Id, _Type}, schema_types(), {Id, schema_capnp:schema(Id)}),
+      ?LET({_Id, Type}, schema_types(), {Type, schema_capnp:schema(Type)})
+     ]).
+
+schema_types() ->
+    union(proplists:get_value(types, schema_capnp:module_info(attributes))).
 
 
 %%% ----------------------------------------

@@ -1,4 +1,4 @@
-%% This file was generated 2014-04-02 08:38:44 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-02 09:56:52 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(schema_capnp).
 
@@ -39,7 +39,8 @@
 'Node'() -> '16610026722781537303'().
 
 '16610026722781537303'() ->
-    #schema_node{name = 'Node', id = 16610026722781537303, src = <<"src/schema.capnp:Node">>,
+    #schema_node{module = ?MODULE, name = 'Node', id = 16610026722781537303,
+		 src = <<"src/schema.capnp:Node">>,
 		 kind =
 		     #struct{dsize = 5, psize = 5, esize = inlineComposite,
 			     union_field =
@@ -70,7 +71,7 @@
 'Node.NestedNode'() -> '16050641862814319170'().
 
 '16050641862814319170'() ->
-    #schema_node{name = 'Node.NestedNode', id = 16050641862814319170,
+    #schema_node{module = ?MODULE, name = 'Node.NestedNode', id = 16050641862814319170,
 		 src = <<"src/schema.capnp:Node.NestedNode">>,
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
@@ -81,7 +82,7 @@
 'Node.annotation'() -> '17011813041836786320'().
 
 '17011813041836786320'() ->
-    #schema_node{name = 'Node.annotation', id = 17011813041836786320,
+    #schema_node{module = ?MODULE, name = 'Node.annotation', id = 17011813041836786320,
 		 src = <<"src/schema.capnp:Node.annotation">>,
 		 kind =
 		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
@@ -104,7 +105,7 @@
 'Node.const'() -> '12793219851699983392'().
 
 '12793219851699983392'() ->
-    #schema_node{name = 'Node.const', id = 12793219851699983392,
+    #schema_node{module = ?MODULE, name = 'Node.const', id = 12793219851699983392,
 		 src = <<"src/schema.capnp:Node.const">>,
 		 kind =
 		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
@@ -118,7 +119,7 @@
 'Node.interface'() -> '16728431493453586831'().
 
 '16728431493453586831'() ->
-    #schema_node{name = 'Node.interface', id = 16728431493453586831,
+    #schema_node{module = ?MODULE, name = 'Node.interface', id = 16728431493453586831,
 		 src = <<"src/schema.capnp:Node.interface">>,
 		 kind =
 		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
@@ -132,7 +133,8 @@
 'Node.enum'() -> '13063450714778629528'().
 
 '13063450714778629528'() ->
-    #schema_node{name = 'Node.enum', id = 13063450714778629528, src = <<"src/schema.capnp:Node.enum">>,
+    #schema_node{module = ?MODULE, name = 'Node.enum', id = 13063450714778629528,
+		 src = <<"src/schema.capnp:Node.enum">>,
 		 kind =
 		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
 			     fields =
@@ -144,7 +146,7 @@
 'Node.struct'() -> '11430331134483579957'().
 
 '11430331134483579957'() ->
-    #schema_node{name = 'Node.struct', id = 11430331134483579957,
+    #schema_node{module = ?MODULE, name = 'Node.struct', id = 11430331134483579957,
 		 src = <<"src/schema.capnp:Node.struct">>,
 		 kind =
 		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
@@ -165,7 +167,8 @@
 'Field'() -> '11145653318641710175'().
 
 '11145653318641710175'() ->
-    #schema_node{name = 'Field', id = 11145653318641710175, src = <<"src/schema.capnp:Field">>,
+    #schema_node{module = ?MODULE, name = 'Field', id = 11145653318641710175,
+		 src = <<"src/schema.capnp:Field">>,
 		 kind =
 		     #struct{dsize = 3, psize = 4, esize = inlineComposite,
 			     union_field =
@@ -186,14 +189,14 @@
 'Field.noDiscriminant'() -> '10930602151629473554'().
 
 '10930602151629473554'() ->
-    #schema_node{name = 'Field.noDiscriminant', id = 10930602151629473554,
+    #schema_node{module = ?MODULE, name = 'Field.noDiscriminant', id = 10930602151629473554,
 		 src = <<"src/schema.capnp:Field.noDiscriminant">>,
 		 kind = #const{field = #data{type = uint16, align = 0, default = <<255, 255>>}}}.
 
 'Field.ordinal'() -> '13515537513213004774'().
 
 '13515537513213004774'() ->
-    #schema_node{name = 'Field.ordinal', id = 13515537513213004774,
+    #schema_node{module = ?MODULE, name = 'Field.ordinal', id = 13515537513213004774,
 		 src = <<"src/schema.capnp:Field.ordinal">>,
 		 kind =
 		     #struct{dsize = 3, psize = 4, esize = inlineComposite,
@@ -209,7 +212,7 @@
 'Field.group'() -> '14626792032033250577'().
 
 '14626792032033250577'() ->
-    #schema_node{name = 'Field.group', id = 14626792032033250577,
+    #schema_node{module = ?MODULE, name = 'Field.group', id = 14626792032033250577,
 		 src = <<"src/schema.capnp:Field.group">>,
 		 kind =
 		     #struct{dsize = 3, psize = 4, esize = inlineComposite, union_field = none,
@@ -220,7 +223,7 @@
 'Field.slot'() -> '14133145859926553711'().
 
 '14133145859926553711'() ->
-    #schema_node{name = 'Field.slot', id = 14133145859926553711,
+    #schema_node{module = ?MODULE, name = 'Field.slot', id = 14133145859926553711,
 		 src = <<"src/schema.capnp:Field.slot">>,
 		 kind =
 		     #struct{dsize = 3, psize = 4, esize = inlineComposite, union_field = none,
@@ -235,7 +238,8 @@
 'Enumerant'() -> '10919677598968879693'().
 
 '10919677598968879693'() ->
-    #schema_node{name = 'Enumerant', id = 10919677598968879693, src = <<"src/schema.capnp:Enumerant">>,
+    #schema_node{module = ?MODULE, name = 'Enumerant', id = 10919677598968879693,
+		 src = <<"src/schema.capnp:Enumerant">>,
 		 kind =
 		     #struct{dsize = 1, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
@@ -249,7 +253,8 @@
 'Method'() -> '10736806783679155584'().
 
 '10736806783679155584'() ->
-    #schema_node{name = 'Method', id = 10736806783679155584, src = <<"src/schema.capnp:Method">>,
+    #schema_node{module = ?MODULE, name = 'Method', id = 10736806783679155584,
+		 src = <<"src/schema.capnp:Method">>,
 		 kind =
 		     #struct{dsize = 3, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
@@ -267,7 +272,8 @@
 'Type'() -> '15020482145304562784'().
 
 '15020482145304562784'() ->
-    #schema_node{name = 'Type', id = 15020482145304562784, src = <<"src/schema.capnp:Type">>,
+    #schema_node{module = ?MODULE, name = 'Type', id = 15020482145304562784,
+		 src = <<"src/schema.capnp:Type">>,
 		 kind =
 		     #struct{dsize = 2, psize = 1, esize = inlineComposite,
 			     union_field =
@@ -292,7 +298,7 @@
 'Type.interface'() -> '17116997365232503999'().
 
 '17116997365232503999'() ->
-    #schema_node{name = 'Type.interface', id = 17116997365232503999,
+    #schema_node{module = ?MODULE, name = 'Type.interface', id = 17116997365232503999,
 		 src = <<"src/schema.capnp:Type.interface">>,
 		 kind =
 		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
@@ -303,7 +309,7 @@
 'Type.struct'() -> '12410354185295152851'().
 
 '12410354185295152851'() ->
-    #schema_node{name = 'Type.struct', id = 12410354185295152851,
+    #schema_node{module = ?MODULE, name = 'Type.struct', id = 12410354185295152851,
 		 src = <<"src/schema.capnp:Type.struct">>,
 		 kind =
 		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
@@ -314,7 +320,8 @@
 'Type.enum'() -> '11389172934837766057'().
 
 '11389172934837766057'() ->
-    #schema_node{name = 'Type.enum', id = 11389172934837766057, src = <<"src/schema.capnp:Type.enum">>,
+    #schema_node{module = ?MODULE, name = 'Type.enum', id = 11389172934837766057,
+		 src = <<"src/schema.capnp:Type.enum">>,
 		 kind =
 		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
@@ -324,7 +331,8 @@
 'Type.list'() -> '9792858745991129751'().
 
 '9792858745991129751'() ->
-    #schema_node{name = 'Type.list', id = 9792858745991129751, src = <<"src/schema.capnp:Type.list">>,
+    #schema_node{module = ?MODULE, name = 'Type.list', id = 9792858745991129751,
+		 src = <<"src/schema.capnp:Type.list">>,
 		 kind =
 		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
@@ -335,7 +343,8 @@
 'Value'() -> '14853958794117909659'().
 
 '14853958794117909659'() ->
-    #schema_node{name = 'Value', id = 14853958794117909659, src = <<"src/schema.capnp:Value">>,
+    #schema_node{module = ?MODULE, name = 'Value', id = 14853958794117909659,
+		 src = <<"src/schema.capnp:Value">>,
 		 kind =
 		     #struct{dsize = 2, psize = 1, esize = inlineComposite,
 			     union_field =
@@ -377,7 +386,7 @@
 'Annotation'() -> '17422339044421236034'().
 
 '17422339044421236034'() ->
-    #schema_node{name = 'Annotation', id = 17422339044421236034,
+    #schema_node{module = ?MODULE, name = 'Annotation', id = 17422339044421236034,
 		 src = <<"src/schema.capnp:Annotation">>,
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
@@ -390,7 +399,7 @@
 'ElementSize'() -> '15102134695616452902'().
 
 '15102134695616452902'() ->
-    #schema_node{name = 'ElementSize', id = 15102134695616452902,
+    #schema_node{module = ?MODULE, name = 'ElementSize', id = 15102134695616452902,
 		 src = <<"src/schema.capnp:ElementSize">>,
 		 kind =
 		     #enum{values =
@@ -400,7 +409,7 @@
 'CodeGeneratorRequest'() -> '13818529054586492878'().
 
 '13818529054586492878'() ->
-    #schema_node{name = 'CodeGeneratorRequest', id = 13818529054586492878,
+    #schema_node{module = ?MODULE, name = 'CodeGeneratorRequest', id = 13818529054586492878,
 		 src = <<"src/schema.capnp:CodeGeneratorRequest">>,
 		 kind =
 		     #struct{dsize = 0, psize = 2, esize = inlineComposite, union_field = none,
@@ -416,8 +425,8 @@
 'CodeGeneratorRequest.RequestedFile'() -> '14981803260258615394'().
 
 '14981803260258615394'() ->
-    #schema_node{name = 'CodeGeneratorRequest.RequestedFile', id = 14981803260258615394,
-		 src = <<"src/schema.capnp:CodeGeneratorRequest.RequestedFile">>,
+    #schema_node{module = ?MODULE, name = 'CodeGeneratorRequest.RequestedFile',
+		 id = 14981803260258615394, src = <<"src/schema.capnp:CodeGeneratorRequest.RequestedFile">>,
 		 kind =
 		     #struct{dsize = 1, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
@@ -431,8 +440,8 @@
 'CodeGeneratorRequest.RequestedFile.Import'() -> '12560611460656617445'().
 
 '12560611460656617445'() ->
-    #schema_node{name = 'CodeGeneratorRequest.RequestedFile.Import', id = 12560611460656617445,
-		 src = <<"src/schema.capnp:CodeGeneratorRequest.RequestedFile.Import">>,
+    #schema_node{module = ?MODULE, name = 'CodeGeneratorRequest.RequestedFile.Import',
+		 id = 12560611460656617445, src = <<"src/schema.capnp:CodeGeneratorRequest.RequestedFile.Import">>,
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
@@ -440,53 +449,53 @@
 				  #field{name = name, kind = #ptr{type = text, idx = 0, default = <<>>}}]}}.
 
 schema('Node') -> schema(16610026722781537303);
-schema(16610026722781537303) -> {ok, '16610026722781537303'()};
+schema(16610026722781537303) -> '16610026722781537303'();
 schema('Node.NestedNode') -> schema(16050641862814319170);
-schema(16050641862814319170) -> {ok, '16050641862814319170'()};
+schema(16050641862814319170) -> '16050641862814319170'();
 schema('Node.annotation') -> schema(17011813041836786320);
-schema(17011813041836786320) -> {ok, '17011813041836786320'()};
+schema(17011813041836786320) -> '17011813041836786320'();
 schema('Node.const') -> schema(12793219851699983392);
-schema(12793219851699983392) -> {ok, '12793219851699983392'()};
+schema(12793219851699983392) -> '12793219851699983392'();
 schema('Node.interface') -> schema(16728431493453586831);
-schema(16728431493453586831) -> {ok, '16728431493453586831'()};
+schema(16728431493453586831) -> '16728431493453586831'();
 schema('Node.enum') -> schema(13063450714778629528);
-schema(13063450714778629528) -> {ok, '13063450714778629528'()};
+schema(13063450714778629528) -> '13063450714778629528'();
 schema('Node.struct') -> schema(11430331134483579957);
-schema(11430331134483579957) -> {ok, '11430331134483579957'()};
+schema(11430331134483579957) -> '11430331134483579957'();
 schema('Field') -> schema(11145653318641710175);
-schema(11145653318641710175) -> {ok, '11145653318641710175'()};
+schema(11145653318641710175) -> '11145653318641710175'();
 schema('Field.noDiscriminant') -> schema(10930602151629473554);
-schema(10930602151629473554) -> {ok, '10930602151629473554'()};
+schema(10930602151629473554) -> '10930602151629473554'();
 schema('Field.ordinal') -> schema(13515537513213004774);
-schema(13515537513213004774) -> {ok, '13515537513213004774'()};
+schema(13515537513213004774) -> '13515537513213004774'();
 schema('Field.group') -> schema(14626792032033250577);
-schema(14626792032033250577) -> {ok, '14626792032033250577'()};
+schema(14626792032033250577) -> '14626792032033250577'();
 schema('Field.slot') -> schema(14133145859926553711);
-schema(14133145859926553711) -> {ok, '14133145859926553711'()};
+schema(14133145859926553711) -> '14133145859926553711'();
 schema('Enumerant') -> schema(10919677598968879693);
-schema(10919677598968879693) -> {ok, '10919677598968879693'()};
+schema(10919677598968879693) -> '10919677598968879693'();
 schema('Method') -> schema(10736806783679155584);
-schema(10736806783679155584) -> {ok, '10736806783679155584'()};
+schema(10736806783679155584) -> '10736806783679155584'();
 schema('Type') -> schema(15020482145304562784);
-schema(15020482145304562784) -> {ok, '15020482145304562784'()};
+schema(15020482145304562784) -> '15020482145304562784'();
 schema('Type.interface') -> schema(17116997365232503999);
-schema(17116997365232503999) -> {ok, '17116997365232503999'()};
+schema(17116997365232503999) -> '17116997365232503999'();
 schema('Type.struct') -> schema(12410354185295152851);
-schema(12410354185295152851) -> {ok, '12410354185295152851'()};
+schema(12410354185295152851) -> '12410354185295152851'();
 schema('Type.enum') -> schema(11389172934837766057);
-schema(11389172934837766057) -> {ok, '11389172934837766057'()};
+schema(11389172934837766057) -> '11389172934837766057'();
 schema('Type.list') -> schema(9792858745991129751);
-schema(9792858745991129751) -> {ok, '9792858745991129751'()};
+schema(9792858745991129751) -> '9792858745991129751'();
 schema('Value') -> schema(14853958794117909659);
-schema(14853958794117909659) -> {ok, '14853958794117909659'()};
+schema(14853958794117909659) -> '14853958794117909659'();
 schema('Annotation') -> schema(17422339044421236034);
-schema(17422339044421236034) -> {ok, '17422339044421236034'()};
+schema(17422339044421236034) -> '17422339044421236034'();
 schema('ElementSize') -> schema(15102134695616452902);
-schema(15102134695616452902) -> {ok, '15102134695616452902'()};
+schema(15102134695616452902) -> '15102134695616452902'();
 schema('CodeGeneratorRequest') -> schema(13818529054586492878);
-schema(13818529054586492878) -> {ok, '13818529054586492878'()};
+schema(13818529054586492878) -> '13818529054586492878'();
 schema('CodeGeneratorRequest.RequestedFile') -> schema(14981803260258615394);
-schema(14981803260258615394) -> {ok, '14981803260258615394'()};
+schema(14981803260258615394) -> '14981803260258615394'();
 schema('CodeGeneratorRequest.RequestedFile.Import') -> schema(12560611460656617445);
-schema(12560611460656617445) -> {ok, '12560611460656617445'()};
+schema(12560611460656617445) -> '12560611460656617445'();
 schema(_) -> undefined.
