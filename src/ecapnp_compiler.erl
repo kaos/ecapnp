@@ -59,7 +59,7 @@ compile_root(Root) ->
 compile_file(File, Nodes) ->
     Id = schema(get, id, File),
     ExportedNodes = get_exported_nodes(Id, Nodes),
-    Filename = filename:rootname(schema(get, filename, File), <<".capnp">>),
+    Filename = compile_filename(File),
 
     Vsn =
         case application:get_key(ecapnp, vsn) of
@@ -85,17 +85,19 @@ compile_file(File, Nodes) ->
           ]),
         attribute(atom(vsn), [integer(Id)]),
         attribute(atom(export), [compile_exports(ExportedNodes)]),
+        attribute(atom(types), [compile_types(ExportedNodes)]),
         attribute(atom(include_lib), [string("ecapnp/include/ecapnp.hrl")])
         |compile_nodes(ExportedNodes)
        ])}.
 
+compile_filename(File) ->
+    B = binary:replace(
+          filename:rootname(schema(get, filename, File), <<".capnp">>),
+          <<".">>, <<"_">>, [global]),
+    <<B/binary, "_capnp">>.
+    
 compile_modulename(Filename) ->
-    atom(
-      binary_to_list(
-        binary:replace(
-          filename:basename(Filename),
-          <<".">>, <<"_">>, [global])
-       )).
+    atom(binary_to_list(filename:basename(Filename))).
 
 compile_exports(ExportedNodes) ->
     Exports = lists:foldr(
@@ -104,6 +106,13 @@ compile_exports(ExportedNodes) ->
                          arity_qualifier(IdAst, integer(0))|Acc]
                 end, [], ExportedNodes),
     list([arity_qualifier(atom(schema), integer(1))|Exports]).
+
+compile_types(ExportedNodes) ->
+    Types = [begin
+                 Id = schema(get, id, Schema),
+                 tuple([integer(Id), NameAst])
+             end || {_IdAst, NameAst, Schema} <- ExportedNodes],
+    list(Types).
 
 compile_nodes(ExportedNodes) ->
     lists:foldr(
