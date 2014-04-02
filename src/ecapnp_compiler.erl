@@ -392,6 +392,7 @@ capnp_type_info(float64) -> {data_field, {float64, 64}};
 capnp_type_info(text) -> {ptr_field, text};
 capnp_type_info(data) -> {ptr_field, data};
 capnp_type_info(object) -> {ptr_field, object};
+capnp_type_info(anyPointer) -> {ptr_field, object};
 capnp_type_info({list, List}) -> {ptr_field, {list, list_field_type(List)}};
 capnp_type_info({enum, Enum}) -> {data_field, {{enum, schema(get, typeId, Enum)}, 16}};
 capnp_type_info({RefT, Obj})

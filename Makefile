@@ -10,9 +10,12 @@ EDOC_OPTS = preprocess
 # call `make tests TEST_DEPS=` after the first run in order to skip
 # the `make all` for all test deps.. (which for meck using rebar is
 # sloooow... :/ )
-TEST_DEPS ?= meck
+TEST_DEPS ?= meck proper
 
 dep_meck = https://github.com/eproxus/meck.git master
+dep_proper = pkg://proper master
+
+PKG_FILE_URL ?= https://raw.github.com/kaos/erlang.mk/master/packages.v1.tsv
 
 include erlang.mk
 
