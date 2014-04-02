@@ -143,7 +143,7 @@ data_state({Schema, Data}) ->
                                  data=empty_message(Data) } };
             true ->
                  S1#state{ msg=(S1#state.msg)#msg{
-                                 alloc=[size(Data)],
+                                 alloc=[size(Data) div 8],
                                  data=[Data] } }
          end,
     data_state(S2).
@@ -220,16 +220,15 @@ do_alloc(Id, Size, State) ->
 
 do_alloc_data(Id, Size, State) ->
     Segment = get_segment(Id, State),
-    SegSize = size(Segment),
+    SegSize = size(Segment) div 8,
     Msg = State#state.msg,
     Alloc = Msg#msg.alloc,
-    AllocSize = Size * 8,
     {PreA, [Alloced|PostA]} = lists:split(Id, Alloc),
-    if AllocSize =< (SegSize - Alloced) ->
-            {{Id, Alloced div 8},
+    if Size =< (SegSize - Alloced) ->
+            {{Id, Alloced},
              State#state{
                msg=Msg#msg{
-                     alloc = PreA ++ [Alloced + AllocSize|PostA]
+                     alloc = PreA ++ [Alloced + Size|PostA]
                     }}
             };
        true -> {false, State}

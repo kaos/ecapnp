@@ -1,32 +1,47 @@
 #!/usr/bin/env escript
 %% -*- mode: erlang -*-
 
--include("addressbook.capnp.hrl").
+main(Args) ->
+    try process(Args)
+    catch
+        C:E ->
+            io:format(standard_error,
+                      "~s ~p: ~s:~p~n"
+                      "~p~n",
+                      [escript:script_name(), Args, C, E,
+                       erlang:get_stacktrace()]),
+            halt(2)
+    end.
 
-main(["read"|Args]) ->
+process(["read"|Args]) ->
     read(Args);
-main(["write"|Args]) ->
+process(["write"|Args]) ->
     write(Args);
-main(_) ->
-    io:format("Usage: addressbook.sh {read [filename] | write}~n").
+process(_) ->
+    io:format(standard_error,
+              "Usage: ~s {read [filename] | write}~n",
+              [escript:script_name()]),
+    halt(1).
 
 read([FileName]) ->
     {ok, Data} = file:read_file(FileName),
     dump_message(Data);
 read([]) ->
-    io:format("Reading message from stdin~n"
+    io:format(standard_error,
+              "Reading message from stdin~n"
               "  (note, this will likely fail)~n"
               "  (if you are on windows,     )~n"
-              "  (see README.                )~n~n"),
+              "  (see README.                )~n~n",
+              []),
     dump_message(read_stdin()).
 
-write([]) ->    
-    {ok, Root} = addressbook(root, 'AddressBook'),
-    [Alice, Bob, Steve] = addressbook(set, people, 3, Root),
-    [AlicePhone] = addressbook(set, phones, 1, Alice),
-    [BobPhone1, BobPhone2] = addressbook(set, phones, 2, Bob),
-    [addressbook(set, Field, Value, Obj)
-     || {Obj, FieldValues} <- 
+write([]) ->
+    {ok, Root} = ecapnp:set_root('AddressBook', addressbook_capnp),
+    [Alice, Bob, Steve] = ecapnp:set(people, 3, Root),
+    [AlicePhone] = ecapnp:set(phones, 1, Alice),
+    [BobPhone1, BobPhone2] = ecapnp:set(phones, 2, Bob),
+    [ecapnp:set(Field, Value, Obj)
+     || {Obj, FieldValues} <-
             [{Alice,
               [{id, 123},
                {name, <<"Alice">>},
@@ -75,20 +90,20 @@ dump_message(Data) ->
     %% unpack and read message data
     {ok, Message} = ecapnp_message:read(
                       ecapnp_serialize:unpack(Data)),
-    {ok, Root} = addressbook(root, 'AddressBook', Message),
-    People = addressbook(get, people, Root),
+    {ok, Root} = ecapnp:get_root('AddressBook', addressbook_capnp, Message),
+    People = ecapnp:get(people, Root),
     [dump_person(Person) || Person <- People].
 
 dump_person(Person) ->
-    io:format("#~p ", [addressbook(get, id, Person)]),
-    io:format("~s: ~s~n", [addressbook(get, name, Person),
-                           addressbook(get, email, Person)]),
-    Phones = addressbook(get, phones, Person),
-    [io:format("  ~s phone: ~s~n", [addressbook(get, type, P),
-                                    addressbook(get, number, P)]) 
+    io:format("#~p ", [ecapnp:get(id, Person)]),
+    io:format("~s: ~s~n", [ecapnp:get(name, Person),
+                           ecapnp:get(email, Person)]),
+    Phones = ecapnp:get(phones, Person),
+    [io:format("  ~s phone: ~s~n", [ecapnp:get(type, P),
+                                    ecapnp:get(number, P)])
      || P <- Phones],
     %% hmm... not the best looking api, this.. :/
-    case addressbook(get, addressbook(get, employment, Person)) of
+    case ecapnp:get(ecapnp:get(employment, Person)) of
         unemployed -> io:format("  unemployed~n");
         {employer, Employer} ->
             io:format("  employer: ~s~n", [Employer]);
