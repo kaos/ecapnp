@@ -67,15 +67,15 @@ lookup(Type, #object{ ref=#ref{ data=Pid } }) -> lookup(Type, Pid);
 lookup(Type, #ref{ data=Pid }) -> lookup(Type, Pid);
 lookup(Type, Pid) when is_pid(Pid) ->
     case ecapnp_data:get_type(Type, Pid) of
-        false -> {unknown_type, Type};
-        N when is_record(N, schema_node) -> {ok, N}
+        false -> undefined;
+        Res -> Res
     end;
 lookup(Type, [N|Ns]) -> 
-    Res = lookup(Type, N),
-    if element(1, Res) == ok -> Res;
-       true -> lookup(Type, Ns)
+    case lookup(Type, N) of
+        undefined -> lookup(Type, Ns);
+        Res -> Res
     end;
-lookup(Type, _) -> {unknown_type, Type}.
+lookup(Type, Schema) -> {unknown_type, {Type, Schema}}.
 
 -spec type_of(object()) -> schema_node().
 %% @doc Get type of object.
@@ -85,8 +85,7 @@ type_of(#object{ schema=Type }) -> Type.
 -spec size_of(lookup_type(), lookup_search()) -> non_neg_integer().
 %% @doc Lookup struct type and query it's size.
 size_of(Type, Store) ->    
-    {ok, T} = lookup(Type, Store),
-    size_of(T).
+    size_of(lookup(Type, Store)).
 
 -spec size_of(Node::schema_node()) -> non_neg_integer().
 %% @doc Query size of a struct type.
@@ -117,8 +116,7 @@ get_ref_kind(#interface{ struct=Struct }) ->
     setelement(1, get_ref_kind(Struct), interface_ref).
 
 get_ref_kind(Type, Ref) when is_atom(Type); is_number(Type) ->
-    {ok, T} = lookup(Type, Ref),
-    get_ref_kind(T);
+    get_ref_kind(lookup(Type, Ref));
 get_ref_kind(Type, _) ->
     get_ref_kind(Type).
 

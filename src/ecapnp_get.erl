@@ -153,7 +153,7 @@ read_obj(Type, Ref, _) ->
     ecapnp_obj:from_ref(Ref, Type).
 
 get_enum_value(Type, Tag, Ref) ->
-    {ok, #schema_node{ kind=#enum{ values=Values } }}
+    #schema_node{ kind=#enum{ values=Values } }
         = ecapnp_schema:lookup(Type, Ref),
     case lists:keyfind(Tag, 1, Values) of
         {Tag, Value} -> Value;

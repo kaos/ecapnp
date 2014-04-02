@@ -1,4 +1,4 @@
-%% This file was generated 2014-04-02 09:44:05 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-02 11:48:42 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module('c++_capnp').
 
@@ -13,7 +13,8 @@
 namespace() -> '13386661402618388268'().
 
 '13386661402618388268'() ->
-    #schema_node{name = namespace, id = 13386661402618388268, src = <<"src/c++.capnp:namespace">>,
+    #schema_node{module = ?MODULE, name = namespace, id = 13386661402618388268,
+		 src = <<"src/c++.capnp:namespace">>,
 		 kind = #annotation{type = #ptr{type = text, idx = 0, default = <<>>}, targets = [targetsFile]}}.
 
 schema(namespace) -> schema(13386661402618388268);

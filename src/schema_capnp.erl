@@ -1,4 +1,4 @@
-%% This file was generated 2014-04-02 09:56:52 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-02 11:48:43 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(schema_capnp).
 

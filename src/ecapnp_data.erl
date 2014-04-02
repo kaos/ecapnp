@@ -148,6 +148,8 @@ data_state({Schema, Data}) ->
          end,
     data_state(S2).
 
+new_state(#msg{ schema=Schema }=Msg) when is_atom(Schema) ->
+    #state{ msg=Msg, nodes=Schema };
 new_state(#msg{ schema=Schema }=Msg) ->
     #state{
        msg=Msg,
@@ -258,6 +260,8 @@ do_get_segment(Id, Offset, Length, State) ->
 do_get_segment_size(Id, State) ->
     {size(get_segment(Id, State)) div 8, State}.
 
+do_get_type(Type, #state{ nodes=Schema }=State) when is_atom(Schema) ->
+    {ecapnp_schema:lookup(Type, Schema), State};
 do_get_type(Type, #state{ nodes=Ns }=State) when is_atom(Type) ->
     {lists:keyfind(Type, #schema_node.name, Ns), State};
 do_get_type(Type, #state{ nodes=Ns }=State) when is_integer(Type) ->

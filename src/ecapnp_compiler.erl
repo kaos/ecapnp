@@ -32,7 +32,7 @@
                      binary_field/3, list/1, attribute/2, macro/1,
                      variable/1]).
 
--include("capnp/schema.capnp.hrl").
+-include("ecapnp.hrl").
 
 -type compiled_message() :: {file, erl_syntax:syntaxTree()}.
 
@@ -44,7 +44,7 @@
 -spec compile( message() ) -> {ok, [compiled_message()]}.
 compile(Message)
   when is_list(Message), is_binary(hd(Message)) ->
-    {ok, Root} = schema(root, 'CodeGeneratorRequest', Message),
+    {ok, Root} = ecapnp:get_root('CodeGeneratorRequest', schema_capnp, Message),
     compile_root(Root).
 
 
@@ -53,12 +53,12 @@ compile(Message)
 %% ===================================================================
 
 compile_root(Root) ->
-    Nodes = schema(get, nodes, Root),
-    Files = schema(get, requestedFiles, Root),
+    Nodes = ecapnp:get(nodes, Root),
+    Files = ecapnp:get(requestedFiles, Root),
     {ok, [compile_file(File, Nodes) || File <- Files]}.
 
 compile_file(File, Nodes) ->
-    Id = schema(get, id, File),
+    Id = ecapnp:get(id, File),
     ExportedNodes = get_exported_nodes(Id, Nodes),
     Filename = compile_filename(File),
 
@@ -93,7 +93,7 @@ compile_file(File, Nodes) ->
 
 compile_filename(File) ->
     B = binary:replace(
-          filename:rootname(schema(get, filename, File), <<".capnp">>),
+          filename:rootname(ecapnp:get(filename, File), <<".capnp">>),
           <<".">>, <<"_">>, [global]),
     <<B/binary, "_capnp">>.
     
@@ -110,7 +110,7 @@ compile_exports(ExportedNodes) ->
 
 compile_types(ExportedNodes) ->
     Types = [begin
-                 Id = schema(get, id, Schema),
+                 Id = ecapnp:get(id, Schema),
                  tuple([integer(Id), NameAst])
              end || {_IdAst, NameAst, Schema} <- ExportedNodes],
     list(Types).
@@ -128,7 +128,7 @@ compile_nodes(ExportedNodes) ->
          atom(schema),
          lists:foldr(
            fun ({IdAst, NameAst, Schema}, Acc) ->
-                   Id = schema(get, id, Schema),
+                   Id = ecapnp:get(id, Schema),
                    [clause(
                       [NameAst],
                       none,
@@ -144,8 +144,8 @@ compile_nodes(ExportedNodes) ->
       ], ExportedNodes).
     
 compile_node({IdAst, NameAst, Node}) ->
-    Id = schema(get, id, Node),
-    Fields = compile_node_type(schema(get, Node)),
+    Id = ecapnp:get(id, Node),
+    Fields = compile_node_type(ecapnp:get(Node)),
     function(
       IdAst,
       [clause(
@@ -160,7 +160,7 @@ compile_node({IdAst, NameAst, Node}) ->
                             [binary_field(
                                string(
                                  binary_to_list(
-                                   schema(get, displayName, Node))))
+                                   ecapnp:get(displayName, Node))))
                             ]))
              |Fields])
          ])
@@ -172,12 +172,12 @@ compile_node_type(file) ->
 compile_node_type({struct, Struct}) ->
     {Fields, Union} = lists:partition(
                         fun (F) ->
-                                16#ffff == schema(get, discriminantValue, F)
+                                16#ffff == ecapnp:get(discriminantValue, F)
                         end,
-                        schema(get, fields, Struct)),
+                        ecapnp:get(fields, Struct)),
     Sizes = [record_field(
                atom(RecordKey),
-               F(schema(get, CapnpKey, Struct)))
+               F(ecapnp:get(CapnpKey, Struct)))
              || {RecordKey, CapnpKey, F} <- 
                     [{esize, preferredListEncoding, fun erl_syntax:atom/1},
                      {psize, pointerCount, fun erl_syntax:integer/1},
@@ -198,8 +198,8 @@ compile_node_type({struct, Struct}) ->
            ])))
     ];
 compile_node_type({enum, Enum}) ->
-    Enumerants = [binary_to_list(schema(get, name, E))
-                  || E <- schema(get, enumerants, Enum)],
+    Enumerants = [binary_to_list(ecapnp:get(name, E))
+                  || E <- ecapnp:get(enumerants, Enum)],
     Values = [tuple([integer(Key), atom(Value)])
               || {Key, Value} <-
                      lists:zip(
@@ -219,22 +219,22 @@ compile_node_type({interface, Interface}) ->
          atom(interface),
          [record_field(
             atom(extends),
-            list([integer(Id) || Id <- schema(get, extends, Interface)])),
+            list([integer(Id) || Id <- ecapnp:get(extends, Interface)])),
           record_field(
             atom(methods),
             list([record_expr(
                     atom(method),
-                    [record_field(atom(name), atom(binary_to_list(schema(get, name, M)))),
-                     record_field(atom(paramType), integer(schema(get, paramStructType, M))),
-                     record_field(atom(resultType), integer(schema(get, resultStructType, M)))
+                    [record_field(atom(name), atom(binary_to_list(ecapnp:get(name, M)))),
+                     record_field(atom(paramType), integer(ecapnp:get(paramStructType, M))),
+                     record_field(atom(resultType), integer(ecapnp:get(resultStructType, M)))
                     ])
-                  || M <- schema(get, methods, Interface)]))
+                  || M <- ecapnp:get(methods, Interface)]))
           %% there is a `#interface.struct` field too.. but not sure if it's a keeper.. (see ecapnpc.erl)
          ]))
     ];
 compile_node_type({const, Const}) ->
-    Type = schema(get, type, Const),
-    Value = schema(get, value, Const),
+    Type = ecapnp:get(type, Const),
+    Value = ecapnp:get(value, Const),
     [record_field(
        atom(kind),
        record_expr(
@@ -245,7 +245,7 @@ compile_node_type({const, Const}) ->
          ]))
     ];
 compile_node_type({annotation, Annotation}) ->
-    Type = schema(get, type, Annotation),
+    Type = ecapnp:get(type, Annotation),
     [record_field(
        atom(kind),
        record_expr(
@@ -260,7 +260,7 @@ compile_node_type({annotation, Annotation}) ->
                                    targetsUnion, targetsGroup, targetsInterface,
                                    targetsMethod, targetsParam, targetsAnnotation
                                   ],
-                             schema(get, T, Annotation)
+                             ecapnp:get(T, Annotation)
                  ]))
          ]))
     ];
@@ -268,7 +268,7 @@ compile_node_type({NodeKind, _}) ->
     throw({unknown_node_kind, NodeKind}).
 
 compile_union(Union, Struct) ->
-    case schema(get, discriminantCount, Struct) of
+    case ecapnp:get(discriminantCount, Struct) of
         0 -> atom(none);
         _ ->
             UnionFields = lists:zip(
@@ -283,15 +283,15 @@ compile_union(Union, Struct) ->
                                   tuple([integer(I), Name, T])
                           end
                       end || {I, F} <- UnionFields])}, 16},
-              schema(get, discriminantOffset, Struct),
+              ecapnp:get(discriminantOffset, Struct),
               {union, 0})
     end.
 
 compile_struct_field(Field) ->
     record_expr(
       atom(field),
-      [record_field(atom(name), atom(binary_to_list(schema(get, name, Field))))
-       |compile_struct_field_type(schema(get, Field))]
+      [record_field(atom(name), atom(binary_to_list(ecapnp:get(name, Field))))
+       |compile_struct_field_type(ecapnp:get(Field))]
      ).
 
 compile_struct_field_type({slot, Slot}) ->
@@ -303,18 +303,18 @@ compile_struct_field_type({group, Group}) ->
          atom(group),
          [record_field(
             atom(id),
-            integer(schema(get, typeId, Group)))
+            integer(ecapnp:get(typeId, Group)))
          ]))
     ].
 
 compile_slot(Slot) ->
     [Type, Offset, Default]
-        = [schema(get, Key, Slot)
+        = [ecapnp:get(Key, Slot)
            || Key <- [type, offset, defaultValue]],
     compile_slot_field(Type, Offset, Default).
 
 compile_slot_field(Type, Offset, Default) ->
-    case capnp_type_info(schema(get, Type)) of
+    case capnp_type_info(ecapnp:get(Type)) of
         {data_field, DataType} -> compile_data_field(DataType, Offset, Default);
         {ptr_field, PtrType} -> compile_ptr_field(PtrType, Offset, Default)
     end.
@@ -360,7 +360,7 @@ compile_value(Type, null) ->
             end
     end;
 compile_value(Type, #object{ schema=#schema_node{ name='Value' } }=Object) ->
-    compile_value(Type, schema(get, Object));
+    compile_value(Type, ecapnp:get(Object));
 compile_value(_Type, {_, Object}) when is_record(Object, object) ->
     compile_binary(ecapnp_obj:copy(Object));
 compile_value({Type, _}, {Type, Value})
@@ -405,21 +405,21 @@ capnp_type_info(data) -> {ptr_field, data};
 capnp_type_info(object) -> {ptr_field, object};
 capnp_type_info(anyPointer) -> {ptr_field, object};
 capnp_type_info({list, List}) -> {ptr_field, {list, list_field_type(List)}};
-capnp_type_info({enum, Enum}) -> {data_field, {{enum, schema(get, typeId, Enum)}, 16}};
+capnp_type_info({enum, Enum}) -> {data_field, {{enum, ecapnp:get(typeId, Enum)}, 16}};
 capnp_type_info({RefT, Obj})
   when RefT == struct; RefT == interface ->
-    {ptr_field, {RefT, schema(get, typeId, Obj)}};
+    {ptr_field, {RefT, ecapnp:get(typeId, Obj)}};
 capnp_type_info(Other) -> throw({unknown_capnp_type, Other}).
 
 list_field_type(List) ->
-    Type = schema(get, elementType, List),
-    case capnp_type_info(schema(get, Type)) of
+    Type = ecapnp:get(elementType, List),
+    case capnp_type_info(ecapnp:get(Type)) of
         {data_field, {T, _}} -> T;
         {_, T} -> T
     end.
 
 get_node(Id, Nodes) ->
-    [Node] = [N || N <- Nodes, Id =:= schema(get, id, N)],
+    [Node] = [N || N <- Nodes, Id =:= ecapnp:get(id, N)],
     Node.
 
 get_exported_nodes(Id, Nodes) ->
@@ -427,11 +427,11 @@ get_exported_nodes(Id, Nodes) ->
 
 get_nested_nodes(Id, Nodes, Scope, Acc) ->
     Node = get_node(Id, Nodes),
-    NestedNodes = schema(get, nestedNodes, Node),
+    NestedNodes = ecapnp:get(nestedNodes, Node),
     lists:foldr(
       fun (N, NestedAcc) ->
-              NId = schema(get, id, N),
-              Name = schema(get, name, N),
+              NId = ecapnp:get(id, N),
+              Name = ecapnp:get(name, N),
               get_exported_node({NId, Name}, Nodes, Scope, NestedAcc)
       end, Acc, NestedNodes).
 
@@ -440,21 +440,21 @@ get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
     NameAst = atom(lists:flatten(io_lib:format("~s", [[Scope, Name]]))),
     Schema = get_node(Id, Nodes),
     Scope1 = [Scope, Name, "."],
-    Acc1 = case schema(get, Schema) of
+    Acc1 = case ecapnp:get(Schema) of
                {struct, S} ->
                    lists:foldl(
                      fun (F, AccG) ->
-                             case schema(get, F) of
+                             case ecapnp:get(F) of
                                  {group, G} ->
-                                     GId = schema(get, typeId, G),
+                                     GId = ecapnp:get(typeId, G),
                                      get_exported_node(
-                                       {GId, schema(get, name, F)},
+                                       {GId, ecapnp:get(name, F)},
                                        Nodes,
                                        Scope1,
                                        get_nested_nodes(GId, Nodes, Scope1, AccG));
                                  _ -> AccG
                              end
-                     end, Acc, schema(get, fields, S));
+                     end, Acc, ecapnp:get(fields, S));
                _ -> Acc
            end,
     [{IdAst, NameAst, Schema}

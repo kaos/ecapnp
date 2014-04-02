@@ -235,7 +235,7 @@ set(Field, Value, Object) ->
 %% @doc Get const value from schema.
 const(Name, Schema) ->
     case ecapnp_schema:lookup(Name, Schema) of
-        {ok, #schema_node{ kind=#const{ field=Field }}} ->
+        #schema_node{ kind=#const{ field=Field } } ->
             case Field of
                 #data{ type=Type, default=Value } ->
                     ecapnp_val:get(Type, Value);

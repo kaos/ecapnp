@@ -68,7 +68,7 @@ set_field(#data{ type=Type, align=Align, default=Default }=D,
             end,
     case Type of
         {enum, EnumType} ->
-            {ok, #schema_node{ kind=#enum{ values=Values } }}
+            #schema_node{ kind=#enum{ values=Values } }
                 = ecapnp_schema:lookup(EnumType, StructRef),
             Tag = if is_atom(Value) ->
                           {Idx, Value} = lists:keyfind(Value, 2, Values),
@@ -200,13 +200,13 @@ list_element_size({Simple, _}, _)
   when Simple == enum; Simple == union -> twoBytes;
 list_element_size({_, Type}, Ref) ->
     case ecapnp_schema:lookup(Type, Ref) of
-        {ok, #schema_node{
-                kind=#struct{
-                        esize=inlineComposite,
-                        dsize=DSize, psize=PSize }}} ->
+        #schema_node{
+           kind=#struct{
+                   esize=inlineComposite,
+                   dsize=DSize, psize=PSize }} ->
             #struct_ref{ dsize=DSize, psize=PSize };
-        {ok, #schema_node{
-                kind=#struct{ esize=Size }}} -> Size
+        #schema_node{
+           kind=#struct{ esize=Size }} -> Size
     end;
 list_element_size(Type, _) ->
     list_element_size(ecapnp_val:size(Type)).
