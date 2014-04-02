@@ -80,3 +80,7 @@ dbg: bld
 tst: bld
 	erl -pa test -pa deps/proper/ebin -noinput \
 		-eval "proper:module(ecapnp_props), init:stop()"
+
+.PHONY: samples
+samples: app
+	cd priv/samples && ./run_samples.sh
