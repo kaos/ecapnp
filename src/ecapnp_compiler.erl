@@ -1,18 +1,18 @@
-%%  
+%%
 %%  Copyright 2013, Andreas Stenius <kaos@astekk.se>
-%%  
+%%
 %%   Licensed under the Apache License, Version 2.0 (the "License");
 %%   you may not use this file except in compliance with the License.
 %%   You may obtain a copy of the License at
-%%  
+%%
 %%     http://www.apache.org/licenses/LICENSE-2.0
-%%  
+%%
 %%   Unless required by applicable law or agreed to in writing, software
 %%   distributed under the License is distributed on an "AS IS" BASIS,
 %%   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %%   See the License for the specific language governing permissions and
 %%   limitations under the License.
-%%  
+%%
 
 %% @copyright 2013, Andreas Stenius
 %% @author Andreas Stenius <kaos@astekk.se>
@@ -24,11 +24,11 @@
 
 -export([compile/1]).
 
--import(erl_syntax, [atom/1, function/2, clause/2, record_expr/2,
+-import(erl_syntax, [atom/1, atom_name/1, function/2, clause/2, record_expr/2,
                      clause/3, record_field/2, binary/1, underscore/0,
-                     binary_field/1, application/2, form_list/1,
-                     set_precomments/2, comment/1, string/1,
-                     integer/1, tuple/1, arity_qualifier/2,
+                     binary_field/1, application/2, application/3,
+                     form_list/1, set_precomments/2, comment/1,
+                     string/1, integer/1, tuple/1, arity_qualifier/2,
                      binary_field/3, list/1, attribute/2, macro/1,
                      variable/1]).
 
@@ -60,7 +60,8 @@ compile_root(Root) ->
 compile_file(File, Nodes) ->
     Id = ecapnp:get(id, File),
     FileNodes = get_file_nodes(Id, Nodes),
-    Filename = compile_filename(File),
+    Filename = compile_filename(ecapnp:get(filename, File)),
+    Imports = compile_imports(File, Nodes),
 
     Vsn =
         case application:get_key(ecapnp, vsn) of
@@ -74,29 +75,32 @@ compile_file(File, Nodes) ->
 
     {Filename,
      form_list(
-       [set_precomments(
-          attribute(atom(module), [compile_modulename(Filename)]),
-          [comment(
-             [io_lib:format(
-                "% This file was generated "
-                "~4b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b"
-                " UTC by ecapnp ~s.",
-                [Y, M, D, H, Mm, S, Vsn]),
-              "% http://github.com/kaos/ecapnp"])
-          ]),
-        attribute(atom(vsn), [integer(Id)]),
-        attribute(atom(export), [compile_exports(FileNodes)]),
-        attribute(atom(types), [compile_types(FileNodes)]),
-        attribute(atom(include_lib), [string("ecapnp/include/ecapnp.hrl")])
-        |compile_nodes(FileNodes)
-       ])}.
+       lists:flatten(
+         [set_precomments(
+            attribute(atom(module), [compile_modulename(Filename)]),
+            [comment(
+               [io_lib:format(
+                  "% This file was generated "
+                  "~4b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b"
+                  " UTC by ecapnp ~s.",
+                  [Y, M, D, H, Mm, S, Vsn]),
+                "% http://github.com/kaos/ecapnp"])
+            ]),
+          attribute(atom(vsn), [integer(Id)]),
+          attribute(atom(export), [compile_exports(FileNodes)]),
+          attribute(atom(types), [compile_types(FileNodes)]),
+          compile_import_attributes(Imports),
+          attribute(atom(include_lib), [string("ecapnp/include/ecapnp.hrl")]),
+          compile_schema_fun(FileNodes ++ Imports)
+          |compile_nodes(FileNodes)
+         ]))}.
 
-compile_filename(File) ->
+compile_filename(Filename) ->
     B = binary:replace(
-          filename:rootname(ecapnp:get(filename, File), <<".capnp">>),
+          filename:rootname(Filename, <<".capnp">>),
           <<".">>, <<"_">>, [global]),
     <<B/binary, "_capnp">>.
-    
+
 compile_modulename(Filename) ->
     atom(binary_to_list(filename:basename(Filename))).
 
@@ -115,6 +119,55 @@ compile_types(FileNodes) ->
              end || {_IdAst, NameAst, Schema} <- FileNodes],
     list(Types).
 
+compile_schema_fun(FileNodes) ->
+    function(
+      atom(schema),
+      compile_schema_fun_clauses(
+        FileNodes,
+        [clause([underscore()], none, [atom(undefined)])])).
+
+compile_schema_fun_clauses(Nodes, Acc0) ->
+    lists:foldr(
+      fun ({IdAst, NameAst, Schema}, Acc) ->
+              Id = ecapnp:get(id, Schema),
+              [clause([NameAst], none, [application(IdAst, [])]),
+               clause([integer(Id)], none, [application(IdAst, [])])
+               |Acc];
+          ({ImportModAst, ImportNodes}, Acc) ->
+              case compile_schema_fun_clauses(ImportNodes, Acc) of
+                  Acc -> Acc;
+                  [N|Ns] ->
+                      [set_precomments(
+                         N, [comment([io_lib:format(
+                                        "% Imported from ~s",
+                                        [atom_name(ImportModAst)])])])
+                       |Ns]
+              end
+      end, Acc0, Nodes).
+
+compile_import_attributes(Imports) ->
+    lists:foldr(
+      fun ({ModAst, Nodes}, AccImports) ->
+              attribute(
+                atom(import),
+                [ModAst,
+                 list(
+                   lists:foldr(
+                     fun ({IdAst, _NameAst, _Schema}, Acc) ->
+                             [arity_qualifier(IdAst, integer(0))|Acc]
+                     end, AccImports, Nodes))])
+      end, [], Imports).
+
+compile_imports(File, Nodes) ->
+    lists:foldl(
+      fun (Import, Acc) ->
+              Mod = compile_modulename(
+                      compile_filename(
+                        ecapnp:get(name, Import))),
+              [{Mod, get_nested_nodes(ecapnp:get(id, Import), Nodes, [], [])}
+               |Acc]
+      end, [], ecapnp:get(imports, File)).
+
 compile_nodes(FileNodes) ->
     lists:foldr(
       fun ({IdAst, NameAst, _Schema}=Node, Acc) ->
@@ -123,26 +176,8 @@ compile_nodes(FileNodes) ->
                  [clause(none, [application(IdAst, [])]) ]),
                compile_node(Node)
                |Acc]
-      end,
-      [function(
-         atom(schema),
-         lists:foldr(
-           fun ({IdAst, NameAst, Schema}, Acc) ->
-                   Id = ecapnp:get(id, Schema),
-                   [clause(
-                      [NameAst],
-                      none,
-                      [application(atom(schema), [integer(Id)])]),
-                    clause(
-                      [integer(Id)],
-                      none,
-                      [application(IdAst, [])])
-                    |Acc]
-           end,
-           [clause([underscore()], none, [atom(undefined)])],
-           FileNodes))
-      ], FileNodes).
-    
+      end, [], FileNodes).
+
 compile_node({IdAst, NameAst, Node}) ->
     Id = ecapnp:get(id, Node),
     Fields = compile_node_type(ecapnp:get(Node)),
@@ -188,7 +223,7 @@ compile_node_type({struct, Struct}) ->
     Sizes = [record_field(
                atom(RecordKey),
                F(ecapnp:get(CapnpKey, Struct)))
-             || {RecordKey, CapnpKey, F} <- 
+             || {RecordKey, CapnpKey, F} <-
                     [{esize, preferredListEncoding, fun erl_syntax:atom/1},
                      {psize, pointerCount, fun erl_syntax:integer/1},
                      {dsize, dataWordCount, fun erl_syntax:integer/1}]],
@@ -480,4 +515,3 @@ get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
            end,
     [{IdAst, NameAst, Schema}
      |get_nested_nodes(Id, Nodes, Scope1, Acc1)].
-
