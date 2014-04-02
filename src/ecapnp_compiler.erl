@@ -59,7 +59,7 @@ compile_root(Root) ->
 
 compile_file(File, Nodes) ->
     Id = ecapnp:get(id, File),
-    ExportedNodes = get_exported_nodes(Id, Nodes),
+    FileNodes = get_file_nodes(Id, Nodes),
     Filename = compile_filename(File),
 
     Vsn =
@@ -85,10 +85,10 @@ compile_file(File, Nodes) ->
               "% http://github.com/kaos/ecapnp"])
           ]),
         attribute(atom(vsn), [integer(Id)]),
-        attribute(atom(export), [compile_exports(ExportedNodes)]),
-        attribute(atom(types), [compile_types(ExportedNodes)]),
+        attribute(atom(export), [compile_exports(FileNodes)]),
+        attribute(atom(types), [compile_types(FileNodes)]),
         attribute(atom(include_lib), [string("ecapnp/include/ecapnp.hrl")])
-        |compile_nodes(ExportedNodes)
+        |compile_nodes(FileNodes)
        ])}.
 
 compile_filename(File) ->
@@ -100,22 +100,22 @@ compile_filename(File) ->
 compile_modulename(Filename) ->
     atom(binary_to_list(filename:basename(Filename))).
 
-compile_exports(ExportedNodes) ->
+compile_exports(FileNodes) ->
     Exports = lists:foldr(
                 fun ({IdAst, NameAst, _Schema}, Acc) ->
                         [arity_qualifier(NameAst, integer(0)),
                          arity_qualifier(IdAst, integer(0))|Acc]
-                end, [], ExportedNodes),
+                end, [], FileNodes),
     list([arity_qualifier(atom(schema), integer(1))|Exports]).
 
-compile_types(ExportedNodes) ->
+compile_types(FileNodes) ->
     Types = [begin
                  Id = ecapnp:get(id, Schema),
                  tuple([integer(Id), NameAst])
-             end || {_IdAst, NameAst, Schema} <- ExportedNodes],
+             end || {_IdAst, NameAst, Schema} <- FileNodes],
     list(Types).
 
-compile_nodes(ExportedNodes) ->
+compile_nodes(FileNodes) ->
     lists:foldr(
       fun ({IdAst, NameAst, _Schema}=Node, Acc) ->
               [function(
@@ -140,8 +140,8 @@ compile_nodes(ExportedNodes) ->
                     |Acc]
            end,
            [clause([underscore()], none, [atom(undefined)])],
-           ExportedNodes))
-      ], ExportedNodes).
+           FileNodes))
+      ], FileNodes).
     
 compile_node({IdAst, NameAst, Node}) ->
     Id = ecapnp:get(id, Node),
@@ -161,11 +161,21 @@ compile_node({IdAst, NameAst, Node}) ->
                                string(
                                  binary_to_list(
                                    ecapnp:get(displayName, Node))))
-                            ]))
+                            ])),
+             record_field(atom(annotations),
+                          list(compile_annotations(
+                                 ecapnp:get(annotations, Node))))
              |Fields])
          ])
       ]).
 
+compile_annotations(Annotations) ->
+    [compile_annotation(A) || A <- Annotations].
+
+compile_annotation(Annotation) ->
+    Id = ecapnp:get(id, Annotation),
+    Value = ecapnp:get(value, Annotation),
+    tuple([integer(Id), compile_value(any, ecapnp:get(Value))]).
 
 compile_node_type(file) ->
     [record_field(atom(kind), atom(file))];
@@ -349,6 +359,8 @@ compile_field_type({enum, Type}) ->
     tuple([atom(enum), integer(Type)]);
 compile_field_type(Type) -> atom(Type).
 
+compile_value(any, {Type, _}=Value) ->
+    compile_value(Type, Value);
 compile_value(Type, null) ->
     if Type == text; Type == data -> binary([]);
        true ->
@@ -368,7 +380,7 @@ compile_value({Type, _}, {Type, Value})
     compile_binary(ecapnp_val:set(uint16, Value));
 compile_value(Type, {Type, Value})
   when Type == text; Type == data ->
-    compile_binary(Value);
+    compile_binary(Type, Value);
 compile_value(Type, {ValueType, Value})
   when Type == ValueType; element(1, Type) == ValueType ->
     compile_binary(ecapnp_val:set(ValueType, Value));
@@ -376,6 +388,12 @@ compile_value({interface, _}, interface) ->
     binary([binary_field(integer(0), integer(64), atom(integer))]);
 compile_value(Type, Value) ->
     throw({value_type_mismatch, Type, Value}).
+
+
+compile_binary(text, Bin) ->
+    binary([binary_field(string(binary_to_list(Bin)))]);
+compile_binary(data, Bin) ->
+    compile_binary(Bin).
 
 compile_binary(Bin) ->
     Fields = lists:foldl(
@@ -422,8 +440,11 @@ get_node(Id, Nodes) ->
     [Node] = [N || N <- Nodes, Id =:= ecapnp:get(id, N)],
     Node.
 
-get_exported_nodes(Id, Nodes) ->
-    get_nested_nodes(Id, Nodes, [], []).
+get_file_nodes(Id, Nodes) ->
+    IdAst = atom(integer_to_list(Id)),
+    NameAst = atom(root),
+    Schema = get_node(Id, Nodes),
+    get_nested_nodes(Id, Nodes, [], [{IdAst, NameAst, Schema}]).
 
 get_nested_nodes(Id, Nodes, Scope, Acc) ->
     Node = get_node(Id, Nodes),
