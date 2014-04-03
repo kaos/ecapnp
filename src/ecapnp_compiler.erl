@@ -24,10 +24,11 @@
 
 -export([compile/1]).
 
--import(erl_syntax, [atom/1, atom_name/1, function/2, clause/2, record_expr/2,
-                     clause/3, record_field/2, binary/1, underscore/0,
-                     binary_field/1, application/2, application/3,
-                     form_list/1, set_precomments/2, comment/1,
+-import(erl_syntax, [atom/1, atom_name/1, function/2, clause/2,
+                     record_expr/2, clause/3, record_field/2,
+                     binary/1, underscore/0, binary_field/1,
+                     application/2, application/3, form_list/1,
+                     set_precomments/2, set_postcomments/2, comment/1,
                      string/1, integer/1, tuple/1, arity_qualifier/2,
                      binary_field/3, list/1, attribute/2, macro/1,
                      variable/1]).
@@ -225,9 +226,11 @@ compile_node({IdAst, NameAst, Node}) ->
               fun (Fun, Acc) -> Fun(Acc) end, [],
               [fun (Acc) ->
                        Id = ecapnp:get(id, Node),
+                       ScopeId = ecapnp:get(scopeId, Node),
                        [record_field(atom(module), macro(variable('MODULE'))),
                         record_field(atom(name), NameAst),
                         record_field(atom(id), integer(Id)),
+                        record_field(atom(scope), integer(ScopeId)),
                         record_field(atom(src),
                                      binary(
                                        [binary_field(
@@ -243,6 +246,22 @@ compile_node({IdAst, NameAst, Node}) ->
                end,
                fun (Acc) ->
                        [compile_node_type(ecapnp:get(Node))|Acc]
+               end,
+               fun (Acc) ->
+                       case ecapnp:get(nestedNodes, Node) of
+                           [] -> Acc;
+                           Nested ->
+                               [record_field(
+                                  atom(nodes),
+                                  list([begin
+                                            Id = ecapnp:get(id, N),
+                                            Name = ecapnp:get(name, N),
+                                            set_postcomments(
+                                              integer(Id),
+                                              [comment([io_lib:format("% ~s", [Name])])])
+                                        end || N <- Nested]))
+                                |Acc]
+                       end
                end]))
          ])
       ]).

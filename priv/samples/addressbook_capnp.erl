@@ -1,4 +1,4 @@
-%% This file was generated 2014-04-03 09:09:24 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-03 09:35:03 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(addressbook_capnp).
 
@@ -43,9 +43,12 @@ root() -> '11435534567900897652'().
 root([]) -> '11435534567900897652'().
 
 '11435534567900897652'() ->
-    #schema_node{module = ?MODULE, name = root, id = 11435534567900897652,
+    #schema_node{module = ?MODULE, name = root, id = 11435534567900897652, scope = 0,
 		 src = <<"addressbook.capnp">>, annotations = [{13386661402618388268, <<"addressbook">>}],
-		 kind = file}.
+		 kind = file,
+		 nodes =
+		     [10988939875124296728,  %% Person
+		      17957216978475721012]}.  %% AddressBook
 
 'AddressBook'() -> '17957216978475721012'().
 
@@ -53,7 +56,7 @@ root([]) -> '11435534567900897652'().
 
 '17957216978475721012'() ->
     #schema_node{module = ?MODULE, name = 'AddressBook', id = 17957216978475721012,
-		 src = <<"addressbook.capnp:AddressBook">>,
+		 scope = 11435534567900897652, src = <<"addressbook.capnp:AddressBook">>,
 		 kind =
 		     #struct{dsize = 0, psize = 1, esize = pointer, union_field = none,
 			     fields =
@@ -71,7 +74,7 @@ root([]) -> '11435534567900897652'().
 
 '10988939875124296728'() ->
     #schema_node{module = ?MODULE, name = 'Person', id = 10988939875124296728,
-		 src = <<"addressbook.capnp:Person">>,
+		 scope = 11435534567900897652, src = <<"addressbook.capnp:Person">>,
 		 kind =
 		     #struct{dsize = 1, psize = 4, esize = inlineComposite, union_field = none,
 			     fields =
@@ -81,26 +84,30 @@ root([]) -> '11435534567900897652'().
 				  #field{name = phones,
 					 kind =
 					     #ptr{type = {list, {struct, 9317543775882349264}}, idx = 2, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = employment, kind = #group{id = 13477914502553102653}}]}}.
+				  #field{name = employment, kind = #group{id = 13477914502553102653}}]},
+		 nodes =
+		     [9317543775882349264]}.  %% PhoneNumber
 
 '9317543775882349264'() ->
     #schema_node{module = ?MODULE, name = ['Person', 'PhoneNumber'], id = 9317543775882349264,
-		 src = <<"addressbook.capnp:Person.PhoneNumber">>,
+		 scope = 10988939875124296728, src = <<"addressbook.capnp:Person.PhoneNumber">>,
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{name = number, kind = #ptr{type = text, idx = 0, default = <<"">>}},
 				  #field{name = type,
-					 kind = #data{type = {enum, 10511609358742521391}, align = 0, default = <<0, 0>>}}]}}.
+					 kind = #data{type = {enum, 10511609358742521391}, align = 0, default = <<0, 0>>}}]},
+		 nodes =
+		     [10511609358742521391]}.  %% Type
 
 '10511609358742521391'() ->
     #schema_node{module = ?MODULE, name = ['Person', 'PhoneNumber', 'Type'], id = 10511609358742521391,
-		 src = <<"addressbook.capnp:Person.PhoneNumber.Type">>,
+		 scope = 9317543775882349264, src = <<"addressbook.capnp:Person.PhoneNumber.Type">>,
 		 kind = #enum{values = [{0, mobile}, {1, home}, {2, work}]}}.
 
 '13477914502553102653'() ->
     #schema_node{module = ?MODULE, name = ['Person', employment], id = 13477914502553102653,
-		 src = <<"addressbook.capnp:Person.employment">>,
+		 scope = 10988939875124296728, src = <<"addressbook.capnp:Person.employment">>,
 		 kind =
 		     #struct{dsize = 1, psize = 4, esize = inlineComposite,
 			     union_field =
