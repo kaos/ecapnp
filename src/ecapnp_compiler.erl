@@ -108,8 +108,10 @@ compile_exports(FileNodes) ->
     Exports = lists:foldr(
                 fun ({IdAst, [NameAst], _Schema}, Acc) ->
                         [arity_qualifier(NameAst, integer(0)),
+                         arity_qualifier(NameAst, integer(1)),
                          arity_qualifier(IdAst, integer(0))|Acc];
-                    (_, Acc) -> Acc
+                    ({IdAst, _, _Schema}, Acc) ->
+                        [arity_qualifier(IdAst, integer(0))|Acc]
                 end, [], FileNodes),
     list([arity_qualifier(atom(schema), integer(1))|Exports]).
 
@@ -137,12 +139,13 @@ compile_schema_fun_clauses(Nodes, Acc0) ->
               Id = ecapnp:get(id, Schema),
               case Scope of
                   [NameAst] ->
-                      [clause([NameAst], none, [application(IdAst, [])]),
-                       clause([integer(Id)], none, [application(IdAst, [])])
+                      [clause([integer(Id)], none, [application(IdAst, [])]),
+                       clause([NameAst], none, [application(IdAst, [])]),
+                       clause([list([NameAst])], none, [application(IdAst, [])])
                        |Acc];
                   _ ->
-                      [clause([list(lists:reverse(Scope))], none, [application(IdAst, [])]),
-                       clause([integer(Id)], none, [application(IdAst, [])])
+                      [clause([integer(Id)], none, [application(IdAst, [])]),
+                       clause([list(lists:reverse(Scope))], none, [application(IdAst, [])])
                        |Acc]
               end;
           ({ImportModAst, ImportNodes}, Acc) ->
@@ -184,13 +187,13 @@ compile_nodes(FileNodes) ->
     compile_nodes(FileNodes, [], []).
 
 compile_nodes([{IdAst, [NameAst], Schema}|FileNodes], [], Acc) ->
+    {FileNodes1, {Cl, Fs}} = compile_nodes(
+                               FileNodes, [NameAst],
+                               {[clause([list([])], none, [application(IdAst, [])])],
+                                Acc}),
     Fun = function(NameAst, [clause(none, [application(IdAst, [])])]),
     Node = compile_node({IdAst, NameAst, Schema}),
-    {FileNodes1, Acc1}
-        = case compile_nodes(FileNodes, [NameAst], {[], Acc}) of
-              {Ns, {[], Fs}} -> {Ns, [Fun, Node|Fs]};
-              {Ns, {Cl, Fs}} -> {Ns, [Fun, function(NameAst, Cl), Node|Fs]}
-          end,
+    Acc1 = [Fun, function(NameAst, Cl), Node|Fs],
     compile_nodes(FileNodes1, [], Acc1);
 compile_nodes([{IdAst, [_|Scope]=RPath, Schema}|FileNodes], Scope, Acc) ->
     {FileNodes1, {Cl, Fs}} = compile_nodes(FileNodes, RPath, Acc),
