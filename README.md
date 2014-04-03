@@ -33,7 +33,21 @@ Try it:
     capnpc -oerl .../my_schema.capnp
 
 This will _(given that everything is working as intended)_ produce a
-`.../my_schema_capnp.erl` file that you can compile with `erlc`.
+`.../my_schema_capnp.beam` file.
+
+A few noteworthy options you can set in the environment are:
+
+* `ECAPNP_TO_ERL` - Save erlang source of compiled schema to path
+  (relative to `outdir`).
+
+* `ECAPNP_NO_BEAM` - Do not compile to beam code.
+
+* `ECAPNP_LOAD_BEAM` - Load compiled beam code on the running
+  node. Useful in case you compile files programatically, rather than
+  using the capnp plugin.
+
+_(these options should be available as argument when compiling the code
+generator request.. alas, that is yet to be implemented)_
 
 
 Web Site
