@@ -1,11 +1,12 @@
-%% This file was generated 2014-04-03 04:29:20 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-03 09:09:24 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(addressbook_capnp).
 
 -vsn(11435534567900897652).
 
--export([schema/1, 'Person'/0, '10988939875124296728'/0, 'AddressBook'/0, '17957216978475721012'/0,
-	 root/0, '11435534567900897652'/0]).
+-export([schema/1, 'Person'/0, 'Person'/1, '10988939875124296728'/0, '9317543775882349264'/0,
+	 '10511609358742521391'/0, '13477914502553102653'/0, 'AddressBook'/0, 'AddressBook'/1,
+	 '17957216978475721012'/0, root/0, root/1, '11435534567900897652'/0]).
 
 -types([{10988939875124296728, 'Person'}, {9317543775882349264, ['Person', 'PhoneNumber']},
 	{10511609358742521391, ['Person', 'PhoneNumber', 'Type']},
@@ -16,24 +17,30 @@
 
 -include_lib("ecapnp/include/ecapnp.hrl").
 
-schema('Person') -> '10988939875124296728'();
 schema(10988939875124296728) -> '10988939875124296728'();
-schema(['Person', 'PhoneNumber']) -> '9317543775882349264'();
+schema('Person') -> '10988939875124296728'();
+schema(['Person']) -> '10988939875124296728'();
 schema(9317543775882349264) -> '9317543775882349264'();
-schema(['Person', 'PhoneNumber', 'Type']) -> '10511609358742521391'();
+schema(['Person', 'PhoneNumber']) -> '9317543775882349264'();
 schema(10511609358742521391) -> '10511609358742521391'();
-schema(['Person', employment]) -> '13477914502553102653'();
+schema(['Person', 'PhoneNumber', 'Type']) -> '10511609358742521391'();
 schema(13477914502553102653) -> '13477914502553102653'();
-schema('AddressBook') -> '17957216978475721012'();
+schema(['Person', employment]) -> '13477914502553102653'();
 schema(17957216978475721012) -> '17957216978475721012'();
-schema(root) -> '11435534567900897652'();
+schema('AddressBook') -> '17957216978475721012'();
+schema(['AddressBook']) -> '17957216978475721012'();
 schema(11435534567900897652) -> '11435534567900897652'();
+schema(root) -> '11435534567900897652'();
+schema([root]) -> '11435534567900897652'();
 %% Imported from c++_capnp
-schema(namespace) -> '13386661402618388268'();
 schema(13386661402618388268) -> '13386661402618388268'();
+schema(namespace) -> '13386661402618388268'();
+schema([namespace]) -> '13386661402618388268'();
 schema(_) -> undefined.
 
 root() -> '11435534567900897652'().
+
+root([]) -> '11435534567900897652'().
 
 '11435534567900897652'() ->
     #schema_node{module = ?MODULE, name = root, id = 11435534567900897652,
@@ -42,9 +49,11 @@ root() -> '11435534567900897652'().
 
 'AddressBook'() -> '17957216978475721012'().
 
+'AddressBook'([]) -> '17957216978475721012'().
+
 '17957216978475721012'() ->
     #schema_node{module = ?MODULE, name = 'AddressBook', id = 17957216978475721012,
-		 src = <<"addressbook.capnp:AddressBook">>, annotations = [],
+		 src = <<"addressbook.capnp:AddressBook">>,
 		 kind =
 		     #struct{dsize = 0, psize = 1, esize = pointer, union_field = none,
 			     fields =
@@ -57,11 +66,12 @@ root() -> '11435534567900897652'().
 
 'Person'(['PhoneNumber']) -> '9317543775882349264'();
 'Person'(['PhoneNumber', 'Type']) -> '10511609358742521391'();
-'Person'([employment]) -> '13477914502553102653'().
+'Person'([employment]) -> '13477914502553102653'();
+'Person'([]) -> '10988939875124296728'().
 
 '10988939875124296728'() ->
     #schema_node{module = ?MODULE, name = 'Person', id = 10988939875124296728,
-		 src = <<"addressbook.capnp:Person">>, annotations = [],
+		 src = <<"addressbook.capnp:Person">>,
 		 kind =
 		     #struct{dsize = 1, psize = 4, esize = inlineComposite, union_field = none,
 			     fields =
@@ -75,7 +85,7 @@ root() -> '11435534567900897652'().
 
 '9317543775882349264'() ->
     #schema_node{module = ?MODULE, name = ['Person', 'PhoneNumber'], id = 9317543775882349264,
-		 src = <<"addressbook.capnp:Person.PhoneNumber">>, annotations = [],
+		 src = <<"addressbook.capnp:Person.PhoneNumber">>,
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
@@ -85,12 +95,12 @@ root() -> '11435534567900897652'().
 
 '10511609358742521391'() ->
     #schema_node{module = ?MODULE, name = ['Person', 'PhoneNumber', 'Type'], id = 10511609358742521391,
-		 src = <<"addressbook.capnp:Person.PhoneNumber.Type">>, annotations = [],
+		 src = <<"addressbook.capnp:Person.PhoneNumber.Type">>,
 		 kind = #enum{values = [{0, mobile}, {1, home}, {2, work}]}}.
 
 '13477914502553102653'() ->
     #schema_node{module = ?MODULE, name = ['Person', employment], id = 13477914502553102653,
-		 src = <<"addressbook.capnp:Person.employment">>, annotations = [],
+		 src = <<"addressbook.capnp:Person.employment">>,
 		 kind =
 		     #struct{dsize = 1, psize = 4, esize = inlineComposite,
 			     union_field =

@@ -215,30 +215,44 @@ compile_nodes(FileNodes, [_|Scope], Acc) ->
     compile_nodes(FileNodes, Scope, Acc).
 
 compile_node({IdAst, NameAst, Node}) ->
-    Id = ecapnp:get(id, Node),
-    Fields = compile_node_type(ecapnp:get(Node)),
     function(
       IdAst,
       [clause(
          none,
          [record_expr(
             atom(schema_node),
-            [record_field(atom(module), macro(variable('MODULE'))),
-             record_field(atom(name), NameAst),
-             record_field(atom(id), integer(Id)),
-             record_field(atom(src),
-                          binary(
-                            [binary_field(
-                               string(
-                                 binary_to_list(
-                                   ecapnp:get(displayName, Node))))
-                            ])),
-             record_field(atom(annotations),
-                          list(compile_annotations(
-                                 ecapnp:get(annotations, Node))))
-             |Fields])
+            lists:foldr(
+              fun (Fun, Acc) -> Fun(Acc) end, [],
+              [fun (Acc) ->
+                       Id = ecapnp:get(id, Node),
+                       [record_field(atom(module), macro(variable('MODULE'))),
+                        record_field(atom(name), NameAst),
+                        record_field(atom(id), integer(Id)),
+                        record_field(atom(src),
+                                     binary(
+                                       [binary_field(
+                                          string(
+                                            binary_to_list(
+                                              ecapnp:get(displayName, Node))))
+                                       ]))|Acc]
+               end,
+               fun (Acc) ->
+                       compile_annotation_field(
+                         ecapnp:get(annotations, Node),
+                         annotations, Acc)
+               end,
+               fun (Acc) ->
+                       [compile_node_type(ecapnp:get(Node))|Acc]
+               end]))
          ])
       ]).
+
+compile_annotation_field([], _FieldName, Acc) -> Acc;
+compile_annotation_field(Annotations, FieldName, Acc) ->
+    [record_field(
+       atom(FieldName),
+       list(compile_annotations(Annotations)))
+    |Acc].
 
 compile_annotations(Annotations) ->
     [compile_annotation(A) || A <- Annotations].
@@ -249,7 +263,7 @@ compile_annotation(Annotation) ->
     tuple([integer(Id), compile_value(any, ecapnp:get(Value))]).
 
 compile_node_type(file) ->
-    [record_field(atom(kind), atom(file))];
+    record_field(atom(kind), atom(file));
 compile_node_type({struct, Struct}) ->
     {Fields, Union} = lists:partition(
                         fun (F) ->
@@ -263,21 +277,20 @@ compile_node_type({struct, Struct}) ->
                     [{esize, preferredListEncoding, fun erl_syntax:atom/1},
                      {psize, pointerCount, fun erl_syntax:integer/1},
                      {dsize, dataWordCount, fun erl_syntax:integer/1}]],
-    [record_field(
-       atom(kind),
-       record_expr(
-         atom(struct),
-         lists:reverse(
-           [record_field(
-              atom(fields),
-              list([compile_struct_field(M)
-                    || M <- Fields])),
-            record_field(
-              atom(union_field),
-              compile_union(Union, Struct))
-            |Sizes
-           ])))
-    ];
+    record_field(
+      atom(kind),
+      record_expr(
+        atom(struct),
+        lists:reverse(
+          [record_field(
+             atom(fields),
+             list([compile_struct_field(M)
+                   || M <- Fields])),
+           record_field(
+             atom(union_field),
+             compile_union(Union, Struct))
+           |Sizes
+          ])));
 compile_node_type({enum, Enum}) ->
     Enumerants = [binary_to_list(ecapnp:get(name, E))
                   || E <- ecapnp:get(enumerants, Enum)],
@@ -286,65 +299,61 @@ compile_node_type({enum, Enum}) ->
                      lists:zip(
                        lists:seq(0, length(Enumerants) - 1),
                        Enumerants)],
-    [record_field(
-       atom(kind),
-       record_expr(
-         atom(enum),
-         [record_field(atom(values), list(Values))]
-        ))
-    ];
+    record_field(
+      atom(kind),
+      record_expr(
+        atom(enum),
+        [record_field(atom(values), list(Values))]
+       ));
 compile_node_type({interface, Interface}) ->
-    [record_field(
-       atom(kind),
-       record_expr(
-         atom(interface),
-         [record_field(
-            atom(extends),
-            list([integer(Id) || Id <- ecapnp:get(extends, Interface)])),
-          record_field(
-            atom(methods),
-            list([record_expr(
-                    atom(method),
-                    [record_field(atom(name), atom(binary_to_list(ecapnp:get(name, M)))),
-                     record_field(atom(paramType), integer(ecapnp:get(paramStructType, M))),
-                     record_field(atom(resultType), integer(ecapnp:get(resultStructType, M)))
-                    ])
-                  || M <- ecapnp:get(methods, Interface)]))
-          %% there is a `#interface.struct` field too.. but not sure if it's a keeper.. (see ecapnpc.erl)
-         ]))
-    ];
+    record_field(
+      atom(kind),
+      record_expr(
+        atom(interface),
+        [record_field(
+           atom(extends),
+           list([integer(Id) || Id <- ecapnp:get(extends, Interface)])),
+         record_field(
+           atom(methods),
+           list([record_expr(
+                   atom(method),
+                   [record_field(atom(name), atom(binary_to_list(ecapnp:get(name, M)))),
+                    record_field(atom(paramType), integer(ecapnp:get(paramStructType, M))),
+                    record_field(atom(resultType), integer(ecapnp:get(resultStructType, M)))
+                   ])
+                 || M <- ecapnp:get(methods, Interface)]))
+         %% there is a `#interface.struct` field too.. but not sure if it's a keeper.. (see ecapnpc.erl)
+        ]));
 compile_node_type({const, Const}) ->
     Type = ecapnp:get(type, Const),
     Value = ecapnp:get(value, Const),
-    [record_field(
-       atom(kind),
-       record_expr(
-         atom(const),
-         [record_field(
-            atom(field),
-            compile_slot_field(Type, 0, Value))
-         ]))
-    ];
+    record_field(
+      atom(kind),
+      record_expr(
+        atom(const),
+        [record_field(
+           atom(field),
+           compile_slot_field(Type, 0, Value))
+        ]));
 compile_node_type({annotation, Annotation}) ->
     Type = ecapnp:get(type, Annotation),
-    [record_field(
-       atom(kind),
-       record_expr(
-         atom(annotation),
-         [record_field(
-            atom(type),
-            compile_slot_field(Type, 0, null)),
-          record_field(
-            atom(targets),
-            list([atom(T) || T <- [targetsFile, targetsConst, targetsEnum,
-                                   targetsEnumerant, targetsStruct, targetsField,
-                                   targetsUnion, targetsGroup, targetsInterface,
-                                   targetsMethod, targetsParam, targetsAnnotation
-                                  ],
-                             ecapnp:get(T, Annotation)
-                 ]))
-         ]))
-    ];
+    record_field(
+      atom(kind),
+      record_expr(
+        atom(annotation),
+        [record_field(
+           atom(type),
+           compile_slot_field(Type, 0, null)),
+         record_field(
+           atom(targets),
+           list([atom(T) || T <- [targetsFile, targetsConst, targetsEnum,
+                                  targetsEnumerant, targetsStruct, targetsField,
+                                  targetsUnion, targetsGroup, targetsInterface,
+                                  targetsMethod, targetsParam, targetsAnnotation
+                                 ],
+                            ecapnp:get(T, Annotation)
+                ]))
+        ]));
 compile_node_type({NodeKind, _}) ->
     throw({unknown_node_kind, NodeKind}).
 
