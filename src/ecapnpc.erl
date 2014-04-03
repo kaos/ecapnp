@@ -76,6 +76,7 @@
 
 -include("ecapnp.hrl").
 
+%% TODO: add options argument, so os environment only acts as override..
 
 %% ===================================================================
 %% API functions
@@ -104,17 +105,73 @@ compile_data(Data)
 compile_message(Message)
   when is_list(Message), is_binary(hd(Message)) ->
     {ok, Compiled} = ecapnp_compiler:compile(Message),
-    %% Save to .erl sources, for now..
-    [begin
-         Filename = <<File/binary, ".erl">>,
-         {Filename,
-          file:write_file(
-            Filename,
-            erl_prettypr:format(
-              Ast, [{ribbon, 100}, {paper, 200}]))}
-     end || {File, Ast} <- Compiled].
+    ok = maybe_save_sources(Compiled),
+    ok = maybe_compile_ast(Compiled).
 
 
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
+
+maybe_save_sources(Compiled) ->
+    case os:getenv("ECAPNP_TO_ERL") of
+        false -> ok;
+        "" -> save_sources(Compiled, ".");
+        Path -> save_sources(Compiled, Path)
+    end.
+
+maybe_compile_ast(Compiled) ->
+    case os:getenv("ECAPNP_NO_BEAM") of
+        false -> compile_ast(Compiled);
+        _ -> ok
+    end.
+
+save_sources([], _Path) -> ok;
+save_sources([{File, Ast}|Compiled], Path) ->
+    Filename = filename:join(Path, <<File/binary, ".erl">>),
+    case write_file(
+           Filename,
+           erl_prettypr:format(Ast, [{ribbon, 100}, {paper, 200}]))
+    of
+        ok -> save_sources(Compiled, Path);
+        error -> halt(2)
+    end.
+
+compile_ast([]) -> ok;
+compile_ast([{_File, Ast}|Compiled]) ->
+    Forms = erl_syntax:revert_forms(Ast),
+    case compile:forms(
+           Forms,
+           [verbose, report, debug_info]) of
+        {ok, Module, Bin} ->
+            Filename = lists:concat([Module, ".beam"]),
+            case write_file(Filename, Bin) of
+                ok -> maybe_load(Module, Filename, Bin);
+                error -> halt(2)
+            end,
+            compile_ast(Compiled);
+        error -> halt(1)
+    end.
+
+maybe_load(Module, Filename, Bin) ->
+    case os:getenv("ECAPNP_LOAD_BEAM") of
+        false -> ok;
+        _ ->
+            case code:load_binary(Module, Filename, Bin) of
+                {module, Module} -> ok;
+                {error, Reason} ->
+                    io:format(standard_error,
+                              "~s: warning: failed to load: ~p~n",
+                              [Filename, Reason])
+            end
+    end.
+
+write_file(Filename, Data) ->
+    case file:write_file(Filename, Data) of
+        ok -> ok;
+        {error, Reason} ->
+            io:format(standard_error,
+                     "~s: failed to write file: ~p~n",
+                      [Filename, Reason]),
+            error
+    end.

@@ -30,12 +30,11 @@
                      application/2, application/3, form_list/1,
                      set_precomments/2, set_postcomments/2, comment/1,
                      string/1, integer/1, tuple/1, arity_qualifier/2,
-                     binary_field/3, list/1, attribute/2, macro/1,
-                     variable/1]).
+                     binary_field/3, list/1, attribute/2]).
 
 -include("ecapnp.hrl").
 
--type compiled_message() :: {file, erl_syntax:syntaxTree()}.
+-type compiled_message() :: {file:filename_all(), erl_syntax:syntaxTree()}.
 
 %% ===================================================================
 %% API functions
@@ -61,7 +60,10 @@ compile_root(Root) ->
 compile_file(File, Nodes) ->
     Id = ecapnp:get(id, File),
     FileNodes = get_file_nodes(Id, Nodes),
-    Filename = compile_filename(ecapnp:get(filename, File)),
+    Src = ecapnp:get(filename, File),
+    SrcAst = string(binary_to_list(Src)),
+    Filename = compile_filename(Src),
+    Module = compile_modulename(Filename),
     Imports = compile_imports(File, Nodes),
 
     Vsn =
@@ -76,24 +78,44 @@ compile_file(File, Nodes) ->
 
     {Filename,
      form_list(
-       lists:flatten(
-         [set_precomments(
-            attribute(atom(module), [compile_modulename(Filename)]),
-            [comment(
-               [io_lib:format(
-                  "% This file was generated "
-                  "~4b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b"
-                  " UTC by ecapnp ~s.",
-                  [Y, M, D, H, Mm, S, Vsn]),
-                "% http://github.com/kaos/ecapnp"])
-            ]),
-          attribute(atom(vsn), [integer(Id)]),
-          attribute(atom(export), [compile_exports(FileNodes)]),
-          attribute(atom(types), [compile_types(FileNodes)]),
-          compile_import_attributes(Imports),
-          attribute(atom(include_lib), [string("ecapnp/include/ecapnp.hrl")]),
-          compile_schema_fun(FileNodes ++ Imports)
-          |compile_nodes(FileNodes)
+       lists:foldr(
+         fun (Fun, Acc) -> Fun(Acc) end, [],
+         [fun (Acc) ->
+                  [attribute(atom(file), [SrcAst, integer(1)]),
+                   set_precomments(
+                     attribute(atom(module), [Module]),
+                     [comment(
+                        [io_lib:format(
+                           "% This file was generated "
+                           "~4b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b"
+                           " UTC by ecapnp ~s.",
+                           [Y, M, D, H, Mm, S, Vsn]),
+                         "% http://github.com/kaos/ecapnp"])
+                     ]),
+                   attribute(atom(vsn), [integer(Id)]),
+                   attribute(atom(export), [compile_exports(FileNodes)]),
+                   attribute(atom(types), [compile_types(FileNodes)])
+                   |Acc]
+          end,
+          fun (Acc) ->
+                  compile_import_attributes(Imports) ++ Acc
+          end,
+          fun (Acc) ->
+                  {ok, Forms} = epp:parse_file(
+                                  filename:join(code:lib_dir(ecapnp, include),
+                                                "ecapnp_records.hrl"),
+                                  [], []),
+                  %% drop eof
+                  Forms1 = lists:reverse(tl(lists:reverse(Forms))),
+                  Forms1 ++ [attribute(atom(file), [SrcAst, integer(1)])|Acc]
+          end,
+          fun (Acc) ->
+                  [compile_schema_fun(FileNodes ++ Imports)
+                   |Acc]
+          end,
+          fun (Acc) ->
+                  compile_nodes(Module, FileNodes, Acc)
+          end
          ]))}.
 
 compile_filename(Filename) ->
@@ -164,14 +186,15 @@ compile_schema_fun_clauses(Nodes, Acc0) ->
 compile_import_attributes(Imports) ->
     lists:foldr(
       fun ({ModAst, Nodes}, AccImports) ->
-              attribute(
+              [attribute(
                 atom(import),
                 [ModAst,
                  list(
                    lists:foldr(
                      fun ({IdAst, _Scope, _Schema}, Acc) ->
                              [arity_qualifier(IdAst, integer(0))|Acc]
-                     end, AccImports, Nodes))])
+                     end, [], Nodes))])
+               |AccImports]
       end, [], Imports).
 
 compile_imports(File, Nodes) ->
@@ -184,38 +207,38 @@ compile_imports(File, Nodes) ->
                |Acc]
       end, [], ecapnp:get(imports, File)).
 
-compile_nodes(FileNodes) ->
-    compile_nodes(FileNodes, [], []).
+compile_nodes(Module, FileNodes, Acc) ->
+    compile_nodes(Module, FileNodes, [], Acc).
 
-compile_nodes([{IdAst, [NameAst], Schema}|FileNodes], [], Acc) ->
+compile_nodes(Module, [{IdAst, [NameAst], Schema}|FileNodes], [], Acc) ->
     {FileNodes1, {Cl, Fs}} = compile_nodes(
-                               FileNodes, [NameAst],
+                               Module, FileNodes, [NameAst],
                                {[clause([list([])], none, [application(IdAst, [])])],
                                 Acc}),
     Fun = function(NameAst, [clause(none, [application(IdAst, [])])]),
-    Node = compile_node({IdAst, NameAst, Schema}),
+    Node = compile_node(Module, {IdAst, NameAst, Schema}),
     Acc1 = [Fun, function(NameAst, Cl), Node|Fs],
-    compile_nodes(FileNodes1, [], Acc1);
-compile_nodes([{IdAst, [_|Scope]=RPath, Schema}|FileNodes], Scope, Acc) ->
-    {FileNodes1, {Cl, Fs}} = compile_nodes(FileNodes, RPath, Acc),
+    compile_nodes(Module, FileNodes1, [], Acc1);
+compile_nodes(Module, [{IdAst, [_|Scope]=RPath, Schema}|FileNodes], Scope, Acc) ->
+    {FileNodes1, {Cl, Fs}} = compile_nodes(Module, FileNodes, RPath, Acc),
     Path = lists:reverse(RPath),
-    F = compile_node({IdAst, list(Path), Schema}),
-    compile_nodes(FileNodes1, Scope,
+    F = compile_node(Module, {IdAst, list(Path), Schema}),
+    compile_nodes(Module, FileNodes1, Scope,
                   {[clause([list(tl(Path))], none,
                            [application(IdAst, [])])
                     |Cl], [F|Fs]});
-compile_nodes([{_, [_], _}|_]=FileNodes, [_|_], Acc) ->
+compile_nodes(_Module, [{_, [_], _}|_]=FileNodes, [_|_], Acc) ->
     {FileNodes, Acc};
-compile_nodes([], [_|_], Acc) ->
+compile_nodes(_Module, [], [_|_], Acc) ->
     {[], Acc};
-compile_nodes([], [], Acc) ->
+compile_nodes(_Module, [], [], Acc) ->
     Acc;
-compile_nodes(FileNodes, [], Acc) ->
+compile_nodes(_Module, FileNodes, [], Acc) ->
     {FileNodes, Acc};
-compile_nodes(FileNodes, [_|Scope], Acc) ->
-    compile_nodes(FileNodes, Scope, Acc).
+compile_nodes(Module, FileNodes, [_|Scope], Acc) ->
+    compile_nodes(Module, FileNodes, Scope, Acc).
 
-compile_node({IdAst, NameAst, Node}) ->
+compile_node(Module, {IdAst, NameAst, Node}) ->
     function(
       IdAst,
       [clause(
@@ -227,17 +250,14 @@ compile_node({IdAst, NameAst, Node}) ->
               [fun (Acc) ->
                        Id = ecapnp:get(id, Node),
                        ScopeId = ecapnp:get(scopeId, Node),
-                       [record_field(atom(module), macro(variable('MODULE'))),
+                       [record_field(atom(module), Module),
                         record_field(atom(name), NameAst),
                         record_field(atom(id), integer(Id)),
                         record_field(atom(scope), integer(ScopeId)),
                         record_field(atom(src),
-                                     binary(
-                                       [binary_field(
-                                          string(
-                                            binary_to_list(
-                                              ecapnp:get(displayName, Node))))
-                                       ]))|Acc]
+                                     compile_binary(
+                                       text, ecapnp:get(displayName, Node)))
+                        |Acc]
                end,
                fun (Acc) ->
                        compile_annotation_field(

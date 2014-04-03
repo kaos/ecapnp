@@ -30,12 +30,11 @@ erlang.mk:
 %.capnp.hrl: %.capnp
 	$(gen_verbose) capnpc -oerl $<
 
-%_capnp.erl: %.capnp
-	$(gen_verbose) capnpc -oerl $<
+%_capnp.erl: %.capnp | ebin
+	$(gen_verbose) ECAPNP_TO_ERL=../src capnpc -oerl:ebin --src-prefix=src $<
 
-# compiler schema dependencies
-all: src/schema_capnp.erl src/c++_capnp.erl \
-	include/capnp/c++.capnp.hrl include/capnp/schema.capnp.hrl
+ebin:
+	@mkdir -p ebin
 
 # make sure we rebuild on any header file change
 %.erl: include/*.hrl include/*/*.hrl ; @touch $@
