@@ -106,17 +106,22 @@ compile_modulename(Filename) ->
 
 compile_exports(FileNodes) ->
     Exports = lists:foldr(
-                fun ({IdAst, NameAst, _Schema}, Acc) ->
+                fun ({IdAst, [NameAst], _Schema}, Acc) ->
                         [arity_qualifier(NameAst, integer(0)),
-                         arity_qualifier(IdAst, integer(0))|Acc]
+                         arity_qualifier(IdAst, integer(0))|Acc];
+                    (_, Acc) -> Acc
                 end, [], FileNodes),
     list([arity_qualifier(atom(schema), integer(1))|Exports]).
 
 compile_types(FileNodes) ->
     Types = [begin
                  Id = ecapnp:get(id, Schema),
+                 NameAst = case Scope of
+                               [N] -> N;
+                               _ -> list(lists:reverse(Scope))
+                           end,
                  tuple([integer(Id), NameAst])
-             end || {_IdAst, NameAst, Schema} <- FileNodes],
+             end || {_IdAst, Scope, Schema} <- FileNodes],
     list(Types).
 
 compile_schema_fun(FileNodes) ->
@@ -128,11 +133,18 @@ compile_schema_fun(FileNodes) ->
 
 compile_schema_fun_clauses(Nodes, Acc0) ->
     lists:foldr(
-      fun ({IdAst, NameAst, Schema}, Acc) ->
+      fun ({IdAst, Scope, Schema}, Acc) ->
               Id = ecapnp:get(id, Schema),
-              [clause([NameAst], none, [application(IdAst, [])]),
-               clause([integer(Id)], none, [application(IdAst, [])])
-               |Acc];
+              case Scope of
+                  [NameAst] ->
+                      [clause([NameAst], none, [application(IdAst, [])]),
+                       clause([integer(Id)], none, [application(IdAst, [])])
+                       |Acc];
+                  _ ->
+                      [clause([list(lists:reverse(Scope))], none, [application(IdAst, [])]),
+                       clause([integer(Id)], none, [application(IdAst, [])])
+                       |Acc]
+              end;
           ({ImportModAst, ImportNodes}, Acc) ->
               case compile_schema_fun_clauses(ImportNodes, Acc) of
                   Acc -> Acc;
@@ -153,7 +165,7 @@ compile_import_attributes(Imports) ->
                 [ModAst,
                  list(
                    lists:foldr(
-                     fun ({IdAst, _NameAst, _Schema}, Acc) ->
+                     fun ({IdAst, _Scope, _Schema}, Acc) ->
                              [arity_qualifier(IdAst, integer(0))|Acc]
                      end, AccImports, Nodes))])
       end, [], Imports).
@@ -169,14 +181,35 @@ compile_imports(File, Nodes) ->
       end, [], ecapnp:get(imports, File)).
 
 compile_nodes(FileNodes) ->
-    lists:foldr(
-      fun ({IdAst, NameAst, _Schema}=Node, Acc) ->
-              [function(
-                 NameAst,
-                 [clause(none, [application(IdAst, [])]) ]),
-               compile_node(Node)
-               |Acc]
-      end, [], FileNodes).
+    compile_nodes(FileNodes, [], []).
+
+compile_nodes([{IdAst, [NameAst], Schema}|FileNodes], [], Acc) ->
+    Fun = function(NameAst, [clause(none, [application(IdAst, [])])]),
+    Node = compile_node({IdAst, NameAst, Schema}),
+    {FileNodes1, Acc1}
+        = case compile_nodes(FileNodes, [NameAst], {[], Acc}) of
+              {Ns, {[], Fs}} -> {Ns, [Fun, Node|Fs]};
+              {Ns, {Cl, Fs}} -> {Ns, [Fun, function(NameAst, Cl), Node|Fs]}
+          end,
+    compile_nodes(FileNodes1, [], Acc1);
+compile_nodes([{IdAst, [_|Scope]=RPath, Schema}|FileNodes], Scope, Acc) ->
+    {FileNodes1, {Cl, Fs}} = compile_nodes(FileNodes, RPath, Acc),
+    Path = lists:reverse(RPath),
+    F = compile_node({IdAst, list(Path), Schema}),
+    compile_nodes(FileNodes1, Scope,
+                  {[clause([list(tl(Path))], none,
+                           [application(IdAst, [])])
+                    |Cl], [F|Fs]});
+compile_nodes([{_, [_], _}|_]=FileNodes, [_|_], Acc) ->
+    {FileNodes, Acc};
+compile_nodes([], [_|_], Acc) ->
+    {[], Acc};
+compile_nodes([], [], Acc) ->
+    Acc;
+compile_nodes(FileNodes, [], Acc) ->
+    {FileNodes, Acc};
+compile_nodes(FileNodes, [_|Scope], Acc) ->
+    compile_nodes(FileNodes, Scope, Acc).
 
 compile_node({IdAst, NameAst, Node}) ->
     Id = ecapnp:get(id, Node),
@@ -479,7 +512,7 @@ get_file_nodes(Id, Nodes) ->
     IdAst = atom(integer_to_list(Id)),
     NameAst = atom(root),
     Schema = get_node(Id, Nodes),
-    get_nested_nodes(Id, Nodes, [], [{IdAst, NameAst, Schema}]).
+    get_nested_nodes(Id, Nodes, [], [{IdAst, [NameAst], Schema}]).
 
 get_nested_nodes(Id, Nodes, Scope, Acc) ->
     Node = get_node(Id, Nodes),
@@ -492,10 +525,9 @@ get_nested_nodes(Id, Nodes, Scope, Acc) ->
       end, Acc, NestedNodes).
 
 get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
-    IdAst = atom(integer_to_list(Id)),
-    NameAst = atom(lists:flatten(io_lib:format("~s", [[Scope, Name]]))),
+    NameAst = atom(binary_to_list(Name)),
+    Scope1 = [NameAst|Scope],
     Schema = get_node(Id, Nodes),
-    Scope1 = [Scope, Name, "."],
     Acc1 = case ecapnp:get(Schema) of
                {struct, S} ->
                    lists:foldl(
@@ -513,5 +545,6 @@ get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
                      end, Acc, ecapnp:get(fields, S));
                _ -> Acc
            end,
-    [{IdAst, NameAst, Schema}
+    IdAst = atom(integer_to_list(Id)),
+    [{IdAst, Scope1, Schema}
      |get_nested_nodes(Id, Nodes, Scope1, Acc1)].
