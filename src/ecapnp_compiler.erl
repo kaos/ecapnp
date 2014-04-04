@@ -476,6 +476,8 @@ compile_field_type({union, Fields}) ->
     tuple([atom(union), Fields]);
 compile_field_type({enum, Type}) ->
     tuple([atom(enum), integer(Type)]);
+compile_field_type({interface, Type}) ->
+    tuple([atom(interface), integer(Type)]);
 compile_field_type(Type) -> atom(Type).
 
 compile_value(any, {Type, _}=Value) ->
@@ -504,7 +506,7 @@ compile_value(Type, {ValueType, Value})
   when Type == ValueType; element(1, Type) == ValueType ->
     compile_binary(ecapnp_val:set(ValueType, Value));
 compile_value({interface, _}, interface) ->
-    binary([binary_field(integer(0), integer(64), atom(integer))]);
+    atom('maybe_call_interface_factory... ?');
 compile_value(Type, Value) ->
     throw({value_type_mismatch, Type, Value}).
 
@@ -588,12 +590,29 @@ get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
                                      GId = ecapnp:get(typeId, G),
                                      get_exported_node(
                                        {GId, ecapnp:get(name, F)},
-                                       Nodes,
-                                       Scope1,
+                                       Nodes, Scope1,
                                        get_nested_nodes(GId, Nodes, Scope1, AccG));
                                  _ -> AccG
                              end
                      end, Acc, ecapnp:get(fields, S));
+               {interface, I} ->
+                   lists:foldl(
+                     fun (M, AccM) ->
+                             MName = atom(binary_to_list(ecapnp:get(name, M))),
+                             MScope = [MName],
+                             lists:foldl(
+                               fun ({T, TName}, AccT) ->
+                                       lists:foldl(
+                                         fun ({SubIdAst, SubScope, SubSchema}, AccS) ->
+                                                 [{SubIdAst, [list(lists:reverse(SubScope))|Scope1],
+                                                   SubSchema}|AccS]
+                                         end, AccT,
+                                         get_exported_node(
+                                           {T, TName}, Nodes, MScope,
+                                           get_nested_nodes(T, Nodes, MScope, [])))
+                               end, AccM, [{ecapnp:get(paramStructType, M), <<"$Params">>},
+                                           {ecapnp:get(resultStructType, M), <<"$Results">>}])
+                     end, Acc, ecapnp:get(methods, I));
                _ -> Acc
            end,
     IdAst = atom(integer_to_list(Id)),

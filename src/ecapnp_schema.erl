@@ -60,9 +60,6 @@ lookup(Type, Schema) when is_atom(Schema) -> Schema:schema(Type);
 lookup(Id, #schema_node{ id=Id }=N) -> N;
 lookup(Name, #schema_node{ name=Name }=N) -> N;
 lookup(Type, #schema_node{ module=Module }) when Module /= undefined -> lookup(Type, Module);
-
-%% deprecated clauses..
-lookup(Type, #schema_node{ nodes=Ns }) -> lookup(Type, Ns);
 lookup(Type, #object{ ref=#ref{ data=Pid } }) -> lookup(Type, Pid);
 lookup(Type, #ref{ data=Pid }) -> lookup(Type, Pid);
 lookup(Type, Pid) when is_pid(Pid) ->
@@ -70,12 +67,9 @@ lookup(Type, Pid) when is_pid(Pid) ->
         false -> undefined;
         Res -> Res
     end;
-lookup(Type, [N|Ns]) -> 
-    case lookup(Type, N) of
-        undefined -> lookup(Type, Ns);
-        Res -> Res
-    end;
 lookup(Type, Schema) -> {unknown_type, {Type, Schema}}.
+
+
 
 -spec type_of(object()) -> schema_node().
 %% @doc Get type of object.
