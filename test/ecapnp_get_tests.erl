@@ -17,12 +17,12 @@
 -module(ecapnp_get_tests).
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
--include("test/test.capnp.hrl").
+-include("include/ecapnp.hrl").
 
 root_test() ->
     Msg = [<<0,0,0,0, 2,0,3,0>>],
-    {ok, Root} = ecapnp_get:root('Test', test(schema), Msg),
-    {ok, T} = ecapnp_schema:lookup('Test', test(schema)),
+    {ok, Root} = ecapnp_get:root('Test', test_capnp, Msg),
+    T = ecapnp_schema:lookup('Test', test_capnp),
     Data = (Root#object.ref)#ref.data,
     ?assertEqual(
        #object{ ref=#ref{ segment=0, pos=0, offset=0, data=Data,
@@ -40,21 +40,21 @@ field_defaults_test() ->
     check_default_values([<<0:64/integer>>]).
 
 check_default_values(Msg) ->
-    {ok, Root} = test(root, 'Test', Msg),
-    ?assertEqual(33, test(get, intField, Root)),
-    ?assertEqual(<<"test">>, test(get, textField, Root)),
-    ?assertEqual({boolField, false}, test(get, Root)),
-    Grp = test(get, opts, Root),
-    ?assertEqual({bool, true}, test(get, Grp)),
-    Meta = test(get, meta, Root),
-    ?assertEqual(0, test(get, id, Meta)),
-    ?assertEqual(<<>>, test(get, tag, Meta)),
-    ?assertEqual(<<"1234">>, test(get, data, Meta)),
-    Struct = test(get, structField, Root),
-    ?assertEqual(<<"simple message">>, test(get, simpleMessage, Struct)),
-    ?assertEqual(<<"default message">>, test(get, message, Struct)),
-    ?assertEqual(222, test(get, value, Struct)),
-    ?assertEqual(333, test(get, defaultValue, Struct)).
+    {ok, Root} = ecapnp:get_root('Test', test_capnp, Msg),
+    ?assertEqual(33, ecapnp:get(intField, Root)),
+    ?assertEqual(<<"test">>, ecapnp:get(textField, Root)),
+    ?assertEqual({boolField, false}, ecapnp:get(Root)),
+    Grp = ecapnp:get(opts, Root),
+    ?assertEqual({bool, true}, ecapnp:get(Grp)),
+    Meta = ecapnp:get(meta, Root),
+    ?assertEqual(0, ecapnp:get(id, Meta)),
+    ?assertEqual(<<>>, ecapnp:get(tag, Meta)),
+    ?assertEqual(<<"1234">>, ecapnp:get(data, Meta)),
+    Struct = ecapnp:get(structField, Root),
+    ?assertEqual(<<"simple message">>, ecapnp:get(simpleMessage, Struct)),
+    ?assertEqual(<<"default message">>, ecapnp:get(message, Struct)),
+    ?assertEqual(222, ecapnp:get(value, Struct)),
+    ?assertEqual(333, ecapnp:get(defaultValue, Struct)).
 
 field_values_test() ->
     Msg = [<<0,0,0,0, 2,0,6,0, %% struct, 2 word data, 6 pointers
@@ -96,37 +96,37 @@ field_values_test() ->
              1:32/integer-little, 106:32/integer-little, %% simpleMessage
              "Hello World!", 0, 0:24/integer-little
            >>],
-    {ok, Root} = test(root, 'Test', Msg),
-    ?assertEqual(0, test(get, intField, Root)),
-    ?assertEqual(<<>>, test(get, textField, Root)),
-    {groupField, Union} = test(get, Root),
-    ?assertEqual(-44, test(get, a, Union)),
-    ?assertEqual(0, test(get, b, Union)),
-    ?assertEqual(22, test(get, c, Union)),
-    Grp = test(get, opts, Root),
-    {object, Obj} = test(get, Grp),
+    {ok, Root} = ecapnp:get_root('Test', test_capnp, Msg),
+    ?assertEqual(0, ecapnp:get(intField, Root)),
+    ?assertEqual(<<>>, ecapnp:get(textField, Root)),
+    {groupField, Union} = ecapnp:get(Root),
+    ?assertEqual(-44, ecapnp:get(a, Union)),
+    ?assertEqual(0, ecapnp:get(b, Union)),
+    ?assertEqual(22, ecapnp:get(c, Union)),
+    Grp = ecapnp:get(opts, Root),
+    {object, Obj} = ecapnp:get(Grp),
     Simple = ecapnp_obj:to_struct('Simple', Obj),
-    ?assertEqual(<<"Hello World!">>, test(get, simpleMessage, Simple)),
-    ?assertEqual(<<"default message">>, test(get, message, Simple)),
-    ?assertEqual(0, test(get, value, Simple)),
-    ?assertEqual(333, test(get, defaultValue, Simple)),
-    Meta = test(get, meta, Root),
-    ?assertEqual(1234, test(get, id, Meta)),
-    ?assertEqual(<<>>, test(get, tag, Meta)),
-    ?assertEqual(<<"1234">>, test(get, data, Meta)),
-    Struct = test(get, structField, Root),
-    ?assertEqual(<<"simple message">>, test(get, simpleMessage, Struct)),
-    ?assertEqual(<<"default message">>, test(get, message, Struct)),
-    ?assertEqual(222, test(get, value, Struct)),
-    ?assertEqual(333, test(get, defaultValue, Struct)).
+    ?assertEqual(<<"Hello World!">>, ecapnp:get(simpleMessage, Simple)),
+    ?assertEqual(<<"default message">>, ecapnp:get(message, Simple)),
+    ?assertEqual(0, ecapnp:get(value, Simple)),
+    ?assertEqual(333, ecapnp:get(defaultValue, Simple)),
+    Meta = ecapnp:get(meta, Root),
+    ?assertEqual(1234, ecapnp:get(id, Meta)),
+    ?assertEqual(<<>>, ecapnp:get(tag, Meta)),
+    ?assertEqual(<<"1234">>, ecapnp:get(data, Meta)),
+    Struct = ecapnp:get(structField, Root),
+    ?assertEqual(<<"simple message">>, ecapnp:get(simpleMessage, Struct)),
+    ?assertEqual(<<"default message">>, ecapnp:get(message, Struct)),
+    ?assertEqual(222, ecapnp:get(value, Struct)),
+    ?assertEqual(333, ecapnp:get(defaultValue, Struct)).
 
 
 default_list_test() ->
-    {ok, Root} = test(root, 'ListTest', [<<0:64/integer>>]),
-    ?assertEqual([456, 789, -123], test(get, listInts, Root)),
-    ?assertEqual([], ecapnp_obj:to_list(bool, test(get, listAny, Root))),
-    [Obj1, Obj2] = test(get, listSimples, Root),
-    [?assertEqual(E, test(get, F, O))
+    {ok, Root} = ecapnp:get_root('ListTest', test_capnp, [<<0:64/integer>>]),
+    ?assertEqual([456, 789, -123], ecapnp:get(listInts, Root)),
+    ?assertEqual([], ecapnp_obj:to_list(bool, ecapnp:get(listAny, Root))),
+    [Obj1, Obj2] = ecapnp:get(listSimples, Root),
+    [?assertEqual(E, ecapnp:get(F, O))
      || {O, T} <- [{Obj1, [{value, 1}, {message, <<"first">>}]},
                    {Obj2, [{value, 2}, {message, <<"second">>}]}],
         {F, E} <- T].
@@ -146,11 +146,11 @@ text_list_test() ->
             Text2/binary, 0,
             0:5/integer-little-unit:8, %% padding
             Text3/binary, 0>>,
-    {ok, Root} = test(root, 'ListTest', [Msg]),
+    {ok, Root} = ecapnp:get_root('ListTest', test_capnp, [Msg]),
     [?assertEqual(Expect, Actual)
      || {Expect, Actual} <- 
             lists:zip(
               [Text1, Text2, Text3],
-              test(get, listText, Root))].
+              ecapnp:get(listText, Root))].
 
 -endif.

@@ -31,17 +31,14 @@ erlang.mk:
 	$(gen_verbose) capnpc -oerl $<
 
 %_capnp.erl: %.capnp | ebin
-	$(gen_verbose) ECAPNP_TO_ERL=../src capnpc -oerl:ebin --src-prefix=src $<
+	$(gen_verbose) ECAPNP_TO_ERL=../$(dir $@) capnpc\
+		-oerl:ebin --src-prefix=$(dir $<) $<
 
 ebin:
 	@mkdir -p ebin
 
 # make sure we rebuild on any header file change
 %.erl: include/*.hrl include/*/*.hrl ; @touch $@
-
-# test schema (for the eunit tests)
-test/test.capnp.hrl: test/test.capnp
-	$(gen_verbose) capnpc -oerl $<
 
 # capnp_test integration
 dep_capnp_test = git://github.com/kaos/capnp_test.git
@@ -77,6 +74,8 @@ dbg: bld
 		end"
 
 tst: bld
+	erl -pa test -pa deps/meck/ebin -noinput \
+		-eval "case eunit:test(\"test\") of ok -> halt(0); _ -> halt(1) end"
 	erl -pa test -pa deps/proper/ebin -noinput \
 		-eval "proper:module(ecapnp_props), init:stop()"
 

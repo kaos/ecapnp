@@ -17,10 +17,10 @@
 -module(ecapnp_set_tests).
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
--include("test/test.capnp.hrl").
+-include("include/ecapnp.hrl").
 
 root_test() ->
-    {ok, Root} = ecapnp_set:root('Test', test(schema)),
+    {ok, Root} = ecapnp_set:root('Test', test_capnp),
     #msg{ alloc=[Alloc], data=[<<Data:9/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(9, Alloc),
@@ -30,8 +30,8 @@ root_test() ->
        Data).
 
 data_field_test() ->
-    {ok, Root} = ecapnp_set:root('Test', test(schema)),
-    ok = test(set, intField, 0, Root),
+    {ok, Root} = ecapnp_set:root('Test', test_capnp),
+    ok = ecapnp:set(intField, 0, Root),
     #msg{ alloc=[Alloc], data=[<<Data:9/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(9, Alloc),
@@ -50,8 +50,8 @@ data_field_test() ->
        >>, Data).
 
 text_field_test() ->
-    {ok, Root} = ecapnp_set:root('Test', test(schema)),
-    ok = test(set, textField, <<"test data">>, Root),
+    {ok, Root} = ecapnp_set:root('Test', test_capnp),
+    ok = ecapnp:set(textField, <<"test data">>, Root),
     #msg{ alloc=[Alloc], data=[<<Data:11/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(11, Alloc),
@@ -75,11 +75,11 @@ text_field_test() ->
        >>, Data).
 
 list_field_test() ->
-    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
-    ?assertEqual([0,0,0], test(set, listInts, 3, Root)),
-    ok = test(set, listInts, {1, 222}, Root),
-    ok = test(set, listInts, {0, 111}, Root),
-    ok = test(set, listInts, {2, -333}, Root),
+    {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
+    ?assertEqual([0,0,0], ecapnp:set(listInts, 3, Root)),
+    ok = ecapnp:set(listInts, {1, 222}, Root),
+    ok = ecapnp:set(listInts, {0, 111}, Root),
+    ok = ecapnp:set(listInts, {2, -333}, Root),
     #msg{ alloc=[Alloc], data=[<<Data:7/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(7, Alloc),
@@ -98,10 +98,10 @@ list_field_test() ->
        >>, Data).
 
 object_field_test() ->
-    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
-    ?assertEqual([false, false], test(set, listAny, {{list, bool}, 2}, Root)),
-    ok = test(set, listAny, {{list, bool}, {1, true}}, Root),
-    ok = test(set, listAny, {{list, bool}, {0, false}}, Root),
+    {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
+    ?assertEqual([false, false], ecapnp:set(listAny, {{list, bool}, 2}, Root)),
+    ok = ecapnp:set(listAny, {{list, bool}, {1, true}}, Root),
+    ok = ecapnp:set(listAny, {{list, bool}, {0, false}}, Root),
     #msg{ alloc=[Alloc], data=[<<Data:6/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(6, Alloc),
@@ -118,9 +118,9 @@ object_field_test() ->
        >>, Data).
 
 object_as_struct_test() ->
-    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
-    Obj = test(set, listAny, 'Simple', Root),
-    ok = test(set, simpleMessage, <<"object text">>, Obj),
+    {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
+    Obj = ecapnp:set(listAny, 'Simple', Root),
+    ok = ecapnp:set(simpleMessage, <<"object text">>, Obj),
     #msg{ alloc=[Alloc], data=[<<Data:10/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(10, Alloc),
@@ -142,10 +142,10 @@ object_as_struct_test() ->
        >>, Data).
 
 struct_list_test() ->
-    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
-    [R1, R2] = test(set, listSimples, 2, Root),
-    ok = test(set, value, 332211, R1),
-    ok = test(set, defaultValue, 112233, R2),
+    {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
+    [R1, R2] = ecapnp:set(listSimples, 2, Root),
+    ok = ecapnp:set(value, 332211, R1),
+    ok = ecapnp:set(defaultValue, 112233, R2),
     #msg{ alloc=[Alloc], data=[<<Data:12/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(12, Alloc),
@@ -179,11 +179,11 @@ text_list_test() ->
             0:5/integer-little-unit:8, %% padding
             Text3/binary, 0>>,
 
-    {ok, Root} = test(root, 'ListTest'),
-    test(set, listText, 3, Root),
-    test(set, listText, {0, Text1}, Root),
-    test(set, listText, {1, Text2}, Root),
-    test(set, listText, {2, Text3}, Root),
+    {ok, Root} = ecapnp:set_root('ListTest', test_capnp),
+    ecapnp:set(listText, 3, Root),
+    ecapnp:set(listText, {0, Text1}, Root),
+    ecapnp:set(listText, {1, Text2}, Root),
+    ecapnp:set(listText, {2, Text3}, Root),
     #msg{ alloc=[Alloc], data=[<<Data:15/binary-unit:64, _/binary>>]}
         = ecapnp_data:get_message((Root#object.ref)#ref.data),
     ?assertEqual(15, Alloc),
@@ -197,8 +197,8 @@ set_struct_test() ->
           "object text", 0,
           0:32/integer-little %% padding
         >>,
-    {ok, Root} = ecapnp_set:root('ListTest', test(schema)),
-    Obj = test(set, listAny,
+    {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
+    Obj = ecapnp:set(listAny,
                {{struct, 'Simple'},
                 <<0,0,0,0, 1,0,2,0,
                   SimpleData/binary>>},

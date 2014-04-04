@@ -174,17 +174,17 @@ copy_struct_list2_test() ->
     ?assertEqual(Bin, ecapnp_ref:copy(Ref)).
 
 alloc_test() ->
-    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
+    Data = ecapnp_data:new({test_capnp, 10}),
     Ref = ecapnp_ref:alloc(0, 5, Data),
     ?assertEqual(
        #ref{ segment=0, pos=0, offset=0, data=Data, kind=null},
        Ref),
     #msg{ alloc=[A], data=[D]} = ecapnp_data:get_message(Data),
     ?assertEqual(5, A),
-    ?assertEqual(<<0:10/integer-unit:64>>, D).
+    ?assertEqual(<<0:100/integer-unit:64>>, D).
 
 set_test() ->
-    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
+    Data = ecapnp_data:new({test_capnp, 10}),
     Kind = #struct_ref{ dsize=3, psize=4 },
     Ref = ecapnp_ref:set(Kind, ecapnp_ref:alloc(0, 5, Data)),
     ?assertEqual(
@@ -196,7 +196,8 @@ set_test() ->
     ?assertEqual(<<0:32/integer,
                    3:16/integer-little,
                    4:16/integer-little,
-                   0:9/integer-unit:64>>,
+                   0:9/integer-unit:64,
+                   0:90/integer-unit:64>>,
                  D).
 
 write_struct_data_test() ->
@@ -221,7 +222,7 @@ write_struct_ptr_test() ->
        Bin).
 
 write_struct_list_test() ->    
-    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 10}),
+    Data = ecapnp_data:new({test_capnp, 10}),
     Kind = #struct_ref{ dsize=1, psize=2 },
     Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
     _ListRef = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
@@ -238,11 +239,11 @@ write_struct_list_test() ->
          0:64/integer, %% ptr (1)
          2#00010011, %% 8 bits
          0:56/integer, %% padding
-         0:64/integer-unit:5 %% unallocated data
+         0:95/integer-unit:64 %% unallocated data
        >>, Bin).
 
 write_composite_list_test() ->
-    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 20}),
+    Data = ecapnp_data:new({test_capnp, 20}),
     Kind = #struct_ref{ dsize=1, psize=2 },
     Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
     ListRef = ecapnp_ref:alloc_list(
@@ -271,7 +272,7 @@ paste_test() ->
                    0,0,0,0, 0,0,0,0,
                    4,3,2,1, 8,7,6,5,
                    0,0,0,0, 0,0,0,0>>,
-    Data = ecapnp_data:new({ecapnp_test_utils:test_schema(), 20}),
+    Data = ecapnp_data:new({test_capnp, 20}),
     Root = ecapnp_ref:alloc(#struct_ref{ dsize=1, psize=2 }, 0, 4, Data),
     Null = ecapnp_ref:read_struct_ptr(0, Root),
     ?assertEqual(null, Null#ref.kind),

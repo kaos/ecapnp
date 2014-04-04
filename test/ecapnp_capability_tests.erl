@@ -15,9 +15,9 @@
 %%  
 
 -module(ecapnp_capability_tests).
--ifdef(TEST).
+-ifdef(TEST_CAP).
 -include_lib("eunit/include/eunit.hrl").
--include("test/test.capnp.hrl").
+-include("include/ecapnp.hrl").
 
 meck_test() ->
     setup_meck(foo, [{bar, fun() -> baz end}]),
@@ -25,7 +25,7 @@ meck_test() ->
     teardown_meck(foo).
 
 start_stop_server_test() ->
-    {ok, Object} = ecapnp_capability:start('BasicCap', [], test(schema)),
+    {ok, Object} = ecapnp_capability:start('BasicCap', [], test_capnp),
     Pid = ecapnp_capability:pid(Object),
     ?assert(is_process_alive(Pid)),
     ok = ecapnp_capability:stop(Object),
@@ -35,26 +35,26 @@ basic_server_test() ->
     %% setup expectations
     setup_meck(basicCap, [{add,
                            fun(Params, Results) ->
-                                   test(set, result,
-                                        test(get, a, Params)
-                                        + test(get, b, Params),
+                                   ecapnp:set(result,
+                                        ecapnp:get(a, Params)
+                                        + ecapnp:get(b, Params),
                                         Results)
                            end}
                          ]),
     %% start server for capability
-    {ok, Cap} = ecapnp_capability:start('BasicCap', basicCap, test(schema)),
+    {ok, Cap} = ecapnp_capability:start('BasicCap', basicCap, test_capnp),
     %% prepare request
     {ok, Request} = ecapnp_capability:request(add, Cap),
     check_request('BasicCap', add, Request),
     Param = ecapnp_capability:param(Request),
-    ok = test(set, a, 123, Param),
-    ok = test(set, b, 456, Param),
+    ok = ecapnp:set(a, 123, Param),
+    ok = ecapnp:set(b, 456, Param),
     %% send request
     {ok, Result} = ecapnp_capability:send(Request),
     %% check_promise(...),
     %% wait for then verify response
     ok = ecapnp_capability:wait(Result),
-    ?assertEqual(579, test(get, result, Result)),
+    ?assertEqual(579, ecapnp:get(result, Result)),
     %% clean up
     ecapnp_capability:stop(Cap),
     teardown_meck(basicCap).
@@ -63,20 +63,20 @@ pipeline_test() ->
     %% setup expectations
     setup_meck(basicCap, [{add,
                            fun(Params, Results) ->
-                                   test(set, result,
-                                        test(get, a, Params)
-                                        + test(get, b, Params),
+                                   ecapnp:set(result,
+                                        ecapnp:get(a, Params)
+                                        + ecapnp:get(b, Params),
                                         Results)
                            end}
                          ]),
     setup_meck(pipelines, [{getBasic,
                             fun(_Params, Results) ->
-                                    {ok, Basic} = ecapnp_capability:start('BasicCap', basicCap, test(schema)),
-                                    test(set, basic, Basic, Results), ok
+                                    {ok, Basic} = ecapnp_capability:start('BasicCap', basicCap, test_capnp),
+                                    ecapnp:set(basic, Basic, Results), ok
                             end}
                           ]),
     %% start server for capabilities
-    {ok, Pipe} = ecapnp_capability:start('Pipelines', pipelines, test(schema)),
+    {ok, Pipe} = ecapnp_capability:start('Pipelines', pipelines, test_capnp),
     %% prepare request
     {ok, Request} = ecapnp_capability:request(getBasic, Pipe),
     check_request('Pipelines', getBasic, Request),
@@ -84,16 +84,16 @@ pipeline_test() ->
     {ok, Result} = ecapnp_capability:send(Request),
     %% check_promise(...),
     %% pipeline request
-    Basic = test(get, basic, Result),
+    Basic = ecapnp:get(basic, Result),
     {ok, PipeRequest} = ecapnp_capability:request(add, Basic),
     PipeParam = ecapnp_capability:param(PipeRequest),
-    ok = test(set, a, 111, PipeParam),
-    ok = test(set, b, 222, PipeParam),
+    ok = ecapnp:set(a, 111, PipeParam),
+    ok = ecapnp:set(b, 222, PipeParam),
     {ok, PipeResult} = ecapnp_capability:send(PipeRequest),
     %% wait for then verify response
     ok = ecapnp_capability:wait(Result),
     ok = ecapnp_capability:wait(PipeResult),
-    ?assertEqual(333, test(get, result, PipeResult)),
+    ?assertEqual(333, ecapnp:get(result, PipeResult)),
     %% clean up
     ecapnp_capability:stop(Pipe),
     teardown_meck(basicCap),
@@ -103,11 +103,11 @@ pipeline_test() ->
 check_request(Cap, Method, Req) ->
     #request{ method=ActualMethod, param=Object } = Req,
     ?assertEqual(Method, ActualMethod),
-    {ok, Node} = ecapnp_schema:lookup(Cap, test(schema)),
+    {ok, Node} = ecapnp_schema:lookup(Cap, test_capnp),
     #method{ paramType=ParamType }
         = lists:keyfind(Method, #method.name,
                         (Node#schema_node.kind)#interface.methods),
-    {ok, Params} = ecapnp_schema:lookup(ParamType, test(schema)),
+    {ok, Params} = ecapnp_schema:lookup(ParamType, test_capnp),
     #object{ schema=ParamsNode, ref=ParamsRef } = Object,
     ?assertEqual(Params, ParamsNode),
     #schema_node{ kind=#struct{ dsize=DSize, psize=PSize } } = Params,

@@ -19,7 +19,7 @@ struct Test @0xfa556038e27b336d $testAnno("Test struct anno 2013 too") {  # 16 b
       bool @6 :Bool = true;  # bits[48, 49), union tag = 0
       text @7 :Text;  # ptr[1], union tag = 1
       data @8 :Data;  # ptr[1], union tag = 2
-      object @9 :Object;  # ptr[1], union tag = 3
+      object @9 :AnyPointer;  # ptr[1], union tag = 3
     }
   }
   meta :group {
@@ -37,7 +37,7 @@ struct Simple @0xd16f318851f71be8 {  # 8 bytes, 2 ptrs
 }
 struct ListTest @0xed15f6a91b7977a6 {  # 0 bytes, 4 ptrs
   listInts @0 :List(Int32) = [456, 789, -123];  # ptr[0]
-  listAny @1 :Object;  # ptr[1]
+  listAny @1 :AnyPointer;  # ptr[1]
   listSimples @2 :List(Simple) = [(message = "first", value = 1), (message = "second", value = 2)];  # ptr[2]
   listText @3 :List(Text);  # ptr[3]
 }

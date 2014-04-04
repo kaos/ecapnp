@@ -30,9 +30,9 @@ from_ref_test() ->
 
 field_test() ->
     Data = data([]),
-    {ok, T} = ecapnp_schema:lookup('Test', Data),
+    T = ecapnp_schema:lookup('Test', Data),
     ?assertEqual(
-       #field{ name=intField, kind=#data{ type=uint32, align=32, default= <<1,2,3,4>> } },
+       #field{ name=intField, kind=#data{ type=uint8, align=0, default= <<33>> } },
        ecapnp_obj:field(intField, #object{ schema=T })).
 
 copy_test() ->
@@ -59,7 +59,7 @@ object_test() ->
     ListRef = #ref{ kind=#list_ref{ size=byte }, data=Data },
     ListObj = ecapnp_obj:from_ref(ListRef, object),
 
-    {ok, T} = ecapnp_schema:lookup('Test', NullRef), 
+    T = ecapnp_schema:lookup('Test', NullRef), 
     ?assertEqual(
       #object{ schema=T, ref=NullRef },
       ecapnp_obj:to_struct('Test', NullObj)),
