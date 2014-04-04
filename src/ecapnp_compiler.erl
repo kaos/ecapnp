@@ -581,40 +581,41 @@ get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
     NameAst = atom(binary_to_list(Name)),
     Scope1 = [NameAst|Scope],
     Schema = get_node(Id, Nodes),
-    Acc1 = case ecapnp:get(Schema) of
-               {struct, S} ->
-                   lists:foldl(
-                     fun (F, AccG) ->
-                             case ecapnp:get(F) of
-                                 {group, G} ->
-                                     GId = ecapnp:get(typeId, G),
-                                     get_exported_node(
-                                       {GId, ecapnp:get(name, F)},
-                                       Nodes, Scope1,
-                                       get_nested_nodes(GId, Nodes, Scope1, AccG));
-                                 _ -> AccG
-                             end
-                     end, Acc, ecapnp:get(fields, S));
-               {interface, I} ->
-                   lists:foldl(
-                     fun (M, AccM) ->
-                             MName = atom(binary_to_list(ecapnp:get(name, M))),
-                             MScope = [MName],
-                             lists:foldl(
-                               fun ({T, TName}, AccT) ->
-                                       lists:foldl(
-                                         fun ({SubIdAst, SubScope, SubSchema}, AccS) ->
-                                                 [{SubIdAst, [list(lists:reverse(SubScope))|Scope1],
-                                                   SubSchema}|AccS]
-                                         end, AccT,
-                                         get_exported_node(
-                                           {T, TName}, Nodes, MScope,
-                                           get_nested_nodes(T, Nodes, MScope, [])))
-                               end, AccM, [{ecapnp:get(paramStructType, M), <<"$Params">>},
-                                           {ecapnp:get(resultStructType, M), <<"$Results">>}])
-                     end, Acc, ecapnp:get(methods, I));
-               _ -> Acc
-           end,
+    Acc1 = get_exported_node_type(
+             ecapnp:get(Schema), Nodes, Scope1, Acc),
     IdAst = atom(integer_to_list(Id)),
     [{IdAst, Scope1, Schema}
      |get_nested_nodes(Id, Nodes, Scope1, Acc1)].
+
+get_exported_node_type({struct, S}, Nodes, Scope, Acc) ->
+    lists:foldl(
+      fun (F, AccG) ->
+              case ecapnp:get(F) of
+                  {group, G} ->
+                      GId = ecapnp:get(typeId, G),
+                      get_exported_node(
+                        {GId, ecapnp:get(name, F)},
+                        Nodes, Scope,
+                        get_nested_nodes(GId, Nodes, Scope, AccG));
+                  _ -> AccG
+              end
+      end, Acc, ecapnp:get(fields, S));
+get_exported_node_type({interface, I}, Nodes, Scope, Acc) ->
+    lists:foldl(
+      fun (M, AccM) ->
+              MName = atom(binary_to_list(ecapnp:get(name, M))),
+              MScope = [MName],
+              lists:foldl(
+                fun ({T, TName}, AccT) ->
+                        lists:foldl(
+                          fun ({SubIdAst, SubScope, SubSchema}, AccS) ->
+                                  [{SubIdAst, [list(lists:reverse(SubScope))|Scope],
+                                    SubSchema}|AccS]
+                          end, AccT,
+                          get_exported_node(
+                            {T, TName}, Nodes, MScope,
+                            get_nested_nodes(T, Nodes, MScope, [])))
+                end, AccM, [{ecapnp:get(paramStructType, M), <<"$Params">>},
+                            {ecapnp:get(resultStructType, M), <<"$Results">>}])
+      end, Acc, ecapnp:get(methods, I));
+get_exported_node_type(_Type, _Nodes, _Scope, Acc) -> Acc.
