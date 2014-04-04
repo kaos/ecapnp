@@ -517,7 +517,7 @@ compile_binary(data, Bin) ->
     compile_binary(Bin).
 
 compile_binary(Bin) ->
-    Fields = lists:foldl(
+    Fields = lists:foldr(
                fun (B, Acc) when is_integer(B) -> [binary_field(integer(B))|Acc];
                    (B, Acc) when is_bitstring(B) ->
                        S = bit_size(B),
