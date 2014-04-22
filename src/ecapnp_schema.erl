@@ -84,30 +84,28 @@ size_of(Type, Store) ->
 -spec size_of(Node::schema_node()) -> non_neg_integer().
 %% @doc Query size of a struct type.
 %%
-%% Will crash with `function_clause' if `Node' is not a struct node.
-size_of(#struct{ dsize=DSize, psize=PSize }) ->
-    DSize + PSize;
-size_of(#schema_node{ kind=Kind }) ->
-    size_of(Kind);
-size_of(#interface{ struct=Struct }) ->
-    size_of(Struct).
+%% Will crash with `function_clause' if `Node' is not a struct or
+%% interface node.
+size_of(#schema_node{ kind=Kind }) -> size_of(Kind);
+size_of(#struct{ dsize=DSize, psize=PSize }) -> DSize + PSize;
+%% Size in message data, which simply is a Capability pointer, the
+%% CapDescriptor is stored out-of-band.
+size_of(#interface{}) -> 1.
 
 -spec data_size(schema_node()) -> non_neg_integer().
 %% @doc Get data size of a struct type.
-data_size(Node) ->
-    struct_value(Node, #struct.dsize).
+data_size(#struct{ dsize=DSize }) -> DSize.
 
 -spec ptrs_size(schema_node()) -> non_neg_integer().
 %% @doc Get pointer count for a struct type.
-ptrs_size(Node) ->
-    struct_value(Node, #struct.psize).
+ptrs_size(#struct{ psize=PSize }) -> PSize.
 
 get_ref_kind(#struct{ dsize=DSize, psize=PSize }) ->
     #struct_ref{ dsize=DSize, psize=PSize };
 get_ref_kind(#schema_node{ kind=Kind }) ->
     get_ref_kind(Kind);
-get_ref_kind(#interface{ struct=Struct }) ->
-    setelement(1, get_ref_kind(Struct), interface_ref).
+get_ref_kind(#interface{}) ->
+    #interface_ref{}.
 
 get_ref_kind(Type, Ref) when is_atom(Type); is_number(Type) ->
     get_ref_kind(lookup(Type, Ref));
@@ -129,9 +127,9 @@ set_ref_to(Type, Ref) ->
 %% internal functions
 %% ===================================================================
 
-struct_value(Struct, Idx) when is_record(Struct, struct) ->
-    element(Idx, Struct);
-struct_value(#schema_node{ kind=Kind }, Idx) ->
-    struct_value(Kind, Idx);
-struct_value(#interface{ struct=Struct }, Idx) ->
-    struct_value(Struct, Idx).
+%% struct_value(Struct, Idx) when is_record(Struct, struct) ->
+%%     element(Idx, Struct);
+%% struct_value(#schema_node{ kind=Kind }, Idx) ->
+%%     struct_value(Kind, Idx);
+%% struct_value(#interface{ struct=Struct }, Idx) ->
+%%     struct_value(Struct, Idx).

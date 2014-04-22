@@ -82,7 +82,8 @@ get_message(Pid) ->
 -spec get_type(schema_type(), pid()) -> node_type() | false.
 get_type(Type, Pid)
   when is_atom(Type);
-       is_integer(Type) ->
+       is_integer(Type);
+       is_list(Type) ->
     data_request(get_type, Type, Pid).
 
 promise(Pid) ->

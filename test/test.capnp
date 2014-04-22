@@ -1,4 +1,4 @@
-# test/test.capnp
+# test.capnp
 @0xe87e0317861d75a1;
 $testAnno("file anno 2013");
 annotation testAnno @0xf0fabdffa4323aca (*) :Text;
@@ -26,7 +26,7 @@ struct Test @0xfa556038e27b336d $testAnno("Test struct anno 2013 too") {  # 16 b
     id @10 :UInt16;  # bits[80, 96)
     tag @11 :Text;  # ptr[2]
     data @12 :Data = "1234";  # ptr[3]
-    struct @14 :Simple = (message = "overriden default message", defaultValue = 321);  # ptr[5]
+    struct @14 :Simple = (message = "overriden default message", value = 222, defaultValue = 321);  # ptr[5]
   }
 }
 struct Simple @0xd16f318851f71be8 {  # 8 bytes, 2 ptrs
@@ -38,7 +38,7 @@ struct Simple @0xd16f318851f71be8 {  # 8 bytes, 2 ptrs
 struct ListTest @0xed15f6a91b7977a6 {  # 0 bytes, 4 ptrs
   listInts @0 :List(Int32) = [456, 789, -123];  # ptr[0]
   listAny @1 :AnyPointer;  # ptr[1]
-  listSimples @2 :List(Simple) = [(message = "first", value = 1), (message = "second", value = 2)];  # ptr[2]
+  listSimples @2 :List(Simple) = [(message = "first", value = 1, defaultValue = 333), (message = "second", value = 2, defaultValue = 333)];  # ptr[2]
   listText @3 :List(Text);  # ptr[3]
 }
 interface BasicCap @0xf329462caa09f38f {
@@ -46,4 +46,10 @@ interface BasicCap @0xf329462caa09f38f {
 }
 interface Pipelines @0xde7af08d2279ac69 {
   getBasic @0 () -> (basic :BasicCap);
+}
+interface OtherCap @0x9000899726987e7f {
+  sqroot @0 (a :Int64) -> (root1 :Float64, root2 :Float64);
+}
+interface ThirdCap @0xfb84e23a9ca71e0e extends(BasicCap, OtherCap) {
+  square @0 (a :Int64) -> (sq :Int64);
 }

@@ -514,9 +514,9 @@ read_ref(<<OffsetAndKind:32/integer-signed-little,
                          }};
         interface ->
             #ref{ offset=OffsetAndKind bsr 2,
-                  kind=#interface_ref{
-                          dsize=Size band 16#ffff,
-                          psize=Size bsr 16 }}
+                  kind=#interface_ref{}}
+                          %% dsize=Size band 16#ffff,
+                          %% psize=Size bsr 16 }}
     end.
 
 read_list_elements(_, _, 0, Acc) -> lists:reverse(Acc);
@@ -601,13 +601,13 @@ create_ptr(Offset, #list_ref{ size=Size, count=Count }) ->
 %% far ptr
 create_ptr(Offset, #far_ref{ segment=Seg, double_far = false }) ->
     Off = (Offset bsl 3) + 2,
-    <<Off:32/integer-little, Seg:32/integer-little>>;
+    <<Off:32/integer-little, Seg:32/integer-little>>.
 %% capability ptr
-create_ptr(Offset, #interface_ref{ dsize=DSize, psize=PSize }) ->
-    Off = (Offset bsl 2) + 3,
-    <<Off:32/integer-signed-little,
-      DSize:16/integer-little,
-      PSize:16/integer-little>>.
+%% create_ptr(Offset, #interface_ref{ dsize=DSize, psize=PSize }) ->
+%%     Off = (Offset bsl 2) + 3,
+%%     <<Off:32/integer-signed-little,
+%%       DSize:16/integer-little,
+%%       PSize:16/integer-little>>.
 
 
 

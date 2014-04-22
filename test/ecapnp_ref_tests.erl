@@ -266,36 +266,36 @@ write_composite_list_test() ->
          0,0,5,6, 7,8,0,0
        >>, Bin).
 
-paste_test() ->
-    StructData = <<1,2,3,4, 5,6,7,8,
-                   7,0,0,0, 1,0,1,0,
-                   0,0,0,0, 0,0,0,0,
-                   4,3,2,1, 8,7,6,5,
-                   0,0,0,0, 0,0,0,0>>,
-    Data = ecapnp_data:new({test_capnp, 20}),
-    Root = ecapnp_ref:alloc(#struct_ref{ dsize=1, psize=2 }, 0, 4, Data),
-    Null = ecapnp_ref:read_struct_ptr(0, Root),
-    ?assertEqual(null, Null#ref.kind),
-    Ref = ecapnp_ref:paste(
-            <<0,0,0,0, 1,0,2,0, StructData/binary>>,
-            Null),
-    ?assertEqual(#struct_ref{ dsize=1, psize=2 }, Ref#ref.kind),
-    StructValue = ecapnp_ref:read_struct_data(0, 64, Ref),
-    InterfaceRef = ecapnp_ref:read_struct_ptr(0, Ref),
-    ?assertEqual(#interface_ref{ dsize=1, psize=1 }, InterfaceRef#ref.kind),
-    InterfaceValue = ecapnp_ref:read_struct_data(0, 64, InterfaceRef),
-    ?assertEqual(<<1,2,3,4, 5,6,7,8>>, StructValue),
-    ?assertEqual(<<4,3,2,1, 8,7,6,5>>, InterfaceValue),
-    #msg{ alloc=[A], data=[<<Bin:9/binary-unit:64, _/binary>>] }
-        = ecapnp_data:get_message(Data),
-    ?assertEqual(9, A),
-    ?assertEqual(
-       <<0:32/integer-little, 1:16/integer-little, 2:16/integer-little,
-         0:64/integer-little,
-         4,0,0,0, 1,0,2,0,
-         0:64/integer-little,
-         StructData/binary>>,
-       Bin).
+%% paste_test() ->
+%%     StructData = <<1,2,3,4, 5,6,7,8,
+%%                    7,0,0,0, 1,0,1,0,
+%%                    0,0,0,0, 0,0,0,0,
+%%                    4,3,2,1, 8,7,6,5,
+%%                    0,0,0,0, 0,0,0,0>>,
+%%     Data = ecapnp_data:new({test_capnp, 20}),
+%%     Root = ecapnp_ref:alloc(#struct_ref{ dsize=1, psize=2 }, 0, 4, Data),
+%%     Null = ecapnp_ref:read_struct_ptr(0, Root),
+%%     ?assertEqual(null, Null#ref.kind),
+%%     Ref = ecapnp_ref:paste(
+%%             <<0,0,0,0, 1,0,2,0, StructData/binary>>,
+%%             Null),
+%%     ?assertEqual(#struct_ref{ dsize=1, psize=2 }, Ref#ref.kind),
+%%     StructValue = ecapnp_ref:read_struct_data(0, 64, Ref),
+%%     InterfaceRef = ecapnp_ref:read_struct_ptr(0, Ref),
+%%     ?assertEqual(#interface_ref{ dsize=1, psize=1 }, InterfaceRef#ref.kind),
+%%     InterfaceValue = ecapnp_ref:read_struct_data(0, 64, InterfaceRef),
+%%     ?assertEqual(<<1,2,3,4, 5,6,7,8>>, StructValue),
+%%     ?assertEqual(<<4,3,2,1, 8,7,6,5>>, InterfaceValue),
+%%     #msg{ alloc=[A], data=[<<Bin:9/binary-unit:64, _/binary>>] }
+%%         = ecapnp_data:get_message(Data),
+%%     ?assertEqual(9, A),
+%%     ?assertEqual(
+%%        <<0:32/integer-little, 1:16/integer-little, 2:16/integer-little,
+%%          0:64/integer-little,
+%%          4,0,0,0, 1,0,2,0,
+%%          0:64/integer-little,
+%%          StructData/binary>>,
+%%        Bin).
 
 
 -endif.

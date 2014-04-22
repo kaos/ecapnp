@@ -65,18 +65,18 @@ from_data(Data, Type) ->
 field(FieldName, #object{ schema=#schema_node{
                                   kind=#struct{ fields=Fields }
                                  }}) ->
-    find_field(FieldName, #field.name, Fields);
-field(FieldName,
-      #object{
-         schema=#schema_node{
-                   kind=#interface{
-                           methods=Methods,
-                           struct=#struct{ fields=Fields } }
-                  }}) ->
-    case lists:keyfind(FieldName, #field.name, Fields) of
-        false -> find_field(FieldName, #method.name, Methods);
-        Field -> Field
-    end.
+    find_field(FieldName, #field.name, Fields). %;
+%% field(FieldName,
+%%       #object{
+%%          schema=#schema_node{
+%%                    kind=#interface{
+%%                            methods=Methods,
+%%                            struct=#struct{ fields=Fields } }
+%%                   }}) ->
+%%     case lists:keyfind(FieldName, #field.name, Fields) of
+%%         false -> find_field(FieldName, #method.name, Methods);
+%%         Field -> Field
+%%     end.
 
 %% @doc Copy object recursively.
 -spec copy(object()) -> binary().

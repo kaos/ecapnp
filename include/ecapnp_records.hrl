@@ -1,3 +1,5 @@
+%% need the same version in both ecapnp runtime libs and compiled schemas
+-ecapnp_schema_version(1).
 
 %% Common record for all schema nodes
 -record(schema_node, {
@@ -28,10 +30,7 @@
 %% Interface node
 -record(interface, {
           extends=[] :: list(),
-          methods=[] :: list(),
-          
-          %% implementation specifics
-          struct :: ecapnp:struct()
+          methods=[] :: list()
          }).
 
 %% Const node
@@ -87,14 +86,9 @@
           data :: pid()
          }).
 
--define(struct_ref_data,
-        %% DON'T TOUCH
-        dsize=0 :: ecapnp:word_count(),
-        psize=0 :: ecapnp:ptr_count()
-                   ).
-
 -record(struct_ref, {
-          ?struct_ref_data
+          dsize=0 :: ecapnp:word_count(),
+          psize=0 :: ecapnp:ptr_count()
          }).
 
 -record(list_ref, {
@@ -108,15 +102,13 @@
          }).
 
 -record(interface_ref, {
-          ?struct_ref_data
+          pid :: pid()
          }).
 
 -record(object, {
           ref=null :: ecapnp:ref(),
           schema=object :: object | ecapnp:schema_node()
          }).
-
--undef(struct_ref_data).
 
 %% Capability & RPC
 
