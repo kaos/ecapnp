@@ -120,97 +120,12 @@ thirdCap_square(Pid, S, A) ->
            Params, Result),
     ?assertEqual(A*A, ecapnp:get(sq, Result)).
     
-%% basic_server_test() ->
-%%     %% setup expectations
-%%     setup_meck(basicCap, [{add,
-%%                            fun(Params, Results) ->
-%%                                    ecapnp:set(result,
-%%                                         ecapnp:get(a, Params)
-%%                                         + ecapnp:get(b, Params),
-%%                                         Results)
-%%                            end}
-%%                          ]),
-%%     %% start server for capability
-%%     {ok, Cap} = ecapnp_capability:start('BasicCap', basicCap, test_capnp),
-%%     %% prepare request
-%%     {ok, Request} = ecapnp_capability:request(add, Cap),
-%%     check_request('BasicCap', add, Request),
-%%     Param = ecapnp_capability:param(Request),
-%%     ok = ecapnp:set(a, 123, Param),
-%%     ok = ecapnp:set(b, 456, Param),
-%%     %% send request
-%%     {ok, Result} = ecapnp_capability:send(Request),
-%%     %% check_promise(...),
-%%     %% wait for then verify response
-%%     ok = ecapnp_capability:wait(Result),
-%%     ?assertEqual(579, ecapnp:get(result, Result)),
-%%     %% clean up
-%%     ecapnp_capability:stop(Cap),
-%%     teardown_meck(basicCap).
 
-%% pipeline_test() ->
-%%     %% setup expectations
-%%     setup_meck(basicCap, [{add,
-%%                            fun(Params, Results) ->
-%%                                    ecapnp:set(result,
-%%                                         ecapnp:get(a, Params)
-%%                                         + ecapnp:get(b, Params),
-%%                                         Results)
-%%                            end}
-%%                          ]),
-%%     setup_meck(pipelines, [{getBasic,
-%%                             fun(_Params, Results) ->
-%%                                     {ok, Basic} = ecapnp_capability:start('BasicCap', basicCap, test_capnp),
-%%                                     ecapnp:set(basic, Basic, Results), ok
-%%                             end}
-%%                           ]),
-%%     %% start server for capabilities
-%%     {ok, Pipe} = ecapnp_capability:start('Pipelines', pipelines, test_capnp),
-%%     %% prepare request
-%%     {ok, Request} = ecapnp_capability:request(getBasic, Pipe),
-%%     check_request('Pipelines', getBasic, Request),
-%%     %% send request
-%%     {ok, Result} = ecapnp_capability:send(Request),
-%%     %% check_promise(...),
-%%     %% pipeline request
-%%     Basic = ecapnp:get(basic, Result),
-%%     {ok, PipeRequest} = ecapnp_capability:request(add, Basic),
-%%     PipeParam = ecapnp_capability:param(PipeRequest),
-%%     ok = ecapnp:set(a, 111, PipeParam),
-%%     ok = ecapnp:set(b, 222, PipeParam),
-%%     {ok, PipeResult} = ecapnp_capability:send(PipeRequest),
-%%     %% wait for then verify response
-%%     ok = ecapnp_capability:wait(Result),
-%%     ok = ecapnp_capability:wait(PipeResult),
-%%     ?assertEqual(333, ecapnp:get(result, PipeResult)),
-%%     %% clean up
-%%     ecapnp_capability:stop(Pipe),
-%%     teardown_meck(basicCap),
-%%     teardown_meck(pipelines).
-
-
-%% check_request(Cap, Method, Req) ->
-%%     #request{ method=ActualMethod, param=Object } = Req,
-%%     ?assertEqual(Method, ActualMethod),
-%%     {ok, Node} = ecapnp_schema:lookup(Cap, test_capnp),
-%%     #method{ paramType=ParamType }
-%%         = lists:keyfind(Method, #method.name,
-%%                         (Node#schema_node.kind)#interface.methods),
-%%     {ok, Params} = ecapnp_schema:lookup(ParamType, test_capnp),
-%%     #object{ schema=ParamsNode, ref=ParamsRef } = Object,
-%%     ?assertEqual(Params, ParamsNode),
-%%     #schema_node{ kind=#struct{ dsize=DSize, psize=PSize } } = Params,
-%%     ?assertEqual(
-%%        #ref{ segment=0, pos=0, offset=0,
-%%              data=ParamsRef#ref.data, %% don't care (it's a new pid every time)
-%%              kind=#struct_ref{ dsize=DSize, psize=PSize } },
-%%        ParamsRef).
-
-        setup_meck(Mod, Funs) ->
-                          ?assertEqual(ok, meck:new(Mod, [non_strict])),
-                          [?assertEqual(ok, meck:expect(Mod, Fun, Impl))
-                           || {Fun, Impl} <- Funs],
-                          Mod.
+setup_meck(Mod, Funs) ->
+    ?assertEqual(ok, meck:new(Mod, [non_strict])),
+    [?assertEqual(ok, meck:expect(Mod, Fun, Impl))
+     || {Fun, Impl} <- Funs],
+    Mod.
 
 teardown_meck(Mod) ->
     ?assert(meck:validate(Mod)),
