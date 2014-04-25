@@ -15,7 +15,7 @@
 %%  
 
 -module(ecapnp_set_tests).
--ifdef(TEST).
+-ifdef(TEST_SET).
 -include_lib("eunit/include/eunit.hrl").
 -include("include/ecapnp.hrl").
 

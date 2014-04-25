@@ -40,7 +40,8 @@ alloc(Type, SegmentId, Data) when is_pid(Data) ->
     Ref = ecapnp_ref:alloc(
             ecapnp_schema:get_ref_kind(T),
             SegmentId, 1 + ecapnp_schema:size_of(T), Data),
-    #object{ ref=Ref, schema=T }.
+    #object{ ref=set_ref_schema_module(Ref, T),
+             schema=T }.
 
 %% @doc Get object (or list) from reference.
 -spec from_ref(#ref{}, type_name()) -> object() | list().
@@ -57,7 +58,7 @@ from_ref(Ref, Type) ->
 %% @see from_ref/2
 -spec from_data(binary(), type_name()) -> object() | list().
 from_data(Data, Type) ->
-    Ref = ecapnp_ref:get(0, 0, ecapnp_data:new(Data)),
+    Ref = ecapnp_ref:get(0, 0, ecapnp_data:start_link(Data)),
     from_ref(Ref, Type).
 
 %% @doc Lookup field definition by name for object.
@@ -91,12 +92,13 @@ refresh(#object{ ref=Ref }=Object) ->
 
 %% @doc Type cast object to another type of object.
 -spec to_struct(type_name(), object()) -> object().
-to_struct(Type, #object{ ref=#ref{ kind=Kind }}=Object)
+to_struct(Type, #object{ ref=#ref{ kind=Kind }=Ref }=Object)
   when Kind == null;
        is_record(Kind, struct_ref);
        is_record(Kind, interface_ref) ->
     T = ecapnp_schema:lookup(Type, Object, object),
-    Object#object{ schema=T }.
+    Object#object{ ref=set_ref_schema_module(Ref, T),
+                   schema=T }.
 
 %% @doc Type cast object to list of type.
 %% Object must be a reference to a list.
@@ -129,3 +131,8 @@ find_field(Name, Idx, List) ->
         false -> throw({unknown_field, Name});
         Field -> Field
     end.
+
+set_ref_schema_module(Ref, #schema_node{ module=Module }) ->
+    Ref#ref{ module=Module };
+set_ref_schema_module(Ref, _) ->
+    Ref.

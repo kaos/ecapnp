@@ -238,9 +238,8 @@ read_data(#ref{ kind=null }, Default) -> Default.
 %% @doc Write to struct data section.
 -spec write_struct_data(integer(), integer(), binary(), ref()) -> ok.
 write_struct_data(Align, Len, Value,
-                  #ref{ kind={Kind, DSize, _} }=Ref)
-  when (Kind == struct_ref orelse Kind == interface_ref),
-       Align + Len =< DSize * 64 ->
+                  #ref{ kind=#struct_ref{ dsize=DSize } }=Ref)
+  when Align + Len =< DSize * 64 ->
     <<Pre:Align/bits, _:Len/bits, Post/bits>>
         = read(1 + ((Align + Len - 1) div 64), Ref),
     write(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref).

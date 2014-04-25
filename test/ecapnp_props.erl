@@ -17,7 +17,7 @@
 -module(ecapnp_props).
 
 -include_lib("proper/include/proper.hrl").
--include_lib("ecapnp/include/ecapnp.hrl").
+-include("include/ecapnp.hrl").
 
 -define(TRACE(E),
         fun (__V) ->
@@ -202,7 +202,7 @@ prop_struct_data() ->
     ?FORALL(
        {Def, {Off, Size, Value}}, struct_data(),
        begin
-           Root = root(Def),
+           Root = data(Def),
            %% note: value is binary
            ok = ecapnp_ref:write_struct_data(Off, Size, Value, Root),
            Value =:= ecapnp_ref:read_struct_data(Off, Size, Root)
@@ -213,7 +213,7 @@ prop_struct_ptr() ->
     ?FORALL(
        {Def, Idx, Kind}, struct_ptr(),
        begin
-           Root = root(Def),
+           Root = data(Def),
            #ref{ kind=null }=Ref = ecapnp_ref:read_struct_ptr(Idx, Root),
            ok = ecapnp_ref:write_struct_ptr(Ref#ref{ kind=Kind }, Root),
            case ecapnp_ref:read_struct_ptr(Idx, Root) of
@@ -232,8 +232,7 @@ prop_text_data() ->
     ?FORALL(
        {Def, Idx, Text}, text_data(),
        begin
-           S = size(Text) + 8,
-           Root = root(Def, <<0:S/integer-unit:8>>),
+           Root = data(Def, 1 + ((size(Text) - 1) div 8)),
            %% TODO: if write_text would take a ptr index, we wouldn't
            %% need to get the ref for the text first!
            Ref0 = ecapnp_ref:read_struct_ptr(Idx, Root),
@@ -253,7 +252,7 @@ prop_ptr_field() ->
 
 test_field_access({Schema, FVs}) ->
     %% Schema is a generated #shema_node{} record
-    Root = root(Schema),
+    Root = data(Schema),
     Obj = ecapnp_obj:from_ref(Root, Schema),
     lists:all(
       fun ({F, V}) ->
@@ -299,32 +298,13 @@ schema_types() ->
 %% helpers
 %%% ----------------------------------------
 
-%% create new message with provided data segments
-data(Data) when is_list(Data) -> data(Data, [size(S) || S <- Data]);
-%% create message with given root ref
-data(R) -> data(R, <<>>).
+data(T) -> data(T, 0).
 
-data(#struct_ref{ dsize=D, psize=P }, Extra) -> data(D, P, Extra);
-data(#schema_node{ kind=#struct{ dsize=D, psize=P }}, Extra) -> data(D, P, Extra);
-%% create message with segments and alloc info
-data(Data, Alloc) when length(Data) =:= length(Alloc) ->
-    ecapnp_data:new(#msg{ data=Data, alloc=Alloc }).
-
-%% create message with extra free segment data
-data(D, P, Extra) ->
-    data([<<0:32, D:16/integer-little, P:16/integer-little,
-            0:D/integer-unit:64, 0:P/integer-unit:64,
-            Extra/binary>>],
-         [8 * (D + P + 1)]).
-
-%% get root ref
-root(Data) when is_pid(Data) ->
-    ecapnp_ref:get(0, 0, Data);
-root(M) ->
-    root(data(M)).
-
-%% create new message and get a ref to the root element
-root(A1, A2) -> root(data(A1, A2)).
+data(#struct_ref{ dsize=D, psize=P }=Kind, Extra) ->
+    {ok, Pid} = ecapnp_data:start_link(1 + D + P + Extra),
+    ecapnp_ref:alloc(Kind, 0, 1 + D + P, Pid);
+data(#schema_node{}=N, Extra) ->
+    data(ecapnp_schema:get_ref_kind(N), Extra).
 
 compare_value(V, V) -> true;
 compare_value(V, W)

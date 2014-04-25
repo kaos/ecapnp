@@ -46,7 +46,7 @@ read(Data)
 %% Any non-default object may be passed to this function.
 -spec write(object()) -> binary().
 write(#object{ ref=#ref{ data=Pid } }) ->
-    write_message(ecapnp_data:get_message(Pid)).
+    write_message(ecapnp_data:get_segments(Pid)).
 
 %% @doc Read binary message from file.
 %% @see read/1
@@ -75,12 +75,9 @@ read_message(<<SegSize:32/integer-little, SegSizes/binary>>, Data, Segments) ->
 read_message(<<>>, <<>>, Segments) ->
     {ok, lists:reverse(Segments)}.
 
-write_message(#msg{ alloc=Alloc, data=Segments }) ->
+write_message(Segments) ->
     SegCount = length(Segments) - 1,
-    SegSizes = << <<Size:32/integer-little>> || Size <- Alloc >>,
     Pad = SegCount rem 2,
     Padding = <<0:Pad/integer-unit:32>>,
-    Data = << <<Segment:Size/binary-unit:64>>
-              || {Segment, Size} <- lists:zip(Segments, Alloc) >>,
-    <<SegCount:32/integer-little, SegSizes/binary,
-      Padding/binary, Data/binary>>.
+    SegSizes = << <<(size(S)):32/integer-little>> || S <- Segments >>,
+    iolist_to_binary([<<SegCount:32/integer-little>>, SegSizes, Padding | Segments]).

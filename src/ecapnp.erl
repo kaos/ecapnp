@@ -39,13 +39,12 @@
 -export_type([annotation/0, bit_count/0, const/0, data/0,
               element_size/0, enum/0, enum_values/0, far_ref/0,
               field_type/0, field_value/0, group/0, interface/0,
-              list_ref/0, message/0, msg/0, object/0, ptr/0,
-              ptr_count/0, ptr_index/0, ref/0, ref_kind/0, schema/0,
-              schema_kind/0, schema_node/0, schema_nodes/0,
-              schema_type/0, segment_id/0, segment_offset/0,
-              segment_pos/0, struct/0, struct_fields/0, struct_ref/0,
-              text/0, type_id/0, type_name/0, value/0,
-              value_type/0, word_count/0 ]).
+              list_ref/0, message/0, object/0, ptr/0, ptr_count/0,
+              ptr_index/0, ref/0, ref_kind/0, schema/0, schema_kind/0,
+              schema_node/0, schema_nodes/0, schema_type/0,
+              segment_id/0, segment_offset/0, segment_pos/0, struct/0,
+              struct_fields/0, struct_ref/0, text/0, type_id/0,
+              type_name/0, value/0, value_type/0, word_count/0 ]).
 
 
 -type annotation() :: #annotation{}.
@@ -94,9 +93,6 @@
 %%
 %% This is the raw segment data, no segment headers or other
 %% information is present.
-
--type msg() :: #msg{}.
-%% A message record for the data server.
 
 -type object() :: #object{}.
 %% A reference paired with schema type information.

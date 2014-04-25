@@ -23,7 +23,7 @@
 -module(ecapnp_get).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/3, field/2, union/1, ref_data/2, ref_data/3]).
+-export([root/2, root/3, field/2, union/1, ref_data/2, ref_data/3]).
 
 -include("ecapnp.hrl").
 
@@ -34,15 +34,13 @@
 
 %% @doc Get the root object for a message.
 %% @see ecapnp:get_root/3
+-spec root(schema_node(), message()) -> {ok, Root::object()}.
+root(Node, Segments) ->
+    {ok, ecapnp_obj:from_data(Segments, Node)}.
+
 -spec root(type_name(), schema(), message()) -> {ok, Root::object()}.
 root(Type, Schema, Segments) ->
-    {ok, ecapnp_obj:from_data(
-           #msg{
-              schema=Schema,
-              alloc=[size(S) || S <- Segments],
-              data=Segments
-             },
-           Type)}.
+    root(Schema:schema(Type), Segments).
 
 %% @doc Read the field value of object.
 %% @see ecapnp:get/2

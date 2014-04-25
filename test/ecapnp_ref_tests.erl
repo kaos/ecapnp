@@ -15,7 +15,7 @@
 %%  
 
 -module(ecapnp_ref_tests).
--ifdef(TEST).
+-ifdef(TEST_REF).
 -include_lib("eunit/include/eunit.hrl").
 -include("include/ecapnp.hrl").
 

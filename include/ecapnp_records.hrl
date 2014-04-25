@@ -117,10 +117,3 @@
           param :: ecapnp:object(),
           interface :: ecapnp:schema_node()
          }).
-
-%% Internal message struct for the data server
--record(msg, {
-          schema :: ecapnp:schema(),
-          alloc=[] :: list(integer()),
-          data=[] :: ecapnp:message()
-         }).
