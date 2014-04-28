@@ -107,7 +107,7 @@
 
 -record(object, {
           ref=null :: ecapnp:ref(),
-          schema=object :: object | ecapnp:schema_node()
+          schema :: atom() | ecapnp:schema_node()
          }).
 
 %% Capability & RPC

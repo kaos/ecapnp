@@ -23,8 +23,9 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([alloc/3, from_ref/2, from_data/2, field/2, copy/1, refresh/1,
-         to_struct/2, to_list/2, to_text/1, to_data/1 ]).
+-export([init/2, alloc/3, from_ref/3, from_data/2, from_data/3,
+         field/2, copy/1, refresh/1, to_struct/2, to_list/2,
+         to_text/1, to_data/1 ]).
 
 -include("ecapnp.hrl").
 
@@ -33,33 +34,39 @@
 %% API functions
 %% ===================================================================
 
+init(Ref, Type) ->
+    #object{ ref = Ref, schema = init_schema(Type) }.
+
 %% @doc Allocate data for a new object.
--spec alloc(type_name(), segment_id(), pid()) -> object().
-alloc(Type, SegmentId, Data) when is_pid(Data) ->
-    T = ecapnp_schema:get(Type, Data),
-    Ref = ecapnp_ref:alloc(
-            ecapnp_schema:get_ref_kind(T),
-            SegmentId, 1 + ecapnp_schema:size_of(T), Data),
-    #object{ ref=set_ref_schema_module(Ref, T),
-             schema=T }.
+-spec alloc(schema_node(), segment_id(), pid()) -> object().
+alloc(Node, SegmentId, Data) when is_pid(Data) ->
+    init(
+      ecapnp_ref:alloc(
+        ecapnp_schema:get_ref_kind(Node),
+        SegmentId, 1 + ecapnp_schema:size_of(Node), Data),
+      Node).
 
 %% @doc Get object (or list) from reference.
--spec from_ref(#ref{}, type_name()) -> object() | list().
-from_ref(Ref, object) when is_record(Ref, ref) ->
-    #object{ ref=Ref };
-from_ref(#ref{ kind=Kind }=Ref, {list, _}=Type)
+%% from ref doesn't work well as it doesn't preserve/keep the schema module name..
+-spec from_ref(#ref{}, type_name(), term()) -> object() | list().
+from_ref(Ref, object, Schema) when is_record(Ref, ref) ->
+    init(Ref, Schema);
+from_ref(#ref{ kind=Kind }=Ref, {list, _}=Type, Schema)
   when is_record(Kind, list_ref); Kind == null ->
-    ecapnp_get:ref_data(Type, Ref, []);
-from_ref(Ref, Type) ->
-    to_struct(Type, #object{ ref=Ref }).
-
+    ecapnp_get:ref_data(Type, init(Ref, Schema), []);
+from_ref(Ref, Type, Schema) ->
+    to_struct(Type, init(Ref, Schema)).
 
 %% @doc Get object (or list) from data.
 %% @see from_ref/2
--spec from_data(binary(), type_name()) -> object() | list().
+-spec from_data(binary(), type_name(), term()) -> object() | list().
+from_data(Data, Type, Schema) ->
+    {ok, Pid} = ecapnp_data:start_link(Data),
+    Ref = ecapnp_ref:get(0, 0, Pid),
+    from_ref(Ref, Type, Schema).
+
 from_data(Data, Type) ->
-    Ref = ecapnp_ref:get(0, 0, ecapnp_data:start_link(Data)),
-    from_ref(Ref, Type).
+    from_data(Data, Type, undefined).
 
 %% @doc Lookup field definition by name for object.
 -spec field(field_name(), object() | #struct{}) -> field_type().
@@ -96,30 +103,29 @@ to_struct(Type, #object{ ref=#ref{ kind=Kind }=Ref }=Object)
   when Kind == null;
        is_record(Kind, struct_ref);
        is_record(Kind, interface_ref) ->
-    T = ecapnp_schema:lookup(Type, Object, object),
-    Object#object{ ref=set_ref_schema_module(Ref, T),
-                   schema=T }.
+    T = ecapnp_schema:lookup(Type, Object),
+    Object#object{ ref=Ref, schema=T }.
 
 %% @doc Type cast object to list of type.
 %% Object must be a reference to a list.
 -spec to_list(type_name(), object()) -> list().
-to_list(Type, #object{ ref=#ref{ kind=Kind }=Ref})
+to_list(Type, #object{ ref=#ref{ kind=Kind }}=Obj)
   when is_record(Kind, list_ref); Kind == null ->
-    ecapnp_get:ref_data({list, Type}, Ref, []).
+    ecapnp_get:ref_data({list, Type}, Obj, []).
 
 %% @doc Type cast object to text.
 %% Object must be a reference to text.
 -spec to_text(object()) -> binary().
-to_text(#object{ ref=#ref{ kind=Kind }=Ref})
+to_text(#object{ ref=#ref{ kind=Kind }}=Obj)
   when is_record(Kind, list_ref); Kind == null ->
-    ecapnp_get:ref_data(text, Ref, <<>>).
+    ecapnp_get:ref_data(text, Obj, <<>>).
 
 %% @doc Type cast object to binary data.
 %% Object must be a reference to data.
 -spec to_data(object()) -> binary().
-to_data(#object{ ref=#ref{ kind=Kind }=Ref})
+to_data(#object{ ref=#ref{ kind=Kind }}=Obj)
   when is_record(Kind, list_ref); Kind == null ->
-    ecapnp_get:ref_data(data, Ref, <<>>).
+    ecapnp_get:ref_data(data, Obj, <<>>).
 
 
 %% ===================================================================
@@ -132,7 +138,10 @@ find_field(Name, Idx, List) ->
         Field -> Field
     end.
 
-set_ref_schema_module(Ref, #schema_node{ module=Module }) ->
-    Ref#ref{ module=Module };
-set_ref_schema_module(Ref, _) ->
-    Ref.
+init_schema(#schema_node{}=N) -> N;
+init_schema(#object{ schema = #schema_node{ module = Module } }) ->
+    Module;
+init_schema(#object{ schema = Schema }) ->
+    Schema;
+init_schema(Module) when is_atom(Module) ->
+    Module.

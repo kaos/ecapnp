@@ -23,7 +23,7 @@
 -module(ecapnp_set).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/2, field/3, union/2]).
+-export([root/1, root/2, field/3, union/2]).
 
 -include("ecapnp.hrl").
 
@@ -35,22 +35,28 @@
 -spec root(type_name(), schema()) -> {ok, object()}.
 %% @doc Get root object for a new message.
 root(Type, Schema) ->
-    {ok, ecapnp_obj:alloc(Type, 0, ecapnp_data:new({Schema, 100}))}.
+    root(Schema:schema(Type)).
+
+-spec root(schema_node()) -> {ok, object()}.
+%% @doc Get root object for a new message.
+root(Node) ->
+    {ok, Data} = ecapnp_data:start_link(default),
+    {ok, ecapnp_obj:alloc(Node, 0, Data)}.
 
 -spec field(field_name(), field_value(), object()) -> ok | list().
 %% @doc Write field value to object.
-field(FieldName, Value, #object{ ref=Ref }=Object) ->
+field(FieldName, Value, Object) ->
     set_field(
       ecapnp_obj:field(FieldName, Object),
-      Value, Ref).
+      Value, Object).
 
 -spec union({field_name(), field_value()} | field_name(), object()) -> ok.
 %% @doc Write unnamed union value in object.
-union(Value, #object{ ref=Ref,
-                      schema=#schema_node{
-                                kind=#struct{ union_field=Union }}
-                    }=Object) ->
-    if Union /= none -> set_field(Union, Value, Ref);
+union(Value, #object{
+                schema=#schema_node{
+                          kind=#struct{ union_field=Union }}
+               }=Object) ->
+    if Union /= none -> set_field(Union, Value, Object);
        true -> throw({no_unnamed_union_in_object, Object})
     end.
 
@@ -59,30 +65,30 @@ union(Value, #object{ ref=Ref,
 %% internal functions
 %% ===================================================================
 
-set_field(#field{ kind=Kind }, Value, StructRef) ->
-    set_field(Kind, Value, StructRef);
+set_field(#field{ kind=Kind }, Value, Obj) ->
+    set_field(Kind, Value, Obj);
 set_field(#data{ type=Type, align=Align, default=Default }=D,
-          Value0, StructRef) ->
+          Value0, #object{ ref=StructRef }=Obj) ->
     Value = if Value0 == undefined -> Default;
                true -> Value0
             end,
     case Type of
         {enum, EnumType} ->
             #schema_node{ kind=#enum{ values=Values } }
-                = ecapnp_schema:lookup(EnumType, StructRef),
+                = ecapnp_schema:lookup(EnumType, Obj),
             Tag = if is_atom(Value) ->
                           {Idx, Value} = lists:keyfind(Value, 2, Values),
                           Idx;
                      is_integer(Value) -> Value
                   end,
-            set_field(D#data{ type=uint16 }, Tag, StructRef);
+            set_field(D#data{ type=uint16 }, Tag, Obj);
         {union, Fields} ->
             {Tag, Field} = union_tag(Value, Fields),
-            set_field(D#data{ type=uint16 }, Tag, StructRef),
+            set_field(D#data{ type=uint16 }, Tag, Obj),
             case Field of
                 void -> ok;
                 {FieldType, FieldValue} ->
-                    set_field(FieldType, FieldValue, StructRef)
+                    set_field(FieldType, FieldValue, Obj)
             end;
         Type ->
             Size = ecapnp_val:size(Type),
@@ -92,7 +98,7 @@ set_field(#data{ type=Type, align=Align, default=Default }=D,
               StructRef)
     end;
 
-set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
+set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, #object{ ref=StructRef }=Obj) ->
     case Type of
         text -> ecapnp_ref:write_text(
                   Value,
@@ -105,26 +111,26 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
         object ->
             case Value of
                 {ObjType, ObjValue} ->
-                    set_field(Ptr#ptr{ type=ObjType }, ObjValue, StructRef);
+                    set_field(Ptr#ptr{ type=ObjType }, ObjValue, Obj);
                 ObjType ->
                     ObjRef = ecapnp_ref:alloc_data(
                                ecapnp_schema:set_ref_to(
                                  ObjType, ecapnp_ref:ptr(Idx, StructRef))),
-                    ecapnp_obj:from_ref(ObjRef, ObjType)
+                    ecapnp_obj:from_ref(ObjRef, ObjType, Obj)
             end;
         {struct, StructType} ->
-            write_obj(StructType, Value, ecapnp_ref:ptr(Idx, StructRef));
+            write_obj(StructType, Value, ecapnp_ref:ptr(Idx, StructRef), Obj);
         {interface, InterfaceType} ->
-            write_obj(InterfaceType, Value, ecapnp_ref:ptr(Idx, StructRef));
+            write_obj(InterfaceType, Value, ecapnp_ref:ptr(Idx, StructRef), Obj);
         {list, ElementType} ->
             if is_integer(Value) -> %% init list
                     ecapnp_obj:from_ref(
                       ecapnp_ref:alloc_list(
                         Idx, #list_ref{
-                                size=list_element_size(ElementType, StructRef),
+                                size=list_element_size(ElementType, Obj),
                                 count=Value },
                         StructRef),
-                      Type);
+                      Type, Obj);
                is_tuple(Value), size(Value) == 2 -> %% {Idx, Value}
                     case ElementType of
                         object -> throw(not_yet_implemented);
@@ -139,7 +145,7 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                                           ecapnp_obj:from_ref(
                                             ecapnp_ref:ptr(
                                               element(1, Value), List),
-                                            StructType))
+                                            StructType, Obj))
                             end;
                         text ->
                             List = ecapnp_ref:read_struct_ptr(Idx, StructRef),
@@ -161,22 +167,22 @@ set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, StructRef) ->
                               StructRef)
                     end;
                is_list(Value) -> %% [Value...]
-                    set_field(Ptr, length(Value), StructRef),
-                    [ok = set_field(Ptr, V, StructRef)
+                    set_field(Ptr, length(Value), Obj),
+                    [ok = set_field(Ptr, V, Obj)
                      || V <- lists:zip(
                                lists:seq(0, length(Value) - 1),
                                Value)], ok
             end
     end;
-set_field(#group{ id=Type }, Value, StructRef) ->
-    union(Value, ecapnp_obj:from_ref(StructRef, Type)).
+set_field(#group{ id=Type }, Value, #object{ ref=StructRef }=Obj) ->
+    union(Value, ecapnp_obj:from_ref(StructRef, Type, Obj)).
 
-write_obj(Type, Value, Ref) when is_binary(Value) ->
+write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(
       ecapnp_ref:paste(Value, Ref),
-      Type);
-write_obj(Type, #object{ schema=#schema_node{ id=Type }, ref=Value }, Ref) ->
-    write_obj(Type, ecapnp_ref:copy(Value), Ref).
+      Type, Obj);
+write_obj(Type, #object{ schema=#schema_node{ id=Type }, ref=Value }, Ref, Obj) ->
+    write_obj(Type, ecapnp_ref:copy(Value), Ref, Obj).
 
 union_tag({FieldName, Value}, [{Tag, FieldName, FieldType}|_]) ->
     {Tag, {FieldType, Value}};
@@ -198,8 +204,8 @@ list_element_size(object, _) -> pointer;
 list_element_size({list, _}, _) -> pointer;
 list_element_size({Simple, _}, _)
   when Simple == enum; Simple == union -> twoBytes;
-list_element_size({_, Type}, Ref) ->
-    case ecapnp_schema:lookup(Type, Ref) of
+list_element_size({_, Type}, Obj) ->
+    case ecapnp_schema:lookup(Type, Obj) of
         #schema_node{
            kind=#struct{
                    esize=inlineComposite,

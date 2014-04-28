@@ -15,13 +15,13 @@
 %%  
 
 -module(ecapnp_test_utils).
--ifdef(TEST_UTILS).
+-ifdef(TEST).
 -include("include/ecapnp.hrl").
 -export([data/1]).
 
 %% ----------------------------------------
 data(Data) ->
-    ecapnp_data:new(#msg{ data=Data, %%schema=test_capnp,
-                          alloc=[size(S) || S <- Data] }).
+    {ok, Pid} = ecapnp_data:start_link(Data),
+    Pid.
 
 -endif.

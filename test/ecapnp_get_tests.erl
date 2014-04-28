@@ -25,9 +25,11 @@ root_test() ->
     T = ecapnp_schema:lookup('Test', test_capnp),
     Data = (Root#object.ref)#ref.data,
     ?assertEqual(
-       #object{ ref=#ref{ segment=0, pos=0, offset=0, data=Data,
-                          kind=#struct_ref{ dsize=2, psize=3 } },
-                schema=T }, Root).
+       #object{
+          ref=#ref{ segment=0, pos=0, offset=0, data=Data,
+                    kind=#struct_ref{ dsize=2, psize=3 } },
+          schema=T
+         }, Root).
 
 field_defaults_test() ->
     Msg= [<<0,0,0,0, 2,0,6,0, %% struct, 2 word data, 6 pointers

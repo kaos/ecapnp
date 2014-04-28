@@ -253,7 +253,7 @@ prop_ptr_field() ->
 test_field_access({Schema, FVs}) ->
     %% Schema is a generated #shema_node{} record
     Root = data(Schema),
-    Obj = ecapnp_obj:from_ref(Root, Schema),
+    Obj = ecapnp_obj:from_ref(Root, Schema, no_schema),
     lists:all(
       fun ({F, V}) ->
               ok = ecapnp:set(F, V, Obj),

@@ -55,28 +55,17 @@ lookup(Type, Schema, Default) ->
 -spec lookup(lookup_type(), lookup_search()) -> schema_node() | undefined.
 %% @doc Find schema node for type.
 lookup(N, _) when is_record(N, schema_node) -> N;
-lookup(_, object) -> undefined;
-lookup(Type, Schema) when is_atom(Schema) -> Schema:schema(Type);
+lookup(Type, Schema) when is_atom(Schema) ->
+    if Type =:= object -> Schema;
+       true -> Schema:schema(Type)
+    end;
 lookup(Id, #schema_node{ id=Id }=N) -> N;
 lookup(Name, #schema_node{ name=Name }=N) -> N;
-lookup(Type, #schema_node{ module=Module }) when Module /= undefined -> lookup(Type, Module);
-lookup(Type, #ref{ module=Module }) when Module /= undefined -> lookup(Type, Module);
-lookup(Type, #object{ ref = Ref, schema = Schema }) ->
-    case lookup(Type, Schema) of
-        undefined -> lookup(Type, Ref);
-        Node -> Node
-    end;
-lookup(Type, Pid) when is_pid(Pid) ->
-    case ecapnp_data:get_type(Type, Pid) of
-        false -> undefined;
-        Node -> Node
-    end;
+lookup(Type, #schema_node{ module=Module }) -> lookup(Type, Module);
+lookup(Type, #object{ schema = Schema }) -> lookup(Type, Schema);
 lookup(Type, Schema) ->
     io:format("type not found: ~p (in schema ~p)~n", [Type, Schema]),
     undefined.
-%%lookup(Type, Schema) -> {unknown_type, {Type, Schema}}.
-
-
 
 -spec type_of(object()) -> schema_node().
 %% @doc Get type of object.

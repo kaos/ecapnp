@@ -57,10 +57,10 @@
 %% ===================================================================
 
 start(Init) ->
-    gen_server:start(?MODULE, [Init], []).
+    gen_server:start(?MODULE, {0, Init, #state{}}, []).
 
 start_link(Init) ->
-    gen_server:start_link(?MODULE, [Init], []).
+    gen_server:start_link(?MODULE, {0, Init, #state{}}, []).
 
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
@@ -103,8 +103,12 @@ get_segments(Pid) ->
 %% gen server callbacks
 %% ===================================================================
 
-init([Init]) ->
-    {ok, set_segment(0, new_segment(Init), #state{})}.
+init({Id, [S|Ss], State}) ->
+    init({Id + 1, Ss, set_segment(Id, new_segment(S), State)});
+init({_, [], State}) ->
+    {ok, State};
+init({Id, Init, State}) ->
+    {ok, set_segment(Id, new_segment(Init), State)}.
 
 handle_call({alloc, {Id, Size}}, _From, State) ->
     {Reply, State1} = do_alloc(Id, Size, State),

@@ -75,6 +75,11 @@ dbg: bld
 
 tst: e p
 
+erl:
+	erl -pa ebin test -eval \
+		"[i:ii(M) || M <- [ecapnp, ecapnp_obj, ecapnp_get, ecapnp_set,\
+			ecapnp_ref, ecapnp_data, ecapnp_schema, ecapnp_get_tests]]"
+
 e: bld
 	erl -pa ebin test -pa deps/meck/ebin -noinput \
 		-eval "case eunit:test(\"test\") of ok -> halt(0); _ -> halt(1) end"
