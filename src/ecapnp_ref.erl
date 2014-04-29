@@ -43,7 +43,7 @@
 %%
 %% The allocated data is left empty.
 -spec alloc(segment_id(), integer(), pid()) -> ref().
-alloc(SegmentId, Size, Data) ->
+alloc(SegmentId, Size, Data) when is_pid(Data) ->
     {Id, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     #ref{ segment=Id, pos=Pos, data=Data }.
 
@@ -55,7 +55,7 @@ alloc(SegmentId, Size, Data) ->
 %% @see set/2
 %% @see alloc/3
 -spec alloc(ref_kind(), segment_id(), integer(), pid()) -> ref().
-alloc(Kind, SegmentId, Size, Data) ->
+alloc(Kind, SegmentId, Size, Data) when is_pid(Data) ->
     set(Kind, alloc(SegmentId, Size, Data)).
 
 %% @doc Set reference kind.
@@ -64,7 +64,7 @@ alloc(Kind, SegmentId, Size, Data) ->
 %% `Ref.pos'.
 %%
 %% @see alloc/4
-set(Kind, Ref0) ->
+set(Kind, Ref0) when is_record(Ref0, ref) ->
     Ref = Ref0#ref{ kind=Kind },
     ok = write(Ref), Ref.
 
@@ -75,11 +75,11 @@ set(Kind, Ref0) ->
 %% Will follow far pointers.
 %%
 %% @see get/4
--spec get(segment_id(), integer(), pid()) -> ref().
-get(SegmentId, Pos, Data) when is_pid(Data) ->
+-spec get(segment_id(), integer(), pid() | binary()) -> ref().
+get(SegmentId, Pos, Data) ->
     get(SegmentId, Pos, Data, true).
 
--spec get(segment_id(), integer(), pid(), boolean()) -> ref().
+-spec get(segment_id(), integer(), pid() | binary(), boolean()) -> ref().
 %% @doc Get reference from segment data.
 %%
 %% Read segment, and parse it for a reference pointer.
@@ -91,7 +91,9 @@ get(SegmentId, Pos, Data) when is_pid(Data) ->
 get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
     read_segment(SegmentId, Pos,
                  ecapnp_data:get_segment(SegmentId, Pos, 1, Data),
-                 Data, FollowFar).
+                 Data, FollowFar);
+get(0, Pos, Data, FollowFar) when is_binary(Data) ->
+    read_segment(0, Pos, binary:part(Data, Pos, 8), Data, FollowFar).
 
 -spec refresh(ref()) -> ref().
 %% @doc Reread reference from message.
@@ -446,11 +448,15 @@ list_element_size(eightBytes) -> 64;
 list_element_size(pointer) -> 64;
 list_element_size(inlineComposite) -> inlineComposite.
 
-read(Len, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data }) ->
-    ecapnp_data:get_segment(SegmentId, Pos + Offset + 1, Len, Data).
+read(Len, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data }) when is_pid(Data) ->
+    ecapnp_data:get_segment(SegmentId, Pos + Offset + 1, Len, Data);
+read(Len, #ref{ segment=0, pos=Pos, offset=Offset, data=Data }) when is_binary(Data) ->
+    %% todo: segment could be /= 0 if data is list of binaries.. if that would ever be needed.. ?!
+    binary:part(Data, (Pos + Offset + 1) * 8, Len * 8).
 
-write(Bin, Offset, #ref{ segment=SegmentId, pos=Pos, data=Data }) ->
-    ecapnp_data:update_segment({SegmentId, Pos + Offset}, Bin, Data).
+write(Bin, Offset, #ref{ segment=SegmentId, pos=Pos, data=Data }) when is_pid(Data) ->
+    ecapnp_data:update_segment({SegmentId, Pos + Offset}, Bin, Data);
+write(_, _, _) -> {error, read_only}.
 
 write(Bin, #ref{ offset=Offset }=Ref) ->
     write(Bin, Offset + 1, Ref).

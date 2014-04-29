@@ -33,6 +33,7 @@
 %%% ----------------------------------------
 
 %% generate any kind of primitive value that capnp can represent.
+%% data_value() -> {Size, Type, Value}
 data_value() ->
     union(
       [?LET(B, boolean(), {1, bool, B}),
@@ -52,12 +53,14 @@ data_value() ->
             {S, T, V})
       ]).
 
+%% ptr_value() -> {Type, Value, Default}.
 ptr_value() ->
     union(
       [?LET({T, V}, list_ptr(), {{list, T}, V, <<0,0,0,0,0,0,0,0>>}),
        ?LET(V, binary(), {text, V, <<>>})
       ]).
 
+%% list_ptr() -> {Type, [Value]}.
 list_ptr() ->
     union(
       [{bool, list(boolean())},
@@ -198,14 +201,25 @@ prop_capnp_value() ->
        compare_value(V, ecapnp_val:get(T, ecapnp_val:set(T, V)))).
 
 %%% ----------------------------------------
-prop_struct_data() ->
+prop_struct_data_builder() ->
     ?FORALL(
        {Def, {Off, Size, Value}}, struct_data(),
        begin
-           Root = data(Def),
+           Root = data_builder(Def),
            %% note: value is binary
            ok = ecapnp_ref:write_struct_data(Off, Size, Value, Root),
            Value =:= ecapnp_ref:read_struct_data(Off, Size, Root)
+       end).
+
+%%% ----------------------------------------
+prop_struct_data_reader() ->
+    ?FORALL(
+       {Def, {Off, Size, Value}}, struct_data(),
+       begin
+           Root = data_reader(Def),
+           %% note: value is binary
+           {error, read_only} = ecapnp_ref:write_struct_data(Off, Size, Value, Root),
+           <<0:Size/integer>> =:= ecapnp_ref:read_struct_data(Off, Size, Root)
        end).
 
 %%% ----------------------------------------
@@ -213,7 +227,7 @@ prop_struct_ptr() ->
     ?FORALL(
        {Def, Idx, Kind}, struct_ptr(),
        begin
-           Root = data(Def),
+           Root = data_builder(Def),
            #ref{ kind=null }=Ref = ecapnp_ref:read_struct_ptr(Idx, Root),
            ok = ecapnp_ref:write_struct_ptr(Ref#ref{ kind=Kind }, Root),
            case ecapnp_ref:read_struct_ptr(Idx, Root) of
@@ -232,13 +246,9 @@ prop_text_data() ->
     ?FORALL(
        {Def, Idx, Text}, text_data(),
        begin
-           Root = data(Def, 1 + ((size(Text) - 1) div 8)),
-           %% TODO: if write_text would take a ptr index, we wouldn't
-           %% need to get the ref for the text first!
+           Root = data_builder(Def, 1 + ((size(Text) - 1) div 8)),
            Ref0 = ecapnp_ref:read_struct_ptr(Idx, Root),
            ok = ecapnp_ref:write_text(Text, Ref0, Root),
-           %% TODO: if read_text would take a ptr index, we wouldn't
-           %% need to get the ref for the text first!
            Ref1 = ecapnp_ref:read_struct_ptr(Idx, Root),
            Text =:= ecapnp_ref:read_text(Ref1)
        end).
@@ -252,7 +262,7 @@ prop_ptr_field() ->
 
 test_field_access({Schema, FVs}) ->
     %% Schema is a generated #shema_node{} record
-    Root = data(Schema),
+    Root = data_builder(Schema),
     Obj = ecapnp_obj:from_ref(Root, Schema, no_schema),
     lists:all(
       fun ({F, V}) ->
@@ -295,16 +305,33 @@ schema_types() ->
 
 
 %%% ----------------------------------------
+%% prop_capabilities() ->
+%%     ?FORALL(
+%%       X, T,
+%%       begin
+%%           Root = data_builder(),
+%%           Cap = self(),
+%%           ecapnp:set()
+%%       end).
+
+%%% ----------------------------------------
 %% helpers
 %%% ----------------------------------------
 
-data(T) -> data(T, 0).
+data_builder(T) -> data_builder(T, 0).
 
-data(#struct_ref{ dsize=D, psize=P }=Kind, Extra) ->
+data_builder(#struct_ref{ dsize=D, psize=P }=Kind, Extra) ->
     {ok, Pid} = ecapnp_data:start_link(1 + D + P + Extra),
     ecapnp_ref:alloc(Kind, 0, 1 + D + P, Pid);
-data(#schema_node{}=N, Extra) ->
-    data(ecapnp_schema:get_ref_kind(N), Extra).
+data_builder(#schema_node{}=N, Extra) ->
+    data_builder(ecapnp_schema:get_ref_kind(N), Extra).
+
+data_reader(#struct_ref{ dsize=D, psize=P }=Kind) ->
+    R = ecapnp_ref:create_ptr(0, Kind),
+    E = <<0:(D + P)/integer-unit:64>>,
+    ecapnp_ref:get(0, 0, <<R/binary, E/binary>>);
+data_reader(#schema_node{}=N) ->
+    data_builder(ecapnp_schema:get_ref_kind(N)).
 
 compare_value(V, V) -> true;
 compare_value(V, W)
