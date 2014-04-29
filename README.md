@@ -7,15 +7,17 @@ NOTICE: There's still some features missing..
 
 ## Status update
 
-I am currently reworking the format of the compiled schema on the
-erlang side of things. Instead of spitting out a `.hrl` file, it will
-compile to a schema module.
+The compiler has been re-organized, and now produces standalone schema
+modules to either compiled `.beam` or in `.erl` source form.
 
 The documentation is still not up-to-date with these changes..
 
-Also, the previous eunit tests were a pain to maintain due to too much
-bit mangling and low-level knowledge in the tests. Now I'm using
-[PropEr](https://github.com/manopapad/proper) to overcome this.
+In addition to the eunit tests, there are now also
+[PropEr](https://github.com/manopapad/proper) tests to cover more
+corner cases. I find that they complement each other well, as unit
+tests are easier to write for a specific slightly contrived scenario,
+while the property tests are well suited for a general approach
+covering as many different inputs as possible.
 
 
 ### Note

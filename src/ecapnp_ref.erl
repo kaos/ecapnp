@@ -1,18 +1,18 @@
-%%  
+%%
 %%  Copyright 2013, Andreas Stenius <kaos@astekk.se>
-%%  
+%%
 %%   Licensed under the Apache License, Version 2.0 (the "License");
 %%   you may not use this file except in compliance with the License.
 %%   You may obtain a copy of the License at
-%%  
+%%
 %%     http://www.apache.org/licenses/LICENSE-2.0
-%%  
+%%
 %%   Unless required by applicable law or agreed to in writing, software
 %%   distributed under the License is distributed on an "AS IS" BASIS,
 %%   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %%   See the License for the specific language governing permissions and
 %%   limitations under the License.
-%%  
+%%
 
 %% @copyright 2013, Andreas Stenius
 %% @author Andreas Stenius <kaos@astekk.se>
@@ -88,12 +88,11 @@ get(SegmentId, Pos, Data) ->
 %%
 %% @see read_segment/5
 %% @see ecapnp_data:get_segment/4
-get(SegmentId, Pos, Data, FollowFar) when is_pid(Data) ->
-    read_segment(SegmentId, Pos,
-                 ecapnp_data:get_segment(SegmentId, Pos, 1, Data),
-                 Data, FollowFar);
-get(0, Pos, Data, FollowFar) when is_binary(Data) ->
-    read_segment(0, Pos, binary:part(Data, Pos, 8), Data, FollowFar).
+get(SegmentId, Pos, Data, FollowFar) ->
+    read_segment(
+      SegmentId, Pos,
+      read(SegmentId, Pos, 1, Data),
+      Data, FollowFar).
 
 -spec refresh(ref()) -> ref().
 %% @doc Reread reference from message.
@@ -191,8 +190,7 @@ read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                                TagOffset + Count,
                                Count div Len)];
        Size == pointer ->
-            List = ecapnp_data:get_segment(
-                     SegmentId, TagOffset, Count, Data),
+            List = read(SegmentId, TagOffset, Count, Data),
             [read_segment(SegmentId, TagOffset + I,
                           binary_part(List, I*8, 8),
                           Data, true)
@@ -201,10 +199,9 @@ read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
             lists:duplicate(Count, <<>>);
        true ->
             ElementSize = list_element_size(Size),
-            List = ecapnp_data:get_segment(
-                     SegmentId, TagOffset,
-                     1 + ((ElementSize * Count - 1) div 64),
-                     Data),
+            List = read(SegmentId, TagOffset,
+                        1 + ((ElementSize * Count - 1) div 64),
+                        Data),
             read_list_elements(ElementSize, List, Count, [])
     end;
 read_list(#ref{ kind=null }, Default) -> Default.
@@ -289,7 +286,7 @@ alloc_data(Ref) ->
 
 -spec alloc_data(word_count(), ref()) -> ref().
 %% @doc Allocate data for reference.
-alloc_data(Size, #ref{ segment=SegmentId, data=Data }=Ref) ->
+alloc_data(Size, #ref{ segment=SegmentId, data=Data }=Ref) when is_pid(Data) ->
     {Seg, Pos} = ecapnp_data:alloc(SegmentId, Size, Data),
     Ref1 = if Seg =:= SegmentId ->
                    update_offset(Pos, Ref);
@@ -316,7 +313,7 @@ alloc_data(Size, #ref{ segment=SegmentId, data=Data }=Ref) ->
 %% field should point to a `#struct_ref{}' describing the list element
 %% type, and `#list_ref.count' should still be the number of elements
 %% rather than the total word count.
-%% 
+%%
 %% @see alloc_data/1
 -spec alloc_list(integer(), ref_kind(), ref()) -> ref().
 alloc_list(Idx, #list_ref{ size={RefKind, DSize, PSize}=Tag,
@@ -327,7 +324,7 @@ alloc_list(Idx, #list_ref{ size={RefKind, DSize, PSize}=Tag,
         = alloc_list(Idx, Kind#list_ref{ size=inlineComposite,
                                          count=Count * (DSize + PSize) },
                      Ref),
-    write(List#ref{ pos=Pos + 1 + Offset, offset=Count, kind=Tag }),
+    ok = write(List#ref{ pos=Pos + 1 + Offset, offset=Count, kind=Tag }),
     List;
 alloc_list(Idx, Kind, Ref) ->
     Ptr = ptr(Idx, Ref),
@@ -413,17 +410,17 @@ null_ref(#ref{ data=Data }) -> #ref{ pos=-1, data=Data }.
 
 ref_data_size(#ref{ kind=Kind }) -> ref_data_size(Kind);
 ref_data_size(null) -> 0;
-ref_data_size(#list_ref{ size=Size, count=Count }) -> 
+ref_data_size(#list_ref{ size=Size, count=Count }) ->
     case list_element_size(Size) of
         inlineComposite -> Count + 1;
         Bits -> 1 + (((Count * Bits) - 1) div 64)
     end;
 ref_data_size({Kind, DSize, PSize})
-  when Kind == struct_ref; Kind == interface_ref -> 
+  when Kind == struct_ref; Kind == interface_ref ->
     DSize + PSize.
 
 ptr_type(0, 0) -> null;
-ptr_type(Offset, _) -> 
+ptr_type(Offset, _) ->
     ptr_type(Offset band 3).
 
 ptr_type(0) -> struct;
@@ -448,11 +445,15 @@ list_element_size(eightBytes) -> 64;
 list_element_size(pointer) -> 64;
 list_element_size(inlineComposite) -> inlineComposite.
 
-read(Len, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data }) when is_pid(Data) ->
-    ecapnp_data:get_segment(SegmentId, Pos + Offset + 1, Len, Data);
-read(Len, #ref{ segment=0, pos=Pos, offset=Offset, data=Data }) when is_binary(Data) ->
-    %% todo: segment could be /= 0 if data is list of binaries.. if that would ever be needed.. ?!
-    binary:part(Data, (Pos + Offset + 1) * 8, Len * 8).
+read(Len, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data }) ->
+    read(SegmentId, Pos + Offset + 1, Len, Data).
+
+read(SegmentId, Pos, Len, Data) when is_pid(Data) ->
+    ecapnp_data:get_segment(SegmentId, Pos, Len, Data);
+read(0, Pos, Len, Data) when is_binary(Data) ->
+    binary:part(Data, Pos * 8, Len * 8);
+read(SegmentId, Pos, Len, Data) when is_list(Data) ->
+    read(0, Pos, Len, lists:nth(SegmentId + 1, Data)).
 
 write(Bin, Offset, #ref{ segment=SegmentId, pos=Pos, data=Data }) when is_pid(Data) ->
     ecapnp_data:update_segment({SegmentId, Pos + Offset}, Bin, Data);
@@ -541,7 +542,7 @@ read_list_element_bits(Bits, Left, Count, Rest, Acc) ->
     read_list_element_bits(Next, Left - 1, Count - 1, Rest, [Bit|Acc]).
 
 copy_ref(#ref{ kind=null }=Ref) -> {Ref, 0, []};
-copy_ref(#ref{ kind={Kind, DSize, PSize} }=Ref) 
+copy_ref(#ref{ kind={Kind, DSize, PSize} }=Ref)
   when Kind == struct_ref; Kind == interface_ref ->
     StructData = read_struct_data(0, DSize * 64, Ref),
     StructPtrs = [copy_ref(read_struct_ptr(Idx, Ref))

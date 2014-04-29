@@ -141,11 +141,9 @@ read_ptr(#ptr{ type=Type, default=Default }, #object{ ref = Ref }=Obj) ->
             end
     end.
 
-read_obj(Type, #object{ ref = #ref{ kind=null }=Ref }=Obj, Default) ->
+read_obj(Type, #object{ ref = #ref{ kind=null } }=Obj, Default) ->
     if is_binary(Default) ->
-            ecapnp_obj:from_ref(
-              ecapnp_ref:paste(Default, Ref),
-              Type, Obj)
+            ecapnp_obj:from_data(Default, Type, Obj)
     end;
 read_obj(Type, Obj, _) ->
     ecapnp_obj:to_struct(Type, Obj).

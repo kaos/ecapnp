@@ -58,11 +58,12 @@ from_ref(Ref, Type, Schema) ->
     to_struct(Type, init(Ref, Schema)).
 
 %% @doc Get object (or list) from data.
+%%
+%% Returns a reader object (i.e. a read-only version).
 %% @see from_ref/2
 -spec from_data(binary(), type_name(), term()) -> object() | list().
 from_data(Data, Type, Schema) ->
-    {ok, Pid} = ecapnp_data:start_link(Data),
-    Ref = ecapnp_ref:get(0, 0, Pid),
+    Ref = ecapnp_ref:get(0, 0, Data),
     from_ref(Ref, Type, Schema).
 
 from_data(Data, Type) ->
