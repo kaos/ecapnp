@@ -1,6 +1,6 @@
 -file("test.capnp", 1).
 
-%% This file was generated 2014-04-30 12:32:56 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-30 13:45:16 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(test_capnp).
 
@@ -10,17 +10,19 @@
 	 '18038429679936549741'/0, '12292473172826227401'/0, '9356761420570873088'/0,
 	 '12591081617868223671'/0, 'Simple'/0, 'Simple'/1, '15091335337902283752'/0, 'ListTest'/0,
 	 'ListTest'/1, '17083831967670695846'/0, 'BasicCap'/0, 'BasicCap'/1, '17521612982906909583'/0,
-	 '13875996178202423621'/0, '10419494484650272988'/0, 'Pipelines'/0, 'Pipelines'/1,
-	 '16031390312538156137'/0, '14503907271725109646'/0, '14869749728248688780'/0, 'OtherCap'/0,
-	 'OtherCap'/1, '10376444823742217855'/0, '18397524501497330844'/0, '14954489407150623152'/0,
-	 'ThirdCap'/0, 'ThirdCap'/1, '18123859541809896974'/0, '14187451716366646039'/0,
-	 '16272584843106476340'/0, 'CapTest'/0, 'CapTest'/1, '17442731430661771208'/0, root/0, root/1,
-	 '16752831063434032545'/0]).
+	 '16325444167000491107'/0, '16351184016261359411'/0, '13875996178202423621'/0,
+	 '10419494484650272988'/0, 'Pipelines'/0, 'Pipelines'/1, '16031390312538156137'/0,
+	 '14503907271725109646'/0, '14869749728248688780'/0, 'OtherCap'/0, 'OtherCap'/1,
+	 '10376444823742217855'/0, '18397524501497330844'/0, '14954489407150623152'/0, 'ThirdCap'/0,
+	 'ThirdCap'/1, '18123859541809896974'/0, '14187451716366646039'/0, '16272584843106476340'/0,
+	 'CapTest'/0, 'CapTest'/1, '17442731430661771208'/0, root/0, root/1, '16752831063434032545'/0]).
 
 -types([{17364400218949434058, testAnno}, {18038429679936549741, 'Test'},
 	{12292473172826227401, ['Test', meta]}, {9356761420570873088, ['Test', opts]},
 	{12591081617868223671, ['Test', groupField]}, {15091335337902283752, 'Simple'},
 	{17083831967670695846, 'ListTest'}, {17521612982906909583, 'BasicCap'},
+	{16325444167000491107, ['BasicCap', [sub, '$Results']]},
+	{16351184016261359411, ['BasicCap', [sub, '$Params']]},
 	{13875996178202423621, ['BasicCap', [add, '$Results']]},
 	{10419494484650272988, ['BasicCap', [add, '$Params']]}, {16031390312538156137, 'Pipelines'},
 	{14503907271725109646, ['Pipelines', [getBasic, '$Results']]},
@@ -154,6 +156,10 @@ schema(['ListTest']) -> '17083831967670695846'();
 schema(17521612982906909583) -> '17521612982906909583'();
 schema('BasicCap') -> '17521612982906909583'();
 schema(['BasicCap']) -> '17521612982906909583'();
+schema(16325444167000491107) -> '16325444167000491107'();
+schema(['BasicCap', [sub, '$Results']]) -> '16325444167000491107'();
+schema(16351184016261359411) -> '16351184016261359411'();
+schema(['BasicCap', [sub, '$Params']]) -> '16351184016261359411'();
 schema(13875996178202423621) -> '13875996178202423621'();
 schema(['BasicCap', [add, '$Results']]) -> '13875996178202423621'();
 schema(10419494484650272988) -> '10419494484650272988'();
@@ -319,6 +325,8 @@ root([]) -> '16752831063434032545'().
 
 'BasicCap'() -> '17521612982906909583'().
 
+'BasicCap'([[sub, '$Results']]) -> '16325444167000491107'();
+'BasicCap'([[sub, '$Params']]) -> '16351184016261359411'();
 'BasicCap'([[add, '$Results']]) -> '13875996178202423621'();
 'BasicCap'([[add, '$Params']]) -> '10419494484650272988'();
 'BasicCap'([]) -> '17521612982906909583'().
@@ -329,8 +337,26 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #interface{extends = [],
 				methods =
-				    [#method{id = 0, name = add, paramType = 10419494484650272988,
-					     resultType = 13875996178202423621}]}}.
+				    [#method{id = 0, name = add, paramType = 10419494484650272988, resultType = 13875996178202423621},
+				     #method{id = 1, name = sub, paramType = 16351184016261359411, resultType = 16325444167000491107}]}}.
+
+'16325444167000491107'() ->
+    #schema_node{module = test_capnp, name = ['BasicCap', [sub, '$Results']], id = 16325444167000491107,
+		 scope = 0, src = <<"test.capnp:BasicCap.sub$Results">>,
+		 kind =
+		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
+			     fields =
+				 [#field{name = result,
+					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+
+'16351184016261359411'() ->
+    #schema_node{module = test_capnp, name = ['BasicCap', [sub, '$Params']], id = 16351184016261359411,
+		 scope = 0, src = <<"test.capnp:BasicCap.sub$Params">>,
+		 kind =
+		     #struct{dsize = 2, psize = 0, esize = inlineComposite, union_field = none,
+			     fields =
+				 [#field{name = a, kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{name = b, kind = #data{type = int64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '13875996178202423621'() ->
     #schema_node{module = test_capnp, name = ['BasicCap', [add, '$Results']], id = 13875996178202423621,

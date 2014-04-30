@@ -43,6 +43,7 @@ struct ListTest @0xed15f6a91b7977a6 {  # 0 bytes, 4 ptrs
 }
 interface BasicCap @0xf329462caa09f38f {
   add @0 (a :Int64, b :Int64) -> (result :Int64);
+  sub @1 (a :Int64, b :Int64) -> (result :Int64);
 }
 interface Pipelines @0xde7af08d2279ac69 {
   getBasic @0 () -> (basic :BasicCap);

@@ -48,6 +48,7 @@
 %% Capability & RPC
 
 -record(rpc_call, {
+          vat,
           target,
           interface :: ecapnp:type_id(),
           method :: non_neg_integer(),

@@ -50,12 +50,20 @@ thirdCap_test_() ->
          ]).
 
 basicCap_funs() ->
-    [{handle_call, fun (add, Params, Result) -> basicCap_add(Params, Result) end}].
+    [{handle_call, fun (add, Params, Result) -> basicCap_add(Params, Result);
+                       (sub, Params, Result) -> basicCap_sub(Params, Result)
+                   end}].
 
 basicCap_add(Params, Results) ->
     ecapnp:set(result,
                ecapnp:get(a, Params)
                + ecapnp:get(b, Params),
+               Results).
+
+basicCap_sub(Params, Results) ->
+    ecapnp:set(result,
+               ecapnp:get(a, Params)
+               - ecapnp:get(b, Params),
                Results).
 
 test_basicCap_add(Pid, S, A, B) ->

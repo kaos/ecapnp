@@ -22,7 +22,7 @@
 -module(ecapnp_rpc).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([request/3]).
+-export([request/3, set_param/3, send/1, wait/1]).
 
 -include("ecapnp.hrl").
 
@@ -34,14 +34,20 @@
 request(MethodName, Capability, Vat) ->
     {ok, Interface, Method} = ecapnp_capability:find_method_by_name(
                                 MethodName, Capability),
-    {ok, Params} = ecapnp_set:root(
-                     ecapnp_schema:lookup(Method#method.paramType, Interface)),
-    #rpc_call{
-       target = ecapnp_vat:find_capability(Capability, Vat),
-       interface = Interface#schema_node.id,
-       method = Method#method.id,
-       params = Params
-      }.
+    ecapnp_vat:request(Interface, Method, Capability, Vat).
+
+set_param(Field, Value, #rpc_call{ params = Params }) ->
+    ecapnp_set:field(Field, Value, Params).
+
+send(Req) ->
+    ecapnp_vat:send(Req).
+
+wait(Promise) ->
+    receive
+        {Promise, Result} ->
+            {ok, Result}
+    end.
+
 
 %% ===================================================================
 %% internal functions
