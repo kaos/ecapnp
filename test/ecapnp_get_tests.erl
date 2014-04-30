@@ -155,4 +155,18 @@ text_list_test() ->
               [Text1, Text2, Text3],
               ecapnp:get(listText, Root))].
 
+get_cap_test() ->
+    Msg = [<<0,0,0,0, 0,0,2,0, %% root struct w 2 ptrs
+             3,0,0,0, 11,0,0,0, %% cap ptr 11 (basic)
+             3,0,0,0, 22,0,0,0  %% cap ptr 22 (obj)
+           >>],
+    {ok, R} = ecapnp:get_root('CapTest', test_capnp, Msg),
+    Pid = spawn(fun() -> ok end),
+    Root = ecapnp_obj:set_cap_table([{11, self()}, {22, Pid}], R),
+    Basic = ecapnp:get(basic, Root),
+    Obj = ecapnp:get(obj, Root),
+    ?assertEqual(self(), Basic#object.ref#ref.kind#interface_ref.pid),
+    ?assertEqual(Pid, Obj#object.ref#ref.kind#interface_ref.pid).
+
+
 -endif.

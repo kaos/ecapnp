@@ -25,7 +25,7 @@
 
 -export([init/2, alloc/3, from_ref/3, from_data/2, from_data/3,
          field/2, copy/1, refresh/1, to_struct/2, to_list/2,
-         to_text/1, to_data/1 ]).
+         to_text/1, to_data/1, set_cap_table/2]).
 
 -include("ecapnp.hrl").
 
@@ -130,6 +130,13 @@ to_text(#object{ ref=#ref{ kind=Kind }}=Obj)
 to_data(#object{ ref=#ref{ kind=Kind }}=Obj)
   when is_record(Kind, list_ref); Kind == null ->
     ecapnp_get:ref_data(data, Obj, <<>>).
+
+set_cap_table(CapTable, #object{ ref = Ref }=Object) ->
+    Object#object{ ref = set_cap_table(CapTable, Ref) };
+set_cap_table(CapTable, #ref{ data = Data }=Ref) ->
+    Ref#ref{ data = set_cap_table(CapTable, Data) };
+set_cap_table(CapTable, Reader) when is_record(Reader, reader) ->
+    Reader#reader{ caps = CapTable }.
 
 
 %% ===================================================================

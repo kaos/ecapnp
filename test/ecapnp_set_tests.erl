@@ -215,8 +215,8 @@ set_cap_test() ->
     Data = ecapnp_data:get_segments(Root#object.ref#ref.data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 0,0,2,0, %% root struct w 2 ptrs
-          3,0,0,0, 1,0,0,0, %% cap ptr idx 1
-          3,0,0,0, 0,0,0,0  %% cap ptr idx 0
+          3,0,0,0, 1,0,0,0, %% cap ptr 1 (basic)
+          3,0,0,0, 0,0,0,0  %% cap ptr 0 (obj)
         >>], Data).
 
 -endif.

@@ -388,7 +388,7 @@ copy(Ref) ->
 %% Note: `Data' should be whole words (8 bytes). Any fraction of a
 %% word will be truncated.
 paste(<<DataRef:64/bits, Data/binary>>, Ref) ->
-    #ref{ offset=0, kind=Kind } = read_ref(DataRef),
+    #ref{ offset=0, kind=Kind } = read_ref(DataRef, Ref),
     if Kind == null -> set(Kind, Ref);
        is_record(Kind, struct_ref);
        is_record(Kind, list_ref);
@@ -498,40 +498,42 @@ update_offset(Target, #ref{ pos=Pos }=Ref) ->
 
 read_segment(SegmentId, Pos, Segment, Data, FollowFar)
   when size(Segment) == 8 ->
-    Ref = read_ref(Segment),
+    Ref = read_ref(Segment, Data),
     case {FollowFar, Ref#ref.kind} of
-        {true, #far_ref{}} -> follow_far(Ref#ref{ data=Data });
-        _ -> Ref#ref{ segment=SegmentId, pos=Pos, data=Data }
+        {true, #far_ref{}} -> follow_far(Ref);
+        _ -> Ref#ref{ segment=SegmentId, pos=Pos }
     end;
+%% list data
 read_segment(SegmentId, _, _, Data, _) ->
     #ref{ segment=SegmentId, pos=-1, data=Data }.
 
 read_ref(<<OffsetAndKind:32/integer-signed-little,
-           Size:32/integer-little>>) ->
-    case ptr_type(OffsetAndKind, Size) of
-        null -> #ref{};
-        struct ->
-            #ref{ offset=OffsetAndKind bsr 2,
-                  kind=#struct_ref{
-                          dsize=Size band 16#ffff,
-                          psize=Size bsr 16 }};
-        list ->
-            #ref{ offset=OffsetAndKind bsr 2,
-                  kind=#list_ref{
-                          size=list_element_size(Size band 7),
-                          count=Size bsr 3 }};
-        far_ptr ->
-            #ref{ offset=OffsetAndKind bsr 3,
-                  kind=#far_ref{
-                          segment=Size,
-                          double_far=OffsetAndKind band 4 > 0
-                         }};
-        interface ->
-            #ref{ offset=OffsetAndKind bsr 2,
-                  kind=#interface_ref{}}
-                          %% dsize=Size band 16#ffff,
-                          %% psize=Size bsr 16 }}
-    end.
+           Size:32/integer-little>>, Data) ->
+    Ref = case ptr_type(OffsetAndKind, Size) of
+              null -> #ref{};
+              struct ->
+                  #ref{ offset = OffsetAndKind bsr 2,
+                        kind = #struct_ref{
+                                  dsize=Size band 16#ffff,
+                                  psize=Size bsr 16 }};
+              list ->
+                  #ref{ offset = OffsetAndKind bsr 2,
+                        kind = #list_ref{
+                                  size=list_element_size(Size band 7),
+                                  count=Size bsr 3 }};
+              far_ptr ->
+                  #ref{ offset = OffsetAndKind bsr 3,
+                        kind = #far_ref{
+                                  segment=Size,
+                                  double_far=OffsetAndKind band 4 > 0
+                                 }};
+              interface ->
+                  #ref{ offset = Size, %% CapTable index
+                        kind = #interface_ref{
+                                  pid = get_cap_pid(Size, Data)
+                                 }}
+          end,
+    Ref#ref{ data = Data }.
 
 read_list_elements(_, _, 0, Acc) -> lists:reverse(Acc);
 read_list_elements(1, <<Byte:1/bytes, Rest/binary>>, Count, Acc) ->
@@ -636,3 +638,11 @@ element_size(inlineComposite) -> 7.
 %% only supported for builders, as readers should not need to lookup cap index
 get_cap_idx(#interface_ref{ pid = Cap }, #builder{ pid = Pid }) ->
     ecapnp_data:get_cap_idx(Cap, Pid).
+
+get_cap_pid(Idx, #builder{ pid = Pid }) ->
+    ecapnp_data:get_cap_pid(Idx, Pid);
+get_cap_pid(Idx, #reader{ caps = CapTable }) ->
+    case lists:keyfind(Idx, 1, CapTable) of
+        {Idx, Cap} -> Cap;
+        false -> undefined
+    end.
