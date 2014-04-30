@@ -45,11 +45,10 @@ read_struct_data_test() ->
        ecapnp_ref:read_struct_data(32, 16, Ref)).
 
 read_composite_list_test() ->
-    {ok, Data} = ecapnp_data:start_link(
-                   <<1,0,0,0, 55,0,0,0,
-                     8,0,0,0, 1,0, 2,0,
-                     0:(6*64)/integer
-                   >>),
+    Data = data(<<1,0,0,0, 55,0,0,0,
+                  8,0,0,0, 1,0, 2,0,
+                  0:(6*64)/integer
+                >>),
     Ref = ecapnp_ref:get(0, 0, Data),
     ?assertEqual(
        [#ref{ segment=0, pos=-1, offset=2, data=Data,
@@ -59,13 +58,12 @@ read_composite_list_test() ->
        ecapnp_ref:read_list(Ref)).
 
 read_pointer_list_test() ->
-    {ok, Data} = ecapnp_data:start_link(
-                   <<1,0,0,0, 22,0,0,0,
-                     5,0,0,0, 34,0,0,0,
-                     5,0,0,0, 34,0,0,0,
-                     102,111,111,0,0,0,0,0,
-                     98,97,114,0,0,0,0,0
-                   >>),
+    Data = data(<<1,0,0,0, 22,0,0,0,
+                  5,0,0,0, 34,0,0,0,
+                  5,0,0,0, 34,0,0,0,
+                  102,111,111,0,0,0,0,0,
+                  98,97,114,0,0,0,0,0
+                >>),
     ListRef = ecapnp_ref:get(0, 0, Data),
     ?assertEqual(
        #ref{ segment=0, pos=0, offset=0, data=Data,
@@ -179,7 +177,7 @@ alloc_test() ->
     ?assertEqual(
        #ref{ segment=0, pos=0, offset=0, data=Data, kind=null},
        Ref),
-    D = ecapnp_data:get_segments(Data),
+    D = ecapnp_data:get_segments(Data#builder.pid),
     ?assertEqual([<<0:5/integer-unit:64>>], D).
 
 set_test() ->
@@ -190,7 +188,7 @@ set_test() ->
        #ref{ segment=0, pos=0, offset=0, data=Data,
              kind=Kind},
        Ref),
-    D = ecapnp_data:get_segments(Data),
+    D = ecapnp_data:get_segments(Data#builder.pid),
     ?assertEqual([<<0:32/integer,
                     3:16/integer-little,
                     4:16/integer-little,
@@ -201,7 +199,7 @@ write_struct_data_test() ->
     Data = data([<<0,0,0,0, 1,0, 0,0,  0:64/integer>>]),
     Ref = ecapnp_ref:get(0, 0, Data),
     ok = ecapnp_ref:write_struct_data(32, 16, <<5, 6>>, Ref),
-    Bin = ecapnp_data:get_segments(Data),
+    Bin = ecapnp_data:get_segments(Data#builder.pid),
     ?assertEqual(
        [<<0:32/integer, 1:32/integer-little,
           0:32/integer, 5, 6, 0, 0>>],
@@ -212,7 +210,7 @@ write_struct_ptr_test() ->
     Ref = ecapnp_ref:get(0, 0, Data),
     Ptr = ecapnp_ref:read_struct_ptr(0, Ref),
     ok = ecapnp_ref:write_struct_ptr(Ptr#ref{ kind=null }, Ref),
-    Bin = ecapnp_data:get_segments(Data),
+    Bin = ecapnp_data:get_segments(Data#builder.pid),
     ?assertEqual(
        [<<0:32/integer, 0, 0, 1, 0,
           0:32/integer, 0, 0, 0, 0>>],
@@ -227,7 +225,7 @@ write_struct_list_test() ->
     ok = ecapnp_ref:write_list(0, 2, <<0:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 1, <<1:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 4, <<1:1>>, Ref),
-    Bin = ecapnp_data:get_segments(Data),
+    Bin = ecapnp_data:get_segments(Data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 1,0, 2,0,
           0:64/integer, %% data
@@ -247,7 +245,7 @@ write_composite_list_test() ->
     [Ref1, Ref2] = ecapnp_ref:read_list(ListRef),
     ok = ecapnp_ref:write_struct_data(16, 32, <<1,2,3,4>>, Ref1),
     ok = ecapnp_ref:write_struct_data(80, 32, <<5,6,7,8>>, Ref2),
-    Bin = ecapnp_data:get_segments(Data),
+    Bin = ecapnp_data:get_segments(Data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 1,0, 2,0,
           0:64/integer, %% data

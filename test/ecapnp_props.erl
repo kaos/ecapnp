@@ -322,14 +322,14 @@ data_builder(T) -> data_builder(T, 0).
 
 data_builder(#struct_ref{ dsize=D, psize=P }=Kind, Extra) ->
     {ok, Pid} = ecapnp_data:start_link(1 + D + P + Extra),
-    ecapnp_ref:alloc(Kind, 0, 1 + D + P, Pid);
+    ecapnp_ref:alloc(Kind, 0, 1 + D + P, #builder{ pid = Pid });
 data_builder(#schema_node{}=N, Extra) ->
     data_builder(ecapnp_schema:get_ref_kind(N), Extra).
 
 data_reader(#struct_ref{ dsize=D, psize=P }=Kind) ->
     R = ecapnp_ref:create_ptr(0, Kind),
     E = <<0:(D + P)/integer-unit:64>>,
-    ecapnp_ref:get(0, 0, <<R/binary, E/binary>>);
+    ecapnp_ref:get(0, 0, #reader{ data = <<R/binary, E/binary>> });
 data_reader(#schema_node{}=N) ->
     data_builder(ecapnp_schema:get_ref_kind(N)).
 

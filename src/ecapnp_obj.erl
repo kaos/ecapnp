@@ -43,7 +43,8 @@ alloc(Node, SegmentId, Data) when is_pid(Data) ->
     init(
       ecapnp_ref:alloc(
         ecapnp_schema:get_ref_kind(Node),
-        SegmentId, 1 + ecapnp_schema:size_of(Node), Data),
+        SegmentId, 1 + ecapnp_schema:size_of(Node),
+        #builder{ pid = Data }),
       Node).
 
 %% @doc Get object (or list) from reference.
@@ -61,9 +62,9 @@ from_ref(Ref, Type, Schema) ->
 %%
 %% Returns a reader object (i.e. a read-only version).
 %% @see from_ref/2
--spec from_data(binary(), type_name(), term()) -> object() | list().
+-spec from_data(binary() | list(binary()), type_name(), term()) -> object() | list().
 from_data(Data, Type, Schema) ->
-    Ref = ecapnp_ref:get(0, 0, Data),
+    Ref = ecapnp_ref:get(0, 0, #reader{ data = Data }),
     from_ref(Ref, Type, Schema).
 
 from_data(Data, Type) ->

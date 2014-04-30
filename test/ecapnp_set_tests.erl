@@ -21,7 +21,7 @@
 
 root_test() ->
     {ok, Root} = ecapnp_set:root('Test', test_capnp),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0:32/integer-little, 2:16/integer-little,
           6:16/integer-little, 0:8/integer-unit:64>>],
@@ -30,7 +30,7 @@ root_test() ->
 data_field_test() ->
     {ok, Root} = ecapnp_set:root('Test', test_capnp),
     ok = ecapnp:set(intField, 0, Root),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0:32/integer-little, 2:16/integer-little, 6:16/integer-little,
           %% data
@@ -48,7 +48,7 @@ data_field_test() ->
 text_field_test() ->
     {ok, Root} = ecapnp_set:root('Test', test_capnp),
     ok = ecapnp:set(textField, <<"test data">>, Root),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0:32/integer-little, 2:16/integer-little, 6:16/integer-little,
           %% data
@@ -74,7 +74,7 @@ list_field_test() ->
     ok = ecapnp:set(listInts, {1, 222}, Root),
     ok = ecapnp:set(listInts, {0, 111}, Root),
     ok = ecapnp:set(listInts, {2, -333}, Root),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 0,0,4,0, %% struct ref off 0, 0 data, 4 ptrs
           %% pointers
@@ -94,7 +94,7 @@ object_field_test() ->
     ?assertEqual([false, false], ecapnp:set(listAny, {{list, bool}, 2}, Root)),
     ok = ecapnp:set(listAny, {{list, bool}, {1, true}}, Root),
     ok = ecapnp:set(listAny, {{list, bool}, {0, false}}, Root),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 0,0,4,0, %% struct ref off 0, 0 data, 4 ptrs
           %% pointers
@@ -111,7 +111,7 @@ object_as_struct_test() ->
     {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
     Obj = ecapnp:set(listAny, 'Simple', Root),
     ok = ecapnp:set(simpleMessage, <<"object text">>, Obj),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 0,0,4,0, %% struct ref off 0, 0 data, 4 ptrs
           %% pointers
@@ -134,7 +134,7 @@ struct_list_test() ->
     [R1, R2] = ecapnp:set(listSimples, 2, Root),
     ok = ecapnp:set(value, 332211, R1),
     ok = ecapnp:set(defaultValue, 112233, R2),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 0,0,4,0,
           0:2/integer-little-unit:64,
@@ -170,7 +170,7 @@ text_list_test() ->
     ecapnp:set(listText, {0, Text1}, Root),
     ecapnp:set(listText, {1, Text2}, Root),
     ecapnp:set(listText, {2, Text3}, Root),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(Msg, Data).
 
 set_struct_test() ->
@@ -189,7 +189,7 @@ set_struct_test() ->
                      Root),
     ?assertEqual(#struct_ref{ dsize=1, psize=2 },
                  (Obj#object.ref)#ref.kind),
-    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
        [<<0,0,0,0, 0,0,4,0, %% struct ref off 0, 0 data, 4 ptrs
           %% pointers

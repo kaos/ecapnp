@@ -22,6 +22,6 @@
 %% ----------------------------------------
 data(Data) ->
     {ok, Pid} = ecapnp_data:start_link(Data),
-    Pid.
+    #builder{ pid = Pid }.
 
 -endif.
