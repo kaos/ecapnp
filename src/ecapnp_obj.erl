@@ -101,12 +101,14 @@ refresh(#object{ ref=Ref }=Object) ->
 
 %% @doc Type cast object to another type of object.
 -spec to_struct(type_name(), object()) -> object().
-to_struct(Type, #object{ ref=#ref{ kind=Kind }=Ref }=Object)
+to_struct(object, Object) ->
+    Object#object{ schema = init_schema(Object) };
+to_struct(Type, #object{ ref=#ref{ kind=Kind } }=Object)
   when Kind == null;
        is_record(Kind, struct_ref);
        is_record(Kind, interface_ref) ->
     T = ecapnp_schema:lookup(Type, Object),
-    Object#object{ ref=Ref, schema=T }.
+    Object#object{ schema=T }.
 
 %% @doc Type cast object to list of type.
 %% Object must be a reference to a list.

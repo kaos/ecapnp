@@ -53,3 +53,7 @@ interface OtherCap @0x9000899726987e7f {
 interface ThirdCap @0xfb84e23a9ca71e0e extends(BasicCap, OtherCap) {
   square @0 (a :Int64) -> (sq :Int64);
 }
+struct CapTest @0xf21107d21522cfc8 {  # 0 bytes, 2 ptrs
+  basic @0 :BasicCap;  # ptr[0]
+  obj @1 :AnyPointer;  # ptr[1]
+}

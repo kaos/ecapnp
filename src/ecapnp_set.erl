@@ -39,7 +39,7 @@ root(Type, Schema) ->
 
 -spec root(schema_node()) -> {ok, object()}.
 %% @doc Get root object for a new message.
-root(Node) ->
+root(Node) when is_record(Node, schema_node) ->
     {ok, Data} = ecapnp_data:start_link(default),
     {ok, ecapnp_obj:alloc(Node, 0, Data)}.
 
@@ -181,6 +181,10 @@ set_field(#group{ id=Type }, Value, #object{ ref=StructRef }=Obj) ->
 write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(
       ecapnp_ref:paste(Value, Ref),
+      Type, Obj);
+write_obj(Type, Value, Ref, Obj) when is_pid(Value) ->
+    ecapnp_obj:from_ref(
+      ecapnp_ref:set(#interface_ref{ pid = Value }, Ref),
       Type, Obj);
 write_obj(Type, #object{ schema=#schema_node{ id=Type }, ref=Value }, Ref, Obj) ->
     write_obj(Type, ecapnp_ref:copy(Value), Ref, Obj).

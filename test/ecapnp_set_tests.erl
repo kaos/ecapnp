@@ -202,4 +202,21 @@ set_struct_test() ->
           SimpleData/binary
         >>], Data).
 
+set_cap_test() ->
+    {ok, Root} = ecapnp:set_root('CapTest', test_capnp),
+
+    Obj1 = ecapnp:set(obj, {{interface, 'BasicCap'}, self()}, Root),
+    ?assertEqual(self(), Obj1#object.ref#ref.kind#interface_ref.pid),
+
+    Pid = spawn(fun() -> ok end),
+    Obj2 = ecapnp:set(basic, Pid, Root),
+    ?assertEqual(Pid, Obj2#object.ref#ref.kind#interface_ref.pid),
+
+    Data = ecapnp_data:get_segments(Root#object.ref#ref.data#builder.pid),
+    ?assertEqual(
+       [<<0,0,0,0, 0,0,2,0, %% root struct w 2 ptrs
+          3,0,0,0, 1,0,0,0, %% cap ptr idx 1
+          3,0,0,0, 0,0,0,0  %% cap ptr idx 0
+        >>], Data).
+
 -endif.

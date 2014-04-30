@@ -64,9 +64,16 @@ alloc(Kind, SegmentId, Size, Builder) ->
 %% `Ref.pos'.
 %%
 %% @see alloc/4
-set(Kind, Ref0) when is_record(Ref0, ref) ->
-    Ref = Ref0#ref{ kind=Kind },
-    ok = write(Ref), Ref.
+set(Kind, #ref{ data = Data }=Ref) ->
+    Ref1 = if is_record(Kind, interface_ref) ->
+                  Ref#ref{
+                    offset = get_cap_idx(Kind, Data),
+                    kind = Kind };
+             true ->
+                   Ref#ref{ kind=Kind }
+          end,
+    ok = write(Ref1),
+    Ref1.
 
 %% @doc Get reference from segment data.
 %%
@@ -608,13 +615,10 @@ create_ptr(Offset, #list_ref{ size=Size, count=Count }) ->
 %% far ptr
 create_ptr(Offset, #far_ref{ segment=Seg, double_far = false }) ->
     Off = (Offset bsl 3) + 2,
-    <<Off:32/integer-little, Seg:32/integer-little>>.
+    <<Off:32/integer-little, Seg:32/integer-little>>;
 %% capability ptr
-%% create_ptr(Offset, #interface_ref{ dsize=DSize, psize=PSize }) ->
-%%     Off = (Offset bsl 2) + 3,
-%%     <<Off:32/integer-signed-little,
-%%       DSize:16/integer-little,
-%%       PSize:16/integer-little>>.
+create_ptr(Idx, #interface_ref{}) ->
+    <<3:32/integer-little, Idx:32/integer-little>>.
 
 
 
@@ -627,3 +631,8 @@ element_size(fourBytes) -> 4;
 element_size(eightBytes) -> 5;
 element_size(pointer) -> 6;
 element_size(inlineComposite) -> 7.
+
+
+%% only supported for builders, as readers should not need to lookup cap index
+get_cap_idx(#interface_ref{ pid = Cap }, #builder{ pid = Pid }) ->
+    ecapnp_data:get_cap_idx(Cap, Pid).

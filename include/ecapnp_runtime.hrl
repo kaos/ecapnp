@@ -10,7 +10,7 @@
 -record(ref, {
           segment :: ecapnp:segment_id(),
           pos=-1 :: ecapnp:segment_pos(),
-          offset=0 :: ecapnp:segment_offset(),
+          offset=0 :: ecapnp:segment_offset(), %% or capability index in CapTable for #interface_ref{}'s
           kind=null :: ecapnp:ref_kind(),
           data :: #builder{} | #reader{}
          }).
