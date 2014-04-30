@@ -2,7 +2,7 @@
 %%
 %% Bump version number on ANY change in ANY of the records in this file.
 %% Must have the same version in both ecapnp runtime libs and compiled schemas.
--ecapnp_schema_version(1).
+-ecapnp_schema_version(2).
 
 %% Common record for all schema nodes
 -record(schema_node, {
@@ -73,6 +73,7 @@
 
 %% Interface methods
 -record(method, {
+          id,
           name,
           paramType,
           resultType

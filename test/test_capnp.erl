@@ -1,6 +1,6 @@
 -file("test.capnp", 1).
 
-%% This file was generated 2014-04-30 08:27:46 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-30 12:32:56 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(test_capnp).
 
@@ -33,7 +33,7 @@
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
--ecapnp_schema_version(1).
+-ecapnp_schema_version(2).
 
 -record(schema_node,
 	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
@@ -129,7 +129,7 @@
 	 {remote_type, 71, [{atom, 71, ecapnp}, {atom, 71, type_id}, []]}}],
        []}).
 
--record(method, {name, paramType, resultType}).
+-record(method, {id, name, paramType, resultType}).
 
 -file("test.capnp", 1).
 
@@ -233,7 +233,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #interface{extends = [17521612982906909583, 10376444823742217855],
 				methods =
-				    [#method{name = square, paramType = 16272584843106476340, resultType = 14187451716366646039}]}}.
+				    [#method{id = 0, name = square, paramType = 16272584843106476340,
+					     resultType = 14187451716366646039}]}}.
 
 '14187451716366646039'() ->
     #schema_node{module = test_capnp, name = ['ThirdCap', [square, '$Results']],
@@ -263,7 +264,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #interface{extends = [],
 				methods =
-				    [#method{name = sqroot, paramType = 14954489407150623152, resultType = 18397524501497330844}]}}.
+				    [#method{id = 0, name = sqroot, paramType = 14954489407150623152,
+					     resultType = 18397524501497330844}]}}.
 
 '18397524501497330844'() ->
     #schema_node{module = test_capnp, name = ['OtherCap', [sqroot, '$Results']],
@@ -296,7 +298,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #interface{extends = [],
 				methods =
-				    [#method{name = getBasic, paramType = 14869749728248688780, resultType = 14503907271725109646}]}}.
+				    [#method{id = 0, name = getBasic, paramType = 14869749728248688780,
+					     resultType = 14503907271725109646}]}}.
 
 '14503907271725109646'() ->
     #schema_node{module = test_capnp, name = ['Pipelines', [getBasic, '$Results']],
@@ -326,7 +329,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #interface{extends = [],
 				methods =
-				    [#method{name = add, paramType = 10419494484650272988, resultType = 13875996178202423621}]}}.
+				    [#method{id = 0, name = add, paramType = 10419494484650272988,
+					     resultType = 13875996178202423621}]}}.
 
 '13875996178202423621'() ->
     #schema_node{module = test_capnp, name = ['BasicCap', [add, '$Results']], id = 13875996178202423621,

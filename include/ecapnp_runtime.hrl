@@ -45,11 +45,11 @@
          }).
 
 
-
 %% Capability & RPC
 
--record(request, {
-          method :: ecapnp:field_name(),
-          param :: ecapnp:object(),
-          interface :: ecapnp:schema_node()
+-record(rpc_call, {
+          target,
+          interface :: ecapnp:type_id(),
+          method :: non_neg_integer(),
+          params :: ecapnp:object()
          }).

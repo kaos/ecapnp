@@ -354,14 +354,7 @@ compile_node_type({interface, Interface}) ->
            list([integer(Id) || Id <- ecapnp:get(extends, Interface)])),
          record_field(
            atom(methods),
-           list([record_expr(
-                   atom(method),
-                   [record_field(atom(name), atom(binary_to_list(ecapnp:get(name, M)))),
-                    record_field(atom(paramType), integer(ecapnp:get(paramStructType, M))),
-                    record_field(atom(resultType), integer(ecapnp:get(resultStructType, M)))
-                   ])
-                 || M <- ecapnp:get(methods, Interface)]))
-         %% there is a `#interface.struct` field too.. but not sure if it's a keeper.. (see ecapnpc.erl)
+           list(compile_methods(ecapnp:get(methods, Interface))))
         ]));
 compile_node_type({const, Const}) ->
     Type = ecapnp:get(type, Const),
@@ -415,6 +408,17 @@ compile_union(Union, Struct) ->
               ecapnp:get(discriminantOffset, Struct),
               {union, 0})
     end.
+
+compile_methods([]) -> [];
+compile_methods(Methods) ->
+    [record_expr(
+       atom(method),
+       [record_field(atom(id), integer(I)),
+        record_field(atom(name), atom(binary_to_list(ecapnp:get(name, M)))),
+        record_field(atom(paramType), integer(ecapnp:get(paramStructType, M))),
+        record_field(atom(resultType), integer(ecapnp:get(resultStructType, M)))
+       ])
+     || {I, M} <- lists:zip(lists:seq(0, length(Methods) - 1), Methods)].
 
 compile_struct_field(Field) ->
     record_expr(

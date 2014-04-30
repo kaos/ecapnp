@@ -25,9 +25,7 @@
 -behaviour(gen_server).
 
 -export([start/2, start_link/2, stop/1]).
--export([dispatch_call/5]).
-%%, data_pid/1, pid/1, pid/2,
-%% request/2, send/1, wait/1, param/1]).
+-export([dispatch_call/5, find_method_by_name/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -35,7 +33,7 @@
 
 -include("ecapnp.hrl").
 
--record(state, { impl, methods }).
+-record(state, { impl, schemas = [] }).
 
 
 %% ===================================================================
@@ -59,7 +57,10 @@ stop(Cap) ->
     gen_server:call(Cap, stop).
 
 dispatch_call(Cap, ItfID, MethID, Params, Result) ->
-    gen_server:call(Cap, {call, {ItfID, MethID}, [Params, Result]}).
+    gen_server:call(Cap, {call, ItfID, MethID, [Params, Result]}).
+
+find_method_by_name(MethodName, Cap) ->
+    gen_server:call(Cap, {find_method_by_name, MethodName}).
 
 %% request(Method, Object) ->
 %%     #method{ paramType=Type } = ecapnp_obj:field(Method, Object),
@@ -133,7 +134,7 @@ dispatch_call(Cap, ItfID, MethID, Params, Result) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Mod, Schema]) ->
-    {ok, #state{ impl = Mod, methods = list_methods(Schema) }}.
+    {ok, #state{ impl = Mod, schemas = list_interfaces(Schema) }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -149,16 +150,25 @@ init([Mod, Schema]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({call, Method, Args}, _From, State) ->
-    dispatch(find_method(Method, State), Args, State);
-handle_call(stop, _From, State) -> {stop, normal, ok, State};
-%% handle_call({call, Method, Param, Result}, {From,_}, #state{ mod=Impl }=State) ->
-%%     Reply = spawn(
-%%               fun() ->
-%%                       link(From),
-%%                       ok = apply(Impl, Method, [Param, Result])
-%%               end),
-%%     {reply, Reply, State};
+handle_call({call, Intf, Meth, Args}, _From, State) ->
+    case find_interface(Intf, State) of
+        false -> {reply, {error, {unsupported_interface, Intf}}, State};
+        Interface ->
+            case find_method(Meth, Interface) of
+                false -> {reply, {error, {unknown_method, Intf, Meth}}, State};
+                Method ->
+                    dispatch(Method, Args, State)
+            end
+    end;
+handle_call({find_method_by_name, MethodName}, _From, State) ->
+    case do_find_method_by_name(MethodName, State) of
+        {ok, _Interface, _Method}=Result ->
+            {reply, Result, State};
+        Err ->
+            {reply, Err, State}
+    end;
+handle_call(stop, _From, State) ->
+    {stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -218,43 +228,37 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-dispatch(false, _, State) ->
-    {reply, unknown_method, State};
-dispatch({_, Fun}, Args, #state{ impl = Mod }=State) ->
-    {reply, apply(Mod, Fun, Args), State}.
+dispatch(#method{ name = MethodName }, Args, #state{ impl = Mod }=State) ->
+    {reply, apply(Mod, handle_call, [MethodName|Args]), State}.
 
-find_method(Method, #state{ methods=Methods }) ->
-    lists:keyfind(Method, 1, Methods).
+find_interface(IntfId, #state{ schemas = Ss }) ->
+    lists:keyfind(IntfId, #schema_node.id, Ss).
 
-list_methods(#schema_node{ id = Id,
-                           kind = #interface{
-                                     extends = Extends, methods = Methods }
-                         }=S) ->
-    {_, Acc} = lists:mapfoldl(
-                 fun (M, {Ord, Acc}) ->
-                         {Ord + 1, [{{Id, Ord}, M#method.name}|Acc]}
-                 end,
-                 {0, lists:flatten(
-                       [list_methods(ecapnp_schema:get(E, S))
-                        || E <- Extends
-                       ])},
-                 Methods),
-    Acc.
+find_method(MethId, #schema_node{ kind = #interface{ methods = Ms } }) ->
+    lists:keyfind(MethId, #method.id, Ms).
 
-%% started(Pid, Intf, Schema) ->
-%%     Cap = ecapnp_obj:alloc(
-%%             Intf, 0,
-%%             ecapnp_data:new({Schema, 10})),
-%%     ok = pid(Pid, Cap),
-%%     {ok, Cap}.
+list_interfaces(Schema) ->
+    list_interfaces([Schema], []).
 
-%% try_call_later(#request{ method=Method, param=Param,
-%%                          interface=Promise }=Request,
-%%                Result) ->
-%%     ok = wait(Promise),
-%%     case pid(Promise) of
-%%         undefined -> throw({promise_not_fulfilled, Request});
-%%         Pid when is_pid(Pid) ->
-%%             Worker = gen_server:call(Pid, {call, Method, Param, Result}),
-%%             ok = wait(Worker)
-%%     end.
+list_interfaces([], Acc) -> Acc;
+list_interfaces([S|Ss], Acc) ->
+    #schema_node{ kind = #interface{ extends = Es } } = S,
+    list_interfaces(
+      Ss, list_interfaces(
+            [ecapnp_schema:get(E, S) || E <- Es],
+            [S|Acc])).
+
+do_find_method_by_name(MethodName, #state{ schemas = Ss }) ->
+    do_find_method_by_name(MethodName, Ss);
+do_find_method_by_name(MethodName, []) ->
+    {error, {unknown_method, MethodName}};
+do_find_method_by_name(MethodName, [S|Ss]) ->
+    case lists:keyfind(
+           MethodName, #method.name,
+           S#schema_node.kind#interface.methods)
+    of
+        false ->
+            do_find_method_by_name(MethodName, Ss);
+        Method ->
+            {ok, S, Method}
+    end.

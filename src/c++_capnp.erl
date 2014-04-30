@@ -1,6 +1,6 @@
 -file("c++.capnp", 1).
 
-%% This file was generated 2014-04-30 07:15:16 UTC by ecapnp 0.2.
+%% This file was generated 2014-04-30 12:36:51 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module('c++_capnp').
 
@@ -13,7 +13,7 @@
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
--ecapnp_schema_version(1).
+-ecapnp_schema_version(2).
 
 -record(schema_node,
 	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
@@ -109,7 +109,7 @@
 	 {remote_type, 71, [{atom, 71, ecapnp}, {atom, 71, type_id}, []]}}],
        []}).
 
--record(method, {name, paramType, resultType}).
+-record(method, {id, name, paramType, resultType}).
 
 -file("c++.capnp", 1).
 
