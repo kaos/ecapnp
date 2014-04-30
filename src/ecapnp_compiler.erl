@@ -103,7 +103,7 @@ compile_file(File, Nodes) ->
           fun (Acc) ->
                   {ok, Forms} = epp:parse_file(
                                   filename:join(code:lib_dir(ecapnp, include),
-                                                "ecapnp_records.hrl"),
+                                                "ecapnp_schema.hrl"),
                                   [], []),
                   %% drop eof
                   Forms1 = lists:reverse(tl(lists:reverse(Forms))),
