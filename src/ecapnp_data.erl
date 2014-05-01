@@ -20,9 +20,6 @@
 %%
 %% All objects data is held in a data process, implemented by this
 %% module.
-%%
-%% I have a wish to get away with the fact that each reference to
-%% default data ends up with their own separate data process.
 
 -module(ecapnp_data).
 -author("Andreas Stenius <kaos@astekk.se>").

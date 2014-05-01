@@ -29,19 +29,21 @@
 %%     ecapnp_rpc:wait(Res),
 %%     ecapnp:get(res, Res).
 
-mocked_request_test_() ->
+request_test_() ->
     meck([{ecapnp_vat, vat_funs()},
           {basicCap, ecapnp_capability_tests:basicCap_funs()}
          ],
          [fun test_request/0
          ]).
 
-mocked_send_test_() ->
+send_test_() ->
     meck([{ecapnp_vat, vat_funs()},
           {basicCap, ecapnp_capability_tests:basicCap_funs()}
          ],
          [fun test_send/0
          ]).
+
+
 
 vat_funs() ->
     [{request,
