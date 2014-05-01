@@ -22,9 +22,11 @@
 export_capability_test() ->
     {ok, Vat} = ecapnp_vat:start_link(),
     {ok, Cap} = ecapnp_capability:start_link(basicCap, test_capnp:'BasicCap'()),
-    {ok, ExportId} = ecapnp_vat:export_capability(Cap, Vat),
+    {ok, ExportId} = ecapnp_vat:export_capability(<<"test-cap">>, Cap, Vat),
     ?assertEqual(0, ExportId),
-    ?assertEqual({exported, Cap}, ecapnp_vat:find_capability(ExportId, Vat)).
+    ?assertEqual({ok, {exported, Cap}}, ecapnp_vat:find_capability(ExportId, Vat)),
+    ?assertEqual({ok, {exported, Cap}}, ecapnp_vat:find_capability(<<"test-cap">>, Vat)),
+    ?assertEqual({ok, {exported, ExportId}}, ecapnp_vat:find_capability(Cap, Vat)).
 
 
 -endif.

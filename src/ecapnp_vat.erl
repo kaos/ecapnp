@@ -25,7 +25,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, start_link/0, stop/1, export_capability/2,
+-export([start/0, start_link/0, stop/1, export_capability/3,
          find_capability/2]).
 
 %% gen_server callbacks
@@ -57,11 +57,11 @@ start_link() ->
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
 
-export_capability(Cap, Vat) ->
-    gen_server:call(Vat, {export, Cap}).
+export_capability(Name, Cap, Vat) ->
+    gen_server:call(Vat, {export, Name, Cap}).
 
-find_capability(Id, Vat) ->
-    gen_server:call(Vat, {find, Id}).
+find_capability(Ref, Vat) ->
+    gen_server:call(Vat, {find, Ref}).
 
 
 %% ===================================================================
@@ -71,11 +71,15 @@ find_capability(Id, Vat) ->
 init(Owner) ->
     {ok, #state{ owner = Owner }}.
 
-handle_call({export, Cap}, _From, State) ->
-    {Id, State1} = export(Cap, State),
+handle_call({export, Name, Cap}, _From, State) ->
+    {Id, State1} = export(Name, Cap, State),
     {reply, {ok, Id}, State1};
-handle_call({find, Id}, _From, State) ->
-    {reply, find(Id, State), State};
+handle_call({find, Ref}, _From, State) ->
+    Reply = case find(Ref, State) of
+                false -> {unknown_capability, Ref};
+                Found -> {ok, Found}
+            end,
+    {reply, Reply, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State}.
 
@@ -97,21 +101,31 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 
 %% ===================================================================
-export(Cap, #state{ next_id = Id, exports = Es }=State) ->
-    case lists:keyfind(Cap, 2, Es) of
-        {EId, Cap} -> {EId, State};
+export(Name, Cap, #state{ next_id = Id }=State) ->
+    case find(Cap, State) of
+        {NId, Cap} ->
+            {NId, export(Cap, 3, {NId, Name, Cap}, State)};
         false ->
-            {Id, State#state{
-                   next_id = Id + 1,
-                   exports = lists:keystore(Id, 1, Es, {Id, Cap})
-                  }}
+            {Id, export(Id, 1, {Id, Name, Cap},
+                        State#state{ next_id = Id + 1 }
+                       )}
     end.
 
+export(Key, Pos, Tuple, #state{ exports = Es }=State) ->
+    State#state{ exports = lists:keystore(Key, Pos, Es, Tuple) }.
+
 %% ===================================================================
-find(Id, #state{ exports = Es }) ->
-    case lists:keyfind(Id, 1, Es) of
-        {Id, Cap} -> {exported, Cap};
-        false -> {unknown_id, Id}
+find(Id, State) when is_integer(Id) ->
+    find(Id, 1, 3, State);
+find(Name, State) when is_binary(Name) ->
+    find(Name, 2, 3, State);
+find(Cap, State) when is_pid(Cap) ->
+    find(Cap, 3, 1, State).
+
+find(Ref, KeyIdx, ResIdx, #state{ exports = Es }) ->
+    case lists:keyfind(Ref, KeyIdx, Es) of
+        false -> false;
+        Tuple -> {exported, element(ResIdx, Tuple)}
     end.
 
 %% ===================================================================
@@ -120,4 +134,3 @@ find(Id, #state{ exports = Es }) ->
 %% ===================================================================
 %% utils
 %% ===================================================================
-
