@@ -88,9 +88,10 @@ write([]) ->
 
 dump_message(Data) ->
     %% unpack and read message data
-    {ok, Message} = ecapnp_message:read(
-                      ecapnp_serialize:unpack(Data)),
-    {ok, Root} = ecapnp:get_root('AddressBook', addressbook_capnp, Message),
+    {ok, Root} = ecapnp:get_root(
+                   'AddressBook', addressbook_capnp,
+                   ecapnp_message:read(
+                     ecapnp_serialize:unpack(Data))),
     People = ecapnp:get(people, Root),
     [dump_person(Person) || Person <- People].
 
