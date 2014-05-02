@@ -25,7 +25,9 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, start_link/0, stop/1, export_capability/3,
+
+-export([start/0, start_link/0, start_link/1, stop/1,
+         import_capability/2, export_capability/3,
          find_capability/2]).
 
 %% gen_server callbacks
@@ -34,13 +36,23 @@
 
 -include("ecapnp.hrl").
 
+-record(questions, {
+          next_id = 0 :: non_neg_integer(),
+          promises = [] :: list({non_neg_integer(), pid()})
+         }).
+
+-record(exports, {
+          next_id = 0 :: non_neg_integer(),
+          caps = [] :: list({non_neg_integer(), binary(), pid()})
+         }).
+
 -record(state, {
           owner,
-          next_id = 0,
-          requests = [],
+          transport,
+          questions = #questions{} :: #questions{},
           answers = [],
-          imports = [],
-          exports = []
+          imports = [] :: list(),
+          exports = #exports{} :: #exports{}
          }).
 
 
@@ -49,16 +61,22 @@
 %% ===================================================================
 
 start() ->
-    gen_server:start(?MODULE, self(), []).
+    gen_server:start(?MODULE, setup_state(), []).
 
 start_link() ->
-    gen_server:start_link(?MODULE, self(), []).
+    gen_server:start_link(?MODULE, setup_state(), []).
+
+start_link(Transport) ->
+    gen_server:start_link(?MODULE, setup_state(Transport), []).
 
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
 
-export_capability(Name, Cap, Vat) ->
-    gen_server:call(Vat, {export, Name, Cap}).
+import_capability(ObjectId, Vat) ->
+    gen_server:call(Vat, {import, ObjectId}, infinity).
+
+export_capability(ObjectId, Cap, Vat) ->
+    gen_server:call(Vat, {export, ObjectId, Cap}).
 
 find_capability(Ref, Vat) ->
     gen_server:call(Vat, {find, Ref}).
@@ -68,11 +86,14 @@ find_capability(Ref, Vat) ->
 %% gen server callbacks
 %% ===================================================================
 
-init(Owner) ->
-    {ok, #state{ owner = Owner }}.
+init(State) ->
+    {ok, State}.
 
-handle_call({export, Name, Cap}, _From, State) ->
-    {Id, State1} = export(Name, Cap, State),
+handle_call({import, ObjectId}, _From, State) ->
+    {Reply, State1} = import(ObjectId, State),
+    {reply, Reply, State1};
+handle_call({export, ObjectId, Cap}, _From, State) ->
+    {Id, State1} = export(ObjectId, Cap, State),
     {reply, {ok, Id}, State1};
 handle_call({find, Ref}, _From, State) ->
     Reply = case find(Ref, State) of
@@ -101,31 +122,39 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 
 %% ===================================================================
-export(Name, Cap, #state{ next_id = Id }=State) ->
-    case find(Cap, State) of
-        {NId, Cap} ->
-            {NId, export(Cap, 3, {NId, Name, Cap}, State)};
-        false ->
-            {Id, export(Id, 1, {Id, Name, Cap},
-                        State#state{ next_id = Id + 1 }
-                       )}
-    end.
-
-export(Key, Pos, Tuple, #state{ exports = Es }=State) ->
-    State#state{ exports = lists:keystore(Key, Pos, Es, Tuple) }.
+import(ObjectId, State) when is_binary(ObjectId) ->
+    {Id, Promise, State1} = new_question(State),
+    {ok, Msg} = ecapnp:set_root('Message', rpc_capnp),
+    Res = ecapnp_obj:init(ecapnp:set(restore, Msg)),
+    ok = ecapnp:set(questionId, Id, Res),
+    ok = ecapnp:set(objectId, {text, ObjectId}, Res),
+    ok = send(Msg, State1),
+    {{ok, Promise}, State1}.
 
 %% ===================================================================
-find(Id, State) when is_integer(Id) ->
-    find(Id, 1, 3, State);
-find(Name, State) when is_binary(Name) ->
-    find(Name, 2, 3, State);
-find(Cap, State) when is_pid(Cap) ->
-    find(Cap, 3, 1, State).
+export(ObjectId, Cap, State) ->
+    case find(Cap, State) of
+        {Id, Cap} ->
+            %% replace existing cap, with updated object id
+            {Id, do_export(Cap, {Id, ObjectId, Cap}, State)};
+        false ->
+            %% export new cap
+            {Id, State1} = get_next_export_id(State),
+            {Id, do_export(Id, {Id, ObjectId, Cap}, State1)}
+    end.
 
-find(Ref, KeyIdx, ResIdx, #state{ exports = Es }) ->
-    case lists:keyfind(Ref, KeyIdx, Es) of
+do_export(Key, Entry, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
+    State#state{
+      exports = Es#exports{
+                  caps = lists:keystore(Key, capt_key_pos(Key), Cs, Entry)
+                 }
+     }.
+
+%% ===================================================================
+find(Key, #state{ exports = #exports{ caps = Cs } }) ->
+    case lists:keyfind(Key, capt_key_pos(Key), Cs) of
         false -> false;
-        Tuple -> {exported, element(ResIdx, Tuple)}
+        Entry -> {exported, Entry}
     end.
 
 %% ===================================================================
@@ -133,4 +162,50 @@ find(Ref, KeyIdx, ResIdx, #state{ exports = Es }) ->
 
 %% ===================================================================
 %% utils
+%% ===================================================================
+
+%% ===================================================================
+setup_state() ->
+    #state{ owner = self() }.
+
+setup_state(Transport) ->
+    (setup_state())#state{ transport = Transport }.
+
+%% ===================================================================
+%% CapTable key pos for entries in the export table: [{Id, ObjectId, Cap}...]
+capt_key_pos(Key) when is_integer(Key) -> 1;
+capt_key_pos(Key) when is_pid(Key) -> 3;
+capt_key_pos(_) -> 2.
+
+%% ===================================================================
+send(Msg, #state{ transport = {Mod, Handle} }) ->
+    Mod:send(Handle, ecapnp_message:write(Msg)).
+
+%% ===================================================================
+get_next_export_id(#state{ exports = #exports{
+                                        next_id = Id
+                                       }=Es }=State) ->
+    {Id, State#state{ exports = Es#exports{
+                                  next_id = Id + 1
+                                 }}}.
+
+%% ===================================================================
+new_question(#state{ questions = #questions{
+                                    next_id = Id,
+                                    promises = Ps
+                                   }=Qs }=State) ->
+    Promise = new_promise(),
+    {Id, Promise, State#state{
+                    questions = Qs#questions{
+                                  next_id = Id + 1,
+                                  promises = [Promise|Ps] }}
+    }.
+
+%% ===================================================================
+new_promise() ->
+    spawn_link(
+      fun () ->
+              receive done -> ok end
+      end).
+
 %% ===================================================================

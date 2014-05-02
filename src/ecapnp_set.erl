@@ -116,11 +116,17 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
             case Value of
                 {ObjType, ObjValue} ->
                     set_field(Ptr#ptr{ type=ObjType }, ObjValue, Obj);
-                ObjType ->
+                _ ->
+                    ObjType = if is_integer(Value); is_atom(Value) ->
+                                      ecapnp_schema:lookup(Value, Obj);
+                                 is_record(Value, schema_node) ->
+                                      Value;
+                                 true ->
+                                      throw({invalid_object, Value})
+                              end,
                     ObjRef = ecapnp_ref:alloc_data(
                                ecapnp_schema:set_ref_to(
-                                 ecapnp_schema:lookup(ObjType, Obj),
-                                 ecapnp_ref:ptr(Idx, StructRef))),
+                                 ObjType, ecapnp_ref:ptr(Idx, StructRef))),
                     ecapnp_obj:from_ref(ObjRef, ObjType, Obj)
             end;
         {struct, StructType} ->

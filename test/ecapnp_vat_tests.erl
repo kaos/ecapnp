@@ -18,15 +18,33 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -include("include/ecapnp.hrl").
+-import(ecapnp_test_utils, [meck/3]).
 
 export_capability_test() ->
     {ok, Vat} = ecapnp_vat:start_link(),
     {ok, Cap} = ecapnp_capability:start_link(basicCap, test_capnp:'BasicCap'()),
     {ok, ExportId} = ecapnp_vat:export_capability(<<"test-cap">>, Cap, Vat),
+    Exported = {exported, {ExportId, <<"test-cap">>, Cap}},
     ?assertEqual(0, ExportId),
-    ?assertEqual({ok, {exported, Cap}}, ecapnp_vat:find_capability(ExportId, Vat)),
-    ?assertEqual({ok, {exported, Cap}}, ecapnp_vat:find_capability(<<"test-cap">>, Vat)),
-    ?assertEqual({ok, {exported, ExportId}}, ecapnp_vat:find_capability(Cap, Vat)).
+    ?assertEqual({ok, Exported}, ecapnp_vat:find_capability(ExportId, Vat)),
+    ?assertEqual({ok, Exported}, ecapnp_vat:find_capability(<<"test-cap">>, Vat)),
+    ?assertEqual({ok, Exported}, ecapnp_vat:find_capability(Cap, Vat)).
+
+test_restore_capability() ->
+    {ok, Vat} = ecapnp_vat:start_link({transport, self()}),
+    {ok, _Promise} = ecapnp_vat:import_capability(<<"test-cap">>, Vat),
+    {ok, Req} = receive {captured, Data} -> {ok, Data} after 10 -> missing_data end,
+    {ok, Msg} = ecapnp_get:root('Message', rpc_capnp, ecapnp_message:read(Req)),
+    {restore, Res} = ecapnp:get(Msg),
+    Obj = ecapnp_obj:to_text(ecapnp:get(objectId, Res)),
+    ?assertEqual(<<"test-cap">>, Obj).
+
+restore_capability_test_() ->
+    meck(transport, transport_funs(), [fun test_restore_capability/0]).
+
+transport_funs() ->
+    [{send, fun (Tester, Data) -> Tester ! {captured, Data}, ok end}].
+
 
 
 -endif.
