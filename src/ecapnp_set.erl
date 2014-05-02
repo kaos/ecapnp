@@ -69,7 +69,7 @@ set_field(#field{ kind=Kind }, Value, Obj) ->
     set_field(Kind, Value, Obj);
 set_field(#data{ type=Type, align=Align, default=Default }=D,
           Value0, #object{ ref=StructRef }=Obj) ->
-    Value = if Value0 == undefined -> Default;
+    Value = if Value0 == {default} -> Default;
                true -> Value0
             end,
     case Type of
@@ -98,7 +98,11 @@ set_field(#data{ type=Type, align=Align, default=Default }=D,
               StructRef)
     end;
 
-set_field(#ptr{ idx=Idx, type=Type }=Ptr, Value, #object{ ref=StructRef }=Obj) ->
+set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
+          Value0, #object{ ref=StructRef }=Obj) ->
+    Value = if Value0 == {default} -> Default;
+               true -> Value0
+            end,
     case Type of
         text -> ecapnp_ref:write_text(
                   Value,
@@ -201,7 +205,7 @@ union_tag(Value, [_|Fields]) ->
     union_tag(Value, Fields).
 
 default(#field{ kind=void }) -> void;
-default(FieldType) -> {FieldType, undefined}.
+default(FieldType) -> {FieldType, {default}}.
 
 list_element_size(text, _) -> pointer;
 list_element_size(data, _) -> pointer;

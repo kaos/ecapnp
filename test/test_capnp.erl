@@ -1,6 +1,6 @@
 -file("test.capnp", 1).
 
-%% This file was generated 2014-04-30 13:45:16 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-02 10:21:08 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(test_capnp).
 
@@ -15,7 +15,8 @@
 	 '14503907271725109646'/0, '14869749728248688780'/0, 'OtherCap'/0, 'OtherCap'/1,
 	 '10376444823742217855'/0, '18397524501497330844'/0, '14954489407150623152'/0, 'ThirdCap'/0,
 	 'ThirdCap'/1, '18123859541809896974'/0, '14187451716366646039'/0, '16272584843106476340'/0,
-	 'CapTest'/0, 'CapTest'/1, '17442731430661771208'/0, root/0, root/1, '16752831063434032545'/0]).
+	 'CapTest'/0, 'CapTest'/1, '17442731430661771208'/0, 'UnionTest'/0, 'UnionTest'/1,
+	 '16940705001995499374'/0, root/0, root/1, '16752831063434032545'/0]).
 
 -types([{17364400218949434058, testAnno}, {18038429679936549741, 'Test'},
 	{12292473172826227401, ['Test', meta]}, {9356761420570873088, ['Test', opts]},
@@ -31,7 +32,7 @@
 	{14954489407150623152, ['OtherCap', [sqroot, '$Params']]}, {18123859541809896974, 'ThirdCap'},
 	{14187451716366646039, ['ThirdCap', [square, '$Results']]},
 	{16272584843106476340, ['ThirdCap', [square, '$Params']]}, {17442731430661771208, 'CapTest'},
-	{16752831063434032545, root}]).
+	{16940705001995499374, 'UnionTest'}, {16752831063434032545, root}]).
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
@@ -188,6 +189,9 @@ schema(['ThirdCap', [square, '$Params']]) -> '16272584843106476340'();
 schema(17442731430661771208) -> '17442731430661771208'();
 schema('CapTest') -> '17442731430661771208'();
 schema(['CapTest']) -> '17442731430661771208'();
+schema(16940705001995499374) -> '16940705001995499374'();
+schema('UnionTest') -> '16940705001995499374'();
+schema(['UnionTest']) -> '16940705001995499374'();
 schema(16752831063434032545) -> '16752831063434032545'();
 schema(root) -> '16752831063434032545'();
 schema([root]) -> '16752831063434032545'();
@@ -209,7 +213,29 @@ root([]) -> '16752831063434032545'().
 		      16031390312538156137,  %% Pipelines
 		      10376444823742217855,  %% OtherCap
 		      18123859541809896974,  %% ThirdCap
-		      17442731430661771208]}.  %% CapTest
+		      17442731430661771208,  %% CapTest
+		      16940705001995499374]}.  %% UnionTest
+
+'UnionTest'() -> '16940705001995499374'().
+
+'UnionTest'([]) -> '16940705001995499374'().
+
+'16940705001995499374'() ->
+    #schema_node{module = test_capnp, name = 'UnionTest', id = 16940705001995499374,
+		 scope = 16752831063434032545, src = <<"test.capnp:UnionTest">>,
+		 kind =
+		     #struct{dsize = 1, psize = 1, esize = inlineComposite,
+			     union_field =
+				 #data{type =
+					   {union,
+					    [{0, foo, #field{name = foo, kind = #data{type = bool, align = 7, default = <<0:1>>}}},
+					     {1, test,
+					      #field{name = test,
+						     kind = #ptr{type = {struct, 18038429679936549741}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
+					     {2, any,
+					      #field{name = any, kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+				       align = 16, default = <<0, 0>>},
+			     fields = []}}.
 
 'CapTest'() -> '17442731430661771208'().
 
@@ -223,8 +249,7 @@ root([]) -> '16752831063434032545'().
 			     fields =
 				 [#field{name = basic,
 					 kind =
-					     #ptr{type = {interface, 17521612982906909583}, idx = 0,
-						  default = 'maybe_call_interface_factory... ?'}},
+					     #ptr{type = {interface, 17521612982906909583}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
 				  #field{name = obj, kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'ThirdCap'() -> '18123859541809896974'().
@@ -315,8 +340,7 @@ root([]) -> '16752831063434032545'().
 			     fields =
 				 [#field{name = basic,
 					 kind =
-					     #ptr{type = {interface, 17521612982906909583}, idx = 0,
-						  default = 'maybe_call_interface_factory... ?'}}]}}.
+					     #ptr{type = {interface, 17521612982906909583}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '14869749728248688780'() ->
     #schema_node{module = test_capnp, name = ['Pipelines', [getBasic, '$Params']],

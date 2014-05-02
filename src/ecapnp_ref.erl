@@ -387,7 +387,9 @@ paste(<<DataRef:64/bits, Data/binary>>, Ref) ->
     #ref{ offset=0, kind=Kind } = read_ref(DataRef, Ref),
     if is_record(Kind, struct_ref);
        is_record(Kind, list_ref) ->
-            case {size(Data) div 8, ref_data_size(Kind)} of
+            case {(size(Data) + 7) div 8, ref_data_size(Kind)} of
+                {0, RefSize} ->
+                    alloc_data(RefSize, Ref#ref{ kind = Kind });
                 {Size, RefSize} when Size >= RefSize ->
                     Ref1 = alloc_data(Size, Ref#ref{ kind=Kind }),
                     ok = write(<<Data:Size/binary-unit:64>>, Ref1),

@@ -58,3 +58,10 @@ struct CapTest @0xf21107d21522cfc8 {  # 0 bytes, 2 ptrs
   basic @0 :BasicCap;  # ptr[0]
   obj @1 :AnyPointer;  # ptr[1]
 }
+struct UnionTest @0xeb197971909ff76e {  # 8 bytes, 1 ptrs
+  union {  # tag bits [16, 32)
+    foo @0 :Bool;  # bits[0, 1), union tag = 0
+    test @1 :Test;  # ptr[0], union tag = 1
+    any @2 :AnyPointer;  # ptr[0], union tag = 2
+  }
+}

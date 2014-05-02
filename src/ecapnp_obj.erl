@@ -1,18 +1,18 @@
-%%  
+%%
 %%  Copyright 2013, Andreas Stenius <kaos@astekk.se>
-%%  
+%%
 %%   Licensed under the Apache License, Version 2.0 (the "License");
 %%   you may not use this file except in compliance with the License.
 %%   You may obtain a copy of the License at
-%%  
+%%
 %%     http://www.apache.org/licenses/LICENSE-2.0
-%%  
+%%
 %%   Unless required by applicable law or agreed to in writing, software
 %%   distributed under the License is distributed on an "AS IS" BASIS,
 %%   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %%   See the License for the specific language governing permissions and
 %%   limitations under the License.
-%%  
+%%
 
 %% @copyright 2013, Andreas Stenius
 %% @author Andreas Stenius <kaos@astekk.se>
@@ -23,16 +23,24 @@
 -module(ecapnp_obj).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([init/2, alloc/3, from_ref/3, from_data/2, from_data/3,
-         field/2, copy/1, refresh/1, to_struct/2, to_list/2,
-         to_text/1, to_data/1, set_cap_table/2]).
+-export([init/1, init/2, alloc/3, from_ref/3, from_data/2,
+         from_data/3, field/2, copy/1, refresh/1, to_struct/2,
+         to_list/2, to_text/1, to_data/1, set_cap_table/2]).
 
 -include("ecapnp.hrl").
 
- 
+
 %% ===================================================================
 %% API functions
 %% ===================================================================
+
+init(#object{ ref = #ref{ kind = null } = Ref, schema = Schema }=Obj) ->
+    Obj#object{
+      ref = ecapnp_ref:paste(
+              ecapnp_ref:create_ptr(
+                0, ecapnp_schema:get_ref_kind(Schema)),
+              Ref)
+     }.
 
 init(Ref, Type) ->
     #object{ ref = Ref, schema = init_schema(Type) }.

@@ -510,7 +510,7 @@ compile_value(Type, {ValueType, Value})
   when Type == ValueType; element(1, Type) == ValueType ->
     compile_binary(ecapnp_val:set(ValueType, Value));
 compile_value({interface, _}, interface) ->
-    atom('maybe_call_interface_factory... ?');
+    compile_binary(<<0:64/integer>>);
 compile_value(Type, Value) ->
     throw({value_type_mismatch, Type, Value}).
 
