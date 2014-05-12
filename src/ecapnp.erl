@@ -30,7 +30,7 @@
 %% ===================================================================
 
 -export([get_root/3, get/1, get/2, set_root/2, set/2, set/3,
-         const/2]).
+         const/2, request/2, send/1, wait/1]).
 
 %% ===================================================================
 %% Public Types
@@ -205,24 +205,32 @@ set_root(Type, Schema) ->
 %% is, and its associated value, or just the tag name, if the value is
 %% void.
 %% @see ecapnp_get:union/1
+get(#rpc_call{ params = Object }) ->
+    ecapnp_get:union(Object);
 get(Object) ->
     ecapnp_get:union(Object).
 
 -spec get(field_name(), object()) -> field_value().
 %% @doc Read the field value of object.
 %% @see ecapnp_get:field/2
+get(Field, #rpc_call{ params = Object }) ->
+    ecapnp_get:field(Field, Object);
 get(Field, Object) ->
     ecapnp_get:field(Field, Object).
 
 -spec set({field_name(), field_value()}|field_name(), object()) -> ok.
 %% @doc Write union value to the unnamed union of object.
 %% @see ecapnp_set:union/2
+set(Value, #rpc_call{ params = Object }) ->
+    ecapnp_set:union(Value, Object);
 set(Value, Object) ->
     ecapnp_set:union(Value, Object).
 
 -spec set(field_name(), field_value(), object()) -> ok.
 %% @doc Write value to a field of object.
 %% @see ecapnp_set:field/3
+set(Field, Value, #rpc_call{ params = Object }) ->
+    ecapnp_set:field(Field, Value, Object);
 set(Field, Value, Object) ->
     ecapnp_set:field(Field, Value, Object).
 
@@ -239,6 +247,17 @@ const(Name, Schema) ->
                     ecapnp_get:ref_data(Ptr, #ref{ data=not_yet_implemented })
             end
     end.
+
+request(Name, Cap) ->
+    ecapnp_rpc:request(Name, Cap).
+
+send(#rpc_call{ target = #capability{ id = {remote, _} }}=Req) ->
+    ecapnp_vat:send(Req);
+send(#rpc_call{ target = #capability{ id = {local, _} }}=Req) ->
+    ecapnp_rpc:send(Req).
+
+wait(Promise) ->
+    ecapnp_rpc:wait(Promise).
 
 
 %% ===================================================================

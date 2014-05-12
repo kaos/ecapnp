@@ -26,14 +26,14 @@
 basicCap_test_() ->
     meck(basicCap, basicCap_funs(),
          [fun () ->
-                  {ok, Pid} = ecapnp_capability:start(basicCap, test_capnp:'BasicCap'()),
+                  {ok, Pid} = ecapnp_capability:start(basicCap, [test_capnp:'BasicCap'()]),
                   ?assert(is_process_alive(Pid)),
                   ok = ecapnp_capability:stop(Pid),
                   ?assert(not is_process_alive(Pid))
           end,
           fun () ->
                   S = test_capnp:'BasicCap'(),
-                  {ok, Pid} = ecapnp_capability:start_link(basicCap, S),
+                  {ok, Pid} = ecapnp_capability:start_link(basicCap, [S]),
                   test_basicCap_add(Pid, S, 123, 456)
           end
          ]).
@@ -42,7 +42,7 @@ thirdCap_test_() ->
     meck(thirdCap, thirdCap_funs(),
          [fun () ->
                   S = test_capnp:'ThirdCap'(),
-                  {ok, Pid} = ecapnp_capability:start_link(thirdCap, S),
+                  {ok, Pid} = ecapnp_capability:start_link(thirdCap, [S]),
                   test_basicCap_add(Pid, test_capnp:'BasicCap'(), 333, 666),
                   test_otherCap_sqroot(Pid, test_capnp:'OtherCap'(), 4),
                   test_thirdCap_square(Pid, S, 5)
@@ -50,8 +50,8 @@ thirdCap_test_() ->
          ]).
 
 basicCap_funs() ->
-    [{handle_call, fun (add, Params, Result) -> basicCap_add(Params, Result);
-                       (sub, Params, Result) -> basicCap_sub(Params, Result)
+    [{handle_call, fun ('BasicCap', add, Params, Result) -> basicCap_add(Params, Result);
+                       ('BasicCap', sub, Params, Result) -> basicCap_sub(Params, Result)
                    end}].
 
 basicCap_add(Params, Results) ->
@@ -68,16 +68,14 @@ basicCap_sub(Params, Results) ->
 
 test_basicCap_add(Pid, S, A, B) ->
     {ok, Params} = ecapnp:set_root(['BasicCap', [add, '$Params']], test_capnp),
-    {ok, Result} = ecapnp:set_root(['BasicCap', [add, '$Results']], test_capnp),
     ok = ecapnp:set(a, A, Params),
     ok = ecapnp:set(b, B, Params),
     %% todo: the Params should be a ref to AnyPointer data
     %% (to match that of Message.Call.Contents)..
     %% likewise, Result should also be a ref to AnyPointer
     %% (to match Return.results)
-    ok = ecapnp_capability:dispatch_call(
-           Pid, S#schema_node.id, 0,
-           Params, Result),
+    {ok, Result} = ecapnp_capability:dispatch_call(
+                     Pid, S#schema_node.id, 0, Params),
     ?assertEqual(A+B, ecapnp:get(result, Result)).
 
 otherCap_sqroot(Params, Results) ->
@@ -87,24 +85,22 @@ otherCap_sqroot(Params, Results) ->
 
 test_otherCap_sqroot(Pid, S, A) ->
     {ok, Params} = ecapnp:set_root(['OtherCap', [sqroot, '$Params']], test_capnp),
-    {ok, Result} = ecapnp:set_root(['OtherCap', [sqroot, '$Results']], test_capnp),
     ok = ecapnp:set(a, A, Params),
     %% todo: the Params should be a ref to AnyPointer data
     %% (to match that of Message.Call.Contents)..
     %% likewise, Result should also be a ref to AnyPointer
     %% (to match Return.results)
-    ok = ecapnp_capability:dispatch_call(
-           Pid, S#schema_node.id, 0,
-           Params, Result),
+    {ok, Result} = ecapnp_capability:dispatch_call(
+                     Pid, S#schema_node.id, 0, Params),
     R1 = ecapnp:get(root1, Result),
     R2 = ecapnp:get(root2, Result),
     ?assertEqual(float(-A), R1*R2).
 
 thirdCap_funs() ->
     [{handle_call,
-      fun (add, Params, Result) -> basicCap_add(Params, Result);
-          (sqroot, Params, Result) -> otherCap_sqroot(Params, Result);
-          (square, Params, Result) -> thirdCap_square(Params, Result)
+      fun ('BasicCap', add, Params, Result) -> basicCap_add(Params, Result);
+          ('OtherCap', sqroot, Params, Result) -> otherCap_sqroot(Params, Result);
+          ('ThirdCap', square, Params, Result) -> thirdCap_square(Params, Result)
       end}].
 
 thirdCap_square(Params, Results) ->
@@ -113,15 +109,13 @@ thirdCap_square(Params, Results) ->
 
 test_thirdCap_square(Pid, S, A) ->
     {ok, Params} = ecapnp:set_root(['ThirdCap', [square, '$Params']], test_capnp),
-    {ok, Result} = ecapnp:set_root(['ThirdCap', [square, '$Results']], test_capnp),
     ok = ecapnp:set(a, A, Params),
     %% todo: the Params should be a ref to AnyPointer data
     %% (to match that of Message.Call.Contents)..
     %% likewise, Result should also be a ref to AnyPointer
     %% (to match Return.results)
-    ok = ecapnp_capability:dispatch_call(
-           Pid, S#schema_node.id, 0,
-           Params, Result),
+    {ok, Result} = ecapnp_capability:dispatch_call(
+                     Pid, S#schema_node.id, 0, Params),
     ?assertEqual(A*A, ecapnp:get(sq, Result)).
 
 -endif.

@@ -35,22 +35,28 @@
          }).
 
 -record(object, {
-          ref=null :: ecapnp:ref(),
+          ref=null :: #builder{} | #reader{}, %% | #promise{} | #rpc_call{},
           schema :: atom() | ecapnp:schema_node()
-         }).
-
--record(cap, {
-          pid :: pid(),
-          interface :: ecapnp:schema_node()
          }).
 
 
 %% Capability & RPC
 
+-record(capability, {
+          id :: {local, pid()} | {remote, {non_neg_integer(), pid()}},
+          interfaces=[] :: list(ecapnp:schema_node())
+         }).
+
+-record(promise, {
+          vat :: pid(),
+          ref :: reference(),
+          resultType :: ecapnp:type_id(),
+          transform=[] :: list()
+         }).
+
 -record(rpc_call, {
-          vat,
-          target,
-          interface :: ecapnp:type_id(),
-          method :: non_neg_integer(),
+          target :: #capability{} | #promise{},
+          interface :: ecapnp:schema_node(),
+          method :: #method{},
           params :: ecapnp:object()
          }).

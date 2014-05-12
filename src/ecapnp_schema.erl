@@ -26,7 +26,7 @@
 
 -export([type_of/1, get/2, lookup/2, lookup/3, size_of/1, size_of/2,
          data_size/1, ptrs_size/1, get_ref_kind/1, get_ref_kind/2,
-         set_ref_to/2]).
+         set_ref_to/2, find_method_by_name/2]).
 
 -include("ecapnp.hrl").
 
@@ -63,8 +63,14 @@ lookup(Id, #schema_node{ id=Id }=N) -> N;
 lookup(Name, #schema_node{ name=Name }=N) -> N;
 lookup(Type, #schema_node{ module=Module }) -> lookup(Type, Module);
 lookup(Type, #object{ schema = Schema }) -> lookup(Type, Schema);
-lookup(Type, Schema) ->
-    io:format("type not found: ~p (in schema ~p)~n", [Type, Schema]),
+lookup(Type, [N|Ns]) ->
+    case {lookup(Type, N), Ns} of
+        {undefined, []} -> undefined;
+        {undefined, _} -> lookup(Type, Ns);
+        Node -> Node
+    end;
+lookup(_Type, _Schema) ->
+    %%io:format("type not found: ~p (in schema ~p)~n", [Type, Schema]),
     undefined.
 
 -spec type_of(object()) -> schema_node().
@@ -118,6 +124,20 @@ get_ref_kind(Type, _) ->
 %% committed to the message.
 set_ref_to(Type, Ref) ->
     Ref#ref{ kind=get_ref_kind(Type, Ref) }.
+
+%% @doc Find Interface and Method.
+find_method_by_name(MethodName, []) ->
+    {error, {unknown_method, MethodName}};
+find_method_by_name(MethodName, [S|Ss]) ->
+    case lists:keyfind(
+           MethodName, #method.name,
+           S#schema_node.kind#interface.methods)
+    of
+        false ->
+            find_method_by_name(MethodName, Ss);
+        Method ->
+            {ok, S, Method}
+    end.
 
 %% ===================================================================
 %% internal functions

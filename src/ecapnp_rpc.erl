@@ -22,7 +22,7 @@
 -module(ecapnp_rpc).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([request/3, set_param/3, send/1, wait/1]).
+-export([request/2, send/1, wait/1]).
 
 -include("ecapnp.hrl").
 
@@ -31,21 +31,37 @@
 %% API functions
 %% ===================================================================
 
-request(MethodName, Capability, Vat) ->
-    {ok, Interface, Method} = ecapnp_capability:find_method_by_name(
-                                MethodName, Capability),
-    ecapnp_vat:request(Interface, Method, Capability, Vat).
+request(MethodName, #capability{ interfaces = Is }=Cap) ->
+    {ok, Interface, Method} = ecapnp_schema:find_method_by_name(
+                                MethodName, Is),
+    {ok, Params} = ecapnp_set:root(
+                     ecapnp_schema:lookup(Method#method.paramType, Interface)),
+    #rpc_call{
+       target = Cap,
+       interface = Interface,
+       method = Method,
+       params = Params }.
 
-set_param(Field, Value, #rpc_call{ params = Params }) ->
-    ecapnp_set:field(Field, Value, Params).
-
-send(Req) ->
-    ecapnp_vat:send(Req).
+send(#rpc_call{ target = #capability{ id = {remote, _} }}=Req) ->
+    ecapnp_vat:send(Req);
+send(#rpc_call{
+        target = #capability{ id = {local, Cap} },
+        interface = #schema_node{ id = IntfId },
+        method = #method{ id = MethId },
+        params = Params
+       }) ->
+    Pid = self(),
+    {ok, spawn_link(
+           fun () ->
+                   Result = ecapnp_capability:dispatch_call(
+                              Cap, IntfId, MethId, Params),
+                   Pid ! {promise_result, self(), Result}
+           end)}.
 
 wait(Promise) ->
     receive
-        {Promise, Result} ->
-            {ok, Result}
+        {promise_result, Promise, Result} ->
+            Result
     end.
 
 

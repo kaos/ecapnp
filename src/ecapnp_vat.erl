@@ -27,7 +27,7 @@
 %% API
 
 -export([start/0, start_link/0, start_link/1, stop/1,
-         import_capability/2, export_capability/3,
+         import_capability/2, export_capability/2,
          find_capability/2]).
 
 %% gen_server callbacks
@@ -43,7 +43,7 @@
 
 -record(exports, {
           next_id = 0 :: non_neg_integer(),
-          caps = [] :: list({non_neg_integer(), binary(), pid()})
+          caps = [] :: list({non_neg_integer(), #capability{}})
          }).
 
 -record(state, {
@@ -75,8 +75,8 @@ stop(Pid) when is_pid(Pid) ->
 import_capability(ObjectId, Vat) ->
     gen_server:call(Vat, {import, ObjectId}, infinity).
 
-export_capability(ObjectId, Cap, Vat) ->
-    gen_server:call(Vat, {export, ObjectId, Cap}).
+export_capability(Cap, Vat) ->
+    gen_server:call(Vat, {export, Cap}).
 
 find_capability(Ref, Vat) ->
     gen_server:call(Vat, {find, Ref}).
@@ -92,8 +92,8 @@ init(State) ->
 handle_call({import, ObjectId}, _From, State) ->
     {Reply, State1} = import(ObjectId, State),
     {reply, Reply, State1};
-handle_call({export, ObjectId, Cap}, _From, State) ->
-    {Id, State1} = export(ObjectId, Cap, State),
+handle_call({export, Cap}, _From, State) ->
+    {Id, State1} = export(Cap, State),
     {reply, {ok, Id}, State1};
 handle_call({find, Ref}, _From, State) ->
     Reply = case find(Ref, State) of
@@ -132,29 +132,26 @@ import(ObjectId, State) when is_binary(ObjectId) ->
     {{ok, Promise}, State1}.
 
 %% ===================================================================
-export(ObjectId, Cap, State) ->
+export(Cap, State) ->
     case find(Cap, State) of
-        {Id, Cap} ->
-            %% replace existing cap, with updated object id
-            {Id, do_export(Cap, {Id, ObjectId, Cap}, State)};
+        {Id, Cap} -> {Id, State};
         false ->
-            %% export new cap
             {Id, State1} = get_next_export_id(State),
-            {Id, do_export(Id, {Id, ObjectId, Cap}, State1)}
+            {Id, do_export(Id, Cap, State1)}
     end.
 
-do_export(Key, Entry, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
+do_export(Id, Cap, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
     State#state{
       exports = Es#exports{
-                  caps = lists:keystore(Key, capt_key_pos(Key), Cs, Entry)
+                  caps = lists:keystore(Id, 1, Cs, {Id, Cap})
                  }
      }.
 
 %% ===================================================================
-find(Key, #state{ exports = #exports{ caps = Cs } }) ->
-    case lists:keyfind(Key, capt_key_pos(Key), Cs) of
+find(Id, #state{ exports = #exports{ caps = Cs } }) ->
+    case lists:keyfind(Id, 1, Cs) of
         false -> false;
-        Entry -> {exported, Entry}
+        {Id, Cap} -> Cap
     end.
 
 %% ===================================================================
@@ -170,12 +167,6 @@ setup_state() ->
 
 setup_state(Transport) ->
     (setup_state())#state{ transport = Transport }.
-
-%% ===================================================================
-%% CapTable key pos for entries in the export table: [{Id, ObjectId, Cap}...]
-capt_key_pos(Key) when is_integer(Key) -> 1;
-capt_key_pos(Key) when is_pid(Key) -> 3;
-capt_key_pos(_) -> 2.
 
 %% ===================================================================
 send(Msg, #state{ transport = {Mod, Handle} }) ->

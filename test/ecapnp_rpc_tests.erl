@@ -15,95 +15,98 @@
 %%
 
 -module(ecapnp_rpc_tests).
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -include("include/ecapnp.hrl").
--import(ecapnp_test_utils, [meck/2]).
 
-%% rpc_test() ->
-%%     {ok, Vat} = ecapnp_vat:connect("localhost:4321"),
-%%     {ok, Cap} = ecapnp_vat:import("Basic", Vat),
-%%     {ok, Req} = ecapnp_rpc:request(add, Cap),
-%%     ecapnp:set(foo, bar, Req),
-%%     {ok, Res} = ecapnp_rpc:send(Req),
-%%     ecapnp_rpc:wait(Res),
-%%     ecapnp:get(res, Res).
+-import(ecapnp_test_utils, [meck/2, setup_meck/2, teardown_meck/1]).
+-import(ecapnp_capability_tests, [basicCap_funs/0]).
 
-request_test_() ->
-    meck([{ecapnp_vat, vat_funs()},
-          {basicCap, ecapnp_capability_tests:basicCap_funs()}
-         ],
-         [fun test_request/0
-         ]).
+-record(test, {
+          sup, cap, mod
+         }).
 
-send_test_() ->
-    meck([{ecapnp_vat, vat_funs()},
-          {basicCap, ecapnp_capability_tests:basicCap_funs()}
-         ],
-         [fun test_send/0
-         ]).
+rpc_local_test_() ->
+    {setup,
+     fun () ->
+             Mod = setup_meck(basicCap, basicCap_funs()),
+             {ok, CapS} = ecapnp_capability_sup:start_link(),
+             {ok, Cap} = ecapnp_capability_sup:start_capability(Mod, test_capnp:'BasicCap'()),
+             #test{ sup = CapS, cap = Cap, mod = Mod }
+     end,
+     fun (#test{ sup = CapS, mod = Mod }) ->
+             exit(CapS, normal),
+             teardown_meck(Mod)
+     end,
+     {with,
+      [fun test_request/1,
+       fun test_send/1
+      ]}}.
+
+%% request_test_() ->
+%%     meck([{ecapnp_vat, vat_funs()},
+%%           {basicCap, ecapnp_capability_tests:basicCap_funs()}
+%%          ],
+%%          [fun test_request/0
+%%          ]).
+
+%% send_test_() ->
+%%     meck([{ecapnp_vat, vat_funs()},
+%%           {basicCap, ecapnp_capability_tests:basicCap_funs()}
+%%          ],
+%%          [fun test_send/0
+%%          ]).
 
 
 
-vat_funs() ->
-    [{request,
-      fun (Interface, Method, Capability, Vat) ->
-              {ok, Params} = ecapnp_set:root(
-                               ecapnp_schema:lookup(Method#method.paramType, Interface)),
-              #rpc_call{
-                 vat = Vat,
-                 target = Capability,
-                 interface = Interface#schema_node.id,
-                 method = Method#method.id,
-                 params = Params }
-      end},
-     {send,
-      fun (Req) ->
-              %% hard coding a lot of stuff here for now, just to get going..
-              Pid = self(),
-              {ok, spawn_link(
-                     fun () ->
-                             {ok, Result} = ecapnp_set:root(
-                                              test_capnp:schema(['BasicCap', [sub, '$Results']])),
-                             ok = ecapnp_capability:dispatch_call(
-                                    Req#rpc_call.target,
-                                    Req#rpc_call.interface,
-                                    Req#rpc_call.method,
-                                    Req#rpc_call.params,
-                                    Result),
-                             Pid ! {self(), Result}
-                     end)}
-      end}
-    ].
+%% vat_funs() ->
+%%     [{send,
+%%       fun (Req) ->
+%%               %% hard coding a lot of stuff here for now, just to get going..
+%%               Pid = self(),
+%%               {ok, spawn_link(
+%%                      fun () ->
+%%                              {ok, Result} = ecapnp_set:root(
+%%                                               test_capnp:schema(['BasicCap', [sub, '$Results']])),
+%%                              ok = ecapnp_capability:dispatch_call(
+%%                                     Req#rpc_call.target,
+%%                                     Req#rpc_call.interface,
+%%                                     Req#rpc_call.method,
+%%                                     Req#rpc_call.params,
+%%                                     Result),
+%%                              Pid ! {self(), Result}
+%%                      end)}
+%%       end}
+%%     ].
 
-test_request() ->
-    Vat = {vat_mock, test},
-    {ok, Cap} = ecapnp_capability:start_link(basicCap, test_capnp:'BasicCap'()),
-    Req = ecapnp_rpc:request(add, Cap, Vat),
+test_request(#test{ cap=Cap }) ->
+    Req = ecapnp:request(add, Cap),
     Params = Req#rpc_call.params,
     ?assertEqual(
        #rpc_call{
-          vat = Vat,
           target = Cap,
-          interface = (test_capnp:'BasicCap'())#schema_node.id,
-          method = 0,
+          interface = test_capnp:'BasicCap'(),
+          method = hd((test_capnp:'BasicCap'())#schema_node.kind#interface.methods),
           params = Params
          }, Req),
     ?assertEqual(
        ['BasicCap', [add, '$Params']],
        Params#object.schema#schema_node.name).
 
-test_send() ->
-    Vat = {vat_mock, test},
-    {ok, Cap} = ecapnp_capability:start_link(basicCap, test_capnp:'BasicCap'()),
-    Req = ecapnp_rpc:request(sub, Cap, Vat),
-    ok = ecapnp_rpc:set_param(a, 333, Req),
-    ok = ecapnp_rpc:set_param(b, 222, Req),
+test_send(#test{ cap=Cap }) ->
+    Req = ecapnp:request(sub, Cap),
     Params = Req#rpc_call.params,
+
+    %% test set of both request object and the params directly
+    ok = ecapnp:set(a, 333, Req),
+    ok = ecapnp:set(b, 222, Params),
+    %% test get of both params directly as well as from the request
     ?assertEqual(333, ecapnp:get(a, Params)),
-    ?assertEqual(222, ecapnp:get(b, Params)),
-    {ok, Promise} = ecapnp_rpc:send(Req),
-    {ok, Res} = ecapnp_rpc:wait(Promise),
+    ?assertEqual(222, ecapnp:get(b, Req)),
+
+    {ok, Promise} = ecapnp:send(Req),
+    {ok, Res} = ecapnp:wait(Promise),
     ?assertEqual(111, ecapnp:get(result, Res)).
 
 -endif.
