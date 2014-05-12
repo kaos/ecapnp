@@ -2,7 +2,7 @@
 %%
 %% Bump version number on ANY change in ANY of the records in this file.
 %% Must have the same version in both ecapnp runtime libs and compiled schemas.
--ecapnp_schema_version(2).
+-ecapnp_schema_version(3).
 
 %% Common record for all schema nodes
 -record(schema_node, {
@@ -49,6 +49,7 @@
 
 %% Struct field
 -record(field, {
+          id,
           name,
           kind,
           annotations=[]

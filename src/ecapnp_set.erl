@@ -192,20 +192,20 @@ write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(
       ecapnp_ref:paste(Value, Ref),
       Type, Obj);
-write_obj(Type, Value, Ref, Obj) when is_pid(Value) ->
+write_obj(Type, Value, Ref, Obj) when is_record(Value, capability) ->
     ecapnp_obj:from_ref(
-      ecapnp_ref:set(#interface_ref{ pid = Value }, Ref),
+      ecapnp_ref:set(#interface_ref{ cap = Value }, Ref),
       Type, Obj);
 write_obj(Type, #object{ schema=#schema_node{ id=Type }, ref=Value }, Ref, Obj) ->
     write_obj(Type, ecapnp_ref:copy(Value), Ref, Obj).
 
-union_tag({FieldName, Value}, [{Tag, FieldName, FieldType}|_]) ->
+union_tag({FieldName, Value}, [#field{ id = Tag, name = FieldName }=FieldType|_]) ->
     {Tag, {FieldType, Value}};
-union_tag(FieldName, [{Tag, FieldName, FieldType}|_]) ->
+union_tag(FieldName, [#field{ id = Tag, name = FieldName }=FieldType|_]) ->
     {Tag, default(FieldType)};
-union_tag({Tag, Value}, [{Tag, _, FieldType}|_]) ->
+union_tag({Tag, Value}, [#field{ id = Tag }=FieldType|_]) ->
     {Tag, {FieldType, Value}};
-union_tag(Tag, [{Tag, _, FieldType}|_]) ->
+union_tag(Tag, [#field{ id = Tag }=FieldType|_]) ->
     {Tag, default(FieldType)};
 union_tag(Value, [_|Fields]) ->
     union_tag(Value, Fields).

@@ -1,6 +1,6 @@
 -file("test.capnp", 1).
 
-%% This file was generated 2014-05-02 10:21:08 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-12 14:57:01 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(test_capnp).
 
@@ -36,7 +36,7 @@
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
--ecapnp_schema_version(2).
+-ecapnp_schema_version(3).
 
 -record(schema_node,
 	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
@@ -100,36 +100,36 @@
 	 {type, 47, list, [{type, 47, atom, []}]}}],
        []}).
 
--record(field, {name, kind, annotations = []}).
+-record(field, {id, name, kind, annotations = []}).
 
 -record(ptr, {type, idx = 0, default = null}).
 
 -type({{record, ptr},
-       [{typed_record_field, {record_field, 59, {atom, 59, type}},
-	 {type, 59, union, [{atom, 59, undefined}, {type, 59, term, []}]}},
-	{typed_record_field, {record_field, 60, {atom, 60, idx}, {integer, 60, 0}},
-	 {remote_type, 60, [{atom, 60, ecapnp}, {atom, 60, ptr_index}, []]}},
-	{typed_record_field, {record_field, 61, {atom, 61, default}, {atom, 61, null}},
-	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, value}, []]}}],
+       [{typed_record_field, {record_field, 60, {atom, 60, type}},
+	 {type, 60, union, [{atom, 60, undefined}, {type, 60, term, []}]}},
+	{typed_record_field, {record_field, 61, {atom, 61, idx}, {integer, 61, 0}},
+	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, ptr_index}, []]}},
+	{typed_record_field, {record_field, 62, {atom, 62, default}, {atom, 62, null}},
+	 {remote_type, 62, [{atom, 62, ecapnp}, {atom, 62, value}, []]}}],
        []}).
 
 -record(data, {type, align = 0, default}).
 
 -type({{record, data},
-       [{typed_record_field, {record_field, 65, {atom, 65, type}},
-	 {type, 65, union, [{atom, 65, undefined}, {type, 65, term, []}]}},
-	{typed_record_field, {record_field, 66, {atom, 66, align}, {integer, 66, 0}},
-	 {remote_type, 66, [{atom, 66, ecapnp}, {atom, 66, bit_count}, []]}},
-	{typed_record_field, {record_field, 67, {atom, 67, default}},
-	 {type, 67, union,
-	  [{atom, 67, undefined}, {remote_type, 67, [{atom, 67, ecapnp}, {atom, 67, value}, []]}]}}],
+       [{typed_record_field, {record_field, 66, {atom, 66, type}},
+	 {type, 66, union, [{atom, 66, undefined}, {type, 66, term, []}]}},
+	{typed_record_field, {record_field, 67, {atom, 67, align}, {integer, 67, 0}},
+	 {remote_type, 67, [{atom, 67, ecapnp}, {atom, 67, bit_count}, []]}},
+	{typed_record_field, {record_field, 68, {atom, 68, default}},
+	 {type, 68, union,
+	  [{atom, 68, undefined}, {remote_type, 68, [{atom, 68, ecapnp}, {atom, 68, value}, []]}]}}],
        []}).
 
 -record(group, {id = 0}).
 
 -type({{record, group},
-       [{typed_record_field, {record_field, 71, {atom, 71, id}, {integer, 71, 0}},
-	 {remote_type, 71, [{atom, 71, ecapnp}, {atom, 71, type_id}, []]}}],
+       [{typed_record_field, {record_field, 72, {atom, 72, id}, {integer, 72, 0}},
+	 {remote_type, 72, [{atom, 72, ecapnp}, {atom, 72, type_id}, []]}}],
        []}).
 
 -record(method, {id, name, paramType, resultType}).
@@ -228,12 +228,11 @@ root([]) -> '16752831063434032545'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, foo, #field{name = foo, kind = #data{type = bool, align = 7, default = <<0:1>>}}},
-					     {1, test,
-					      #field{name = test,
-						     kind = #ptr{type = {struct, 18038429679936549741}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {2, any,
-					      #field{name = any, kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = foo, kind = #data{type = bool, align = 7, default = <<0:1>>}},
+					     #field{id = 1, name = test,
+						    kind = #ptr{type = {struct, 18038429679936549741}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 2, name = any,
+						    kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 16, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -247,10 +246,11 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 0, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = basic,
+				 [#field{id = 0, name = basic,
 					 kind =
 					     #ptr{type = {interface, 17521612982906909583}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = obj, kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				  #field{id = 1, name = obj,
+					 kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'ThirdCap'() -> '18123859541809896974'().
 
@@ -273,7 +273,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = sq, kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = sq,
+					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '16272584843106476340'() ->
     #schema_node{module = test_capnp, name = ['ThirdCap', [square, '$Params']],
@@ -281,7 +282,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = a, kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = a,
+					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'OtherCap'() -> '10376444823742217855'().
 
@@ -304,9 +306,9 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 2, psize = 0, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = root1,
+				 [#field{id = 0, name = root1,
 					 kind = #data{type = float64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = root2,
+				  #field{id = 1, name = root2,
 					 kind = #data{type = float64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '14954489407150623152'() ->
@@ -315,7 +317,8 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = a, kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = a,
+					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Pipelines'() -> '16031390312538156137'().
 
@@ -338,7 +341,7 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 0, psize = 1, esize = pointer, union_field = none,
 			     fields =
-				 [#field{name = basic,
+				 [#field{id = 0, name = basic,
 					 kind =
 					     #ptr{type = {interface, 17521612982906909583}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
@@ -370,7 +373,7 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = result,
+				 [#field{id = 0, name = result,
 					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '16351184016261359411'() ->
@@ -379,8 +382,10 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 2, psize = 0, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = a, kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = b, kind = #data{type = int64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = a,
+					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = b,
+					 kind = #data{type = int64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '13875996178202423621'() ->
     #schema_node{module = test_capnp, name = ['BasicCap', [add, '$Results']], id = 13875996178202423621,
@@ -388,7 +393,7 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = result,
+				 [#field{id = 0, name = result,
 					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '10419494484650272988'() ->
@@ -397,8 +402,10 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 2, psize = 0, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = a, kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = b, kind = #data{type = int64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = a,
+					 kind = #data{type = int64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = b,
+					 kind = #data{type = int64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'ListTest'() -> '17083831967670695846'().
 
@@ -410,19 +417,20 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 0, psize = 4, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = listInts,
+				 [#field{id = 0, name = listInts,
 					 kind =
 					     #ptr{type = {list, int32}, idx = 0,
 						  default = <<1, 0, 0, 0, 28, 0, 0, 0, 200, 1, 0, 0, 21, 3, 0, 0, 133, 255, 255, 255, 0, 0, 0, 0>>}},
-				  #field{name = listAny, kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = listSimples,
+				  #field{id = 1, name = listAny,
+					 kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 2, name = listSimples,
 					 kind =
 					     #ptr{type = {list, {struct, 15091335337902283752}}, idx = 2,
 						  default =
 						      <<1, 0, 0, 0, 55, 0, 0, 0, 8, 0, 0, 0, 1, 0, 2, 0, 223, 0, 0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 50, 0, 0,
 							0, 0, 0, 0, 0, 0, 0, 0, 0, 220, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 							0, 102, 105, 114, 115, 116, 0, 0, 0, 115, 101, 99, 111, 110, 100, 0, 0>>}},
-				  #field{name = listText,
+				  #field{id = 3, name = listText,
 					 kind = #ptr{type = {list, text}, idx = 3, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Simple'() -> '15091335337902283752'().
@@ -435,10 +443,12 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 1, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = message, kind = #ptr{type = text, idx = 0, default = <<"default message">>}},
-				  #field{name = value, kind = #data{type = uint32, align = 0, default = <<222, 0, 0, 0>>}},
-				  #field{name = simpleMessage, kind = #ptr{type = text, idx = 1, default = <<"simple message">>}},
-				  #field{name = defaultValue, kind = #data{type = uint32, align = 32, default = <<77, 1, 0, 0>>}}]}}.
+				 [#field{id = 0, name = message, kind = #ptr{type = text, idx = 0, default = <<"default message">>}},
+				  #field{id = 1, name = value, kind = #data{type = uint32, align = 0, default = <<222, 0, 0, 0>>}},
+				  #field{id = 2, name = simpleMessage,
+					 kind = #ptr{type = text, idx = 1, default = <<"simple message">>}},
+				  #field{id = 3, name = defaultValue,
+					 kind = #data{type = uint32, align = 32, default = <<77, 1, 0, 0>>}}]}}.
 
 'Test'() -> '18038429679936549741'().
 
@@ -456,15 +466,15 @@ root([]) -> '16752831063434032545'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, boolField, #field{name = boolField, kind = #data{type = bool, align = 15, default = <<0:1>>}}},
-					     {1, groupField, #field{name = groupField, kind = #group{id = 12591081617868223671}}}]},
+					    [#field{id = 0, name = boolField, kind = #data{type = bool, align = 15, default = <<0:1>>}},
+					     #field{id = 1, name = groupField, kind = #group{id = 12591081617868223671}}]},
 				       align = 16, default = <<0, 0>>},
 			     fields =
-				 [#field{name = intField, kind = #data{type = uint8, align = 0, default = <<33>>}},
-				  #field{name = textField, kind = #ptr{type = text, idx = 0, default = <<"test">>}},
-				  #field{name = opts, kind = #group{id = 9356761420570873088}},
-				  #field{name = meta, kind = #group{id = 12292473172826227401}},
-				  #field{name = structField,
+				 [#field{id = 0, name = intField, kind = #data{type = uint8, align = 0, default = <<33>>}},
+				  #field{id = 1, name = textField, kind = #ptr{type = text, idx = 0, default = <<"test">>}},
+				  #field{id = 2, name = opts, kind = #group{id = 9356761420570873088}},
+				  #field{id = 3, name = meta, kind = #group{id = 12292473172826227401}},
+				  #field{id = 4, name = structField,
 					 kind =
 					     #ptr{type = {struct, 15091335337902283752}, idx = 4, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
@@ -474,10 +484,10 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 2, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = id, kind = #data{type = uint16, align = 80, default = <<0, 0>>}},
-				  #field{name = tag, kind = #ptr{type = text, idx = 2, default = <<"">>}},
-				  #field{name = data, kind = #ptr{type = data, idx = 3, default = <<49, 50, 51, 52>>}},
-				  #field{name = struct,
+				 [#field{id = 0, name = id, kind = #data{type = uint16, align = 80, default = <<0, 0>>}},
+				  #field{id = 1, name = tag, kind = #ptr{type = text, idx = 2, default = <<"">>}},
+				  #field{id = 2, name = data, kind = #ptr{type = data, idx = 3, default = <<49, 50, 51, 52>>}},
+				  #field{id = 3, name = struct,
 					 kind =
 					     #ptr{type = {struct, 15091335337902283752}, idx = 5,
 						  default =
@@ -493,11 +503,11 @@ root([]) -> '16752831063434032545'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, bool, #field{name = bool, kind = #data{type = bool, align = 55, default = <<1:1>>}}},
-					     {1, text, #field{name = text, kind = #ptr{type = text, idx = 1, default = <<"">>}}},
-					     {2, data, #field{name = data, kind = #ptr{type = data, idx = 1, default = <<>>}}},
-					     {3, object,
-					      #field{name = object, kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = bool, kind = #data{type = bool, align = 55, default = <<1:1>>}},
+					     #field{id = 1, name = text, kind = #ptr{type = text, idx = 1, default = <<"">>}},
+					     #field{id = 2, name = data, kind = #ptr{type = data, idx = 1, default = <<>>}},
+					     #field{id = 3, name = object,
+						    kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 64, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -507,9 +517,9 @@ root([]) -> '16752831063434032545'().
 		 kind =
 		     #struct{dsize = 2, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = a, kind = #data{type = int8, align = 8, default = <<212>>}},
-				  #field{name = b, kind = #data{type = int8, align = 32, default = <<55>>}},
-				  #field{name = c, kind = #data{type = int8, align = 40, default = <<0>>}}]}}.
+				 [#field{id = 0, name = a, kind = #data{type = int8, align = 8, default = <<212>>}},
+				  #field{id = 1, name = b, kind = #data{type = int8, align = 32, default = <<55>>}},
+				  #field{id = 2, name = c, kind = #data{type = int8, align = 40, default = <<0>>}}]}}.
 
 testAnno() -> '17364400218949434058'().
 

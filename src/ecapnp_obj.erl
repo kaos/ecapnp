@@ -79,22 +79,15 @@ from_data(Data, Type) ->
     from_data(Data, Type, undefined).
 
 %% @doc Lookup field definition by name for object.
--spec field(field_name(), object() | #struct{}) -> field_type().
-field(FieldName, #object{ schema=#schema_node{
-                                  kind=#struct{ fields=Fields }
-                                 }}) ->
-    find_field(FieldName, #field.name, Fields). %;
-%% field(FieldName,
-%%       #object{
-%%          schema=#schema_node{
-%%                    kind=#interface{
-%%                            methods=Methods,
-%%                            struct=#struct{ fields=Fields } }
-%%                   }}) ->
-%%     case lists:keyfind(FieldName, #field.name, Fields) of
-%%         false -> find_field(FieldName, #method.name, Methods);
-%%         Field -> Field
-%%     end.
+-spec field(field_name() | non_neg_integer(), object() | #struct{}) -> field_type().
+field(NameOrId, #object{ schema=#schema_node{
+                                   kind=#struct{ fields=Fields }
+                                  }}) ->
+    if is_atom(NameOrId) ->
+            find_field(NameOrId, #field.name, Fields);
+       is_number(NameOrId) ->
+            find_field(NameOrId, #field.id, Fields)
+    end.
 
 %% @doc Copy object recursively.
 -spec copy(object()) -> binary().
@@ -151,9 +144,9 @@ set_cap_table(CapTable, Reader) when is_record(Reader, reader) ->
 %% internal functions
 %% ===================================================================
 
-find_field(Name, Idx, List) ->
-    case lists:keyfind(Name, Idx, List) of
-        false -> throw({unknown_field, Name});
+find_field(Key, Idx, List) ->
+    case lists:keyfind(Key, Idx, List) of
+        false -> throw({unknown_field, Key});
         Field -> Field
     end.
 

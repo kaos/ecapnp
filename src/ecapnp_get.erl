@@ -47,7 +47,7 @@ root(Type, Schema, Segments) ->
 -spec field(field_name(), object()) -> field_value().
 %%field(FieldName, #object{ ref=Ref }=Object)
 field(FieldName, Object)
-  when is_atom(FieldName), is_record(Object, object) ->
+  when is_record(Object, object) ->
     read_field(ecapnp_obj:field(FieldName, Object), Object).
 
 %% @doc Read the unnamed union value of object.
@@ -74,6 +74,21 @@ ref_data(Type, Obj, Default) ->
 %% internal functions
 %% ===================================================================
 
+read_field(#field{ id = Id, kind = Kind },
+           #object{ ref = #promise{ transform = Ts }=P }=Obj) ->
+    case Kind of
+        %% #ptr{ type = object } ->
+        %%     ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] }, Obj);
+        #ptr{ type = {struct, Type} } ->
+            ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] },
+                            ecapnp_schema:get(Type, Obj));
+        #ptr{ type = {interface, Type} } ->
+            ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] },
+                            ecapnp_schema:get(Type, Obj));
+        _ ->
+            {ok, Res} = ecapnp:wait(P),
+            read_field(Kind, Res)
+    end;
 read_field(#field{ kind=Kind }, Object) -> read_field(Kind, Object);
 read_field(#data{ type=Type, align=Align, default=Default }=D, Object) ->
     case Type of
@@ -82,10 +97,9 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, Object) ->
             get_enum_value(EnumType, Tag, Object);
         {union, Fields} ->
             Tag = read_field(D#data{ type=uint16 }, Object),
-            case lists:keyfind(Tag, 1, Fields) of
-                {Tag, FieldName, #field{ kind=void }} ->
-                    FieldName;
-                {Tag, FieldName, Field} ->
+            case lists:keyfind(Tag, #field.id, Fields) of
+                #field{ name=FieldName, kind=void } -> FieldName;
+                #field{ name=FieldName }=Field ->
                     {FieldName, read_field(Field, Object)}
             end;
         Type ->

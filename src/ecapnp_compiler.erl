@@ -321,15 +321,9 @@ compile_node_type({struct, Struct}) ->
       record_expr(
         atom(struct),
         lists:reverse(
-          [record_field(
-             atom(fields),
-             list([compile_struct_field(M)
-                   || M <- Fields])),
-           record_field(
-             atom(union_field),
-             compile_union(Union, Struct))
-           |Sizes
-          ])));
+          [record_field(atom(fields), compile_struct_fields(Fields)),
+           record_field(atom(union_field), compile_union(Union, Struct))
+           |Sizes ])));
 compile_node_type({enum, Enum}) ->
     Enumerants = [binary_to_list(ecapnp:get(name, E))
                   || E <- ecapnp:get(enumerants, Enum)],
@@ -393,18 +387,8 @@ compile_union(Union, Struct) ->
     case ecapnp:get(discriminantCount, Struct) of
         0 -> atom(none);
         _ ->
-            UnionFields = lists:zip(
-                            lists:seq(0, length(Union) - 1),
-                            Union),
             compile_data_field(
-              {{union,
-                list([begin
-                          T = compile_struct_field(F),
-                          case erl_syntax_lib:analyze_record_expr(T) of
-                              {record_expr, {field, [{name, Name}|_]}} ->
-                                  tuple([integer(I), Name, T])
-                          end
-                      end || {I, F} <- UnionFields])}, 16},
+              {{union, compile_struct_fields(Union)}, 16},
               ecapnp:get(discriminantOffset, Struct),
               {union, 0})
     end.
@@ -420,12 +404,18 @@ compile_methods(Methods) ->
        ])
      || {I, M} <- lists:zip(lists:seq(0, length(Methods) - 1), Methods)].
 
-compile_struct_field(Field) ->
+compile_struct_field(Id, Field) ->
     record_expr(
       atom(field),
-      [record_field(atom(name), atom(binary_to_list(ecapnp:get(name, Field))))
+      [record_field(atom(id), integer(Id)),
+       record_field(atom(name), atom(binary_to_list(ecapnp:get(name, Field))))
        |compile_struct_field_type(ecapnp:get(Field))]
      ).
+
+compile_struct_fields(Fields) ->
+    IdFields = lists:zip(lists:seq(0, length(Fields) - 1), Fields),
+    list([compile_struct_field(Id, Field)
+          || {Id, Field} <- IdFields]).
 
 compile_struct_field_type({slot, Slot}) ->
     [record_field(atom(kind), compile_slot(Slot))];

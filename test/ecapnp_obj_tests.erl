@@ -31,7 +31,8 @@ from_ref_test() ->
 field_test() ->
     T = test_capnp:'Test'(),
     ?assertEqual(
-       #field{ name=intField, kind=#data{ type=uint8, align=0, default= <<33>> } },
+       #field{ id = 0, name=intField,
+               kind=#data{ type=uint8, align=0, default= <<33>> } },
        ecapnp_obj:field(intField, #object{ schema=T })).
 
 copy_test() ->
