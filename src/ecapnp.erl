@@ -254,6 +254,10 @@ request(Name, Cap) ->
 send(#rpc_call{ target = #capability{ id = {remote, _} }}=Req) ->
     ecapnp_vat:send(Req);
 send(#rpc_call{ target = #capability{ id = {local, _} }}=Req) ->
+    ecapnp_rpc:send(Req);
+send(#rpc_call{ target = #promise{ id = {remote, _} }}=Req) ->
+    ecapnp_vat:send(Req);
+send(#rpc_call{ target = #promise{ id = {local, _} }}=Req) ->
     ecapnp_rpc:send(Req).
 
 wait(Promise) ->

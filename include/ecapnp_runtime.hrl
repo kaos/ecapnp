@@ -31,7 +31,7 @@
          }).
 
 -record(interface_ref, {
-          pid :: pid()
+          cap %%:: #capability{}
          }).
 
 -record(object, {
@@ -48,9 +48,7 @@
          }).
 
 -record(promise, {
-          vat :: pid(),
-          ref :: reference(),
-          resultType :: ecapnp:type_id(),
+          id :: {local, pid()} | {remote, {non_neg_integer(), pid()}},
           transform=[] :: list()
          }).
 

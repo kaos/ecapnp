@@ -24,25 +24,84 @@
 -import(ecapnp_capability_tests, [basicCap_funs/0]).
 
 -record(test, {
-          sup, cap, mod
+          sup, basic, pipelines, mods
          }).
+
+-export([foo/0]).
+foo() ->
+    {setup, S, T, {with, [_T1, _T2, T3|_]}} = rpc_local_test_(),
+    X = S(),
+    T3(X),
+    T(X).
 
 rpc_local_test_() ->
     {setup,
      fun () ->
-             Mod = setup_meck(basicCap, basicCap_funs()),
              {ok, CapS} = ecapnp_capability_sup:start_link(),
-             {ok, Cap} = ecapnp_capability_sup:start_capability(Mod, test_capnp:'BasicCap'()),
-             #test{ sup = CapS, cap = Cap, mod = Mod }
+             {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
+             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'()),
+             Mods = [setup_meck(Mod, Funs)
+                     || {Mod, Funs} <-
+                            [{basicCap, basicCap_funs()},
+                             {pipelines, pipelines_funs(BasicCap)}
+                            ]
+                    ],
+             #test{ sup = CapS, basic = BasicCap, pipelines = PipelinesCap, mods = Mods }
      end,
-     fun (#test{ sup = CapS, mod = Mod }) ->
+     fun (#test{ sup = CapS, mods = Mods }) ->
              exit(CapS, normal),
-             teardown_meck(Mod)
+             [teardown_meck(Mod) || Mod <- Mods]
      end,
      {with,
       [fun test_request/1,
-       fun test_send/1
+       fun test_send/1,
+       fun test_pipeline/1
       ]}}.
+
+pipelines_funs(BasicCap) ->
+    [{handle_call, fun ('Pipelines', getBasic, _Params, Result) ->
+                           ecapnp:set(basic, BasicCap, Result), ok
+                   end}].
+
+test_request(#test{ basic=Cap }) ->
+    Req = ecapnp:request(add, Cap),
+    Params = Req#rpc_call.params,
+    ?assertEqual(
+       #rpc_call{
+          target = Cap,
+          interface = test_capnp:'BasicCap'(),
+          method = hd((test_capnp:'BasicCap'())#schema_node.kind#interface.methods),
+          params = Params
+         }, Req),
+    ?assertEqual(
+       ['BasicCap', [add, '$Params']],
+       Params#object.schema#schema_node.name).
+
+test_send(#test{ basic=Cap }) ->
+    Req = ecapnp:request(sub, Cap),
+    Params = Req#rpc_call.params,
+
+    %% test set of both request object and the params directly
+    ok = ecapnp:set(a, 333, Req),
+    ok = ecapnp:set(b, 222, Params),
+    %% test get of both params directly as well as from the request
+    ?assertEqual(333, ecapnp:get(a, Params)),
+    ?assertEqual(222, ecapnp:get(b, Req)),
+
+    {ok, Promise} = ecapnp:send(Req),
+    {ok, Res} = ecapnp:wait(Promise),
+    ?assertEqual(111, ecapnp:get(result, Res)).
+
+test_pipeline(#test{ pipelines = Cap }) ->
+    BasicReq = ecapnp:request(getBasic, Cap),
+    {ok, BasicPromise} = ecapnp:send(BasicReq),
+    PromisedBasicCap = ecapnp:get(basic, BasicPromise),
+    AddReq = ecapnp:request(add, PromisedBasicCap),
+    ok = ecapnp:set(a, 123, AddReq),
+    ok = ecapnp:set(b, 321, AddReq),
+    {ok, AddPromise} = ecapnp:send(AddReq),
+    %% get data on a promise will wait until fulfilled, then proceed
+    ?assertEqual(444, ecapnp:get(result, AddPromise)).
 
 %% request_test_() ->
 %%     meck([{ecapnp_vat, vat_funs()},
@@ -80,33 +139,5 @@ rpc_local_test_() ->
 %%       end}
 %%     ].
 
-test_request(#test{ cap=Cap }) ->
-    Req = ecapnp:request(add, Cap),
-    Params = Req#rpc_call.params,
-    ?assertEqual(
-       #rpc_call{
-          target = Cap,
-          interface = test_capnp:'BasicCap'(),
-          method = hd((test_capnp:'BasicCap'())#schema_node.kind#interface.methods),
-          params = Params
-         }, Req),
-    ?assertEqual(
-       ['BasicCap', [add, '$Params']],
-       Params#object.schema#schema_node.name).
-
-test_send(#test{ cap=Cap }) ->
-    Req = ecapnp:request(sub, Cap),
-    Params = Req#rpc_call.params,
-
-    %% test set of both request object and the params directly
-    ok = ecapnp:set(a, 333, Req),
-    ok = ecapnp:set(b, 222, Params),
-    %% test get of both params directly as well as from the request
-    ?assertEqual(333, ecapnp:get(a, Params)),
-    ?assertEqual(222, ecapnp:get(b, Req)),
-
-    {ok, Promise} = ecapnp:send(Req),
-    {ok, Res} = ecapnp:wait(Promise),
-    ?assertEqual(111, ecapnp:get(result, Res)).
 
 -endif.

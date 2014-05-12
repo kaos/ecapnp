@@ -27,23 +27,23 @@ export_capability_test() ->
     ?assertEqual(0, ExportId),
     ?assertEqual({ok, Cap}, ecapnp_vat:find_capability(ExportId, Vat)).
 
-restore_capability_test_() ->
-    meck(echo, transport_funs(),
-         [fun test_restore_capability/0
-          %%,fun test_process_restore_message/0
-         ]).
+%% restore_capability_test__() ->
+%%     meck(echo, transport_funs(),
+%%          [fun test_restore_capability/0
+%%           %%,fun test_process_restore_message/0
+%%          ]).
 
-transport_funs() ->
-    [{send, fun (Tester, Data) -> Tester ! {captured, Data}, ok end}].
+%% transport_funs() ->
+%%     [{send, fun (Tester, Data) -> Tester ! {captured, Data}, ok end}].
 
-test_restore_capability() ->
-    {ok, Vat} = ecapnp_vat:start_link({echo, self()}),
-    {ok, _Promise} = ecapnp_vat:import_capability(<<"test-cap">>, Vat),
-    {ok, Req} = receive {captured, Data} -> {ok, Data} after 10 -> missing_data end,
-    {ok, Msg} = ecapnp_get:root('Message', rpc_capnp, ecapnp_message:read(Req)),
-    {restore, Res} = ecapnp:get(Msg),
-    Obj = ecapnp_obj:to_text(ecapnp:get(objectId, Res)),
-    ?assertEqual(<<"test-cap">>, Obj).
+%% test_restore_capability() ->
+%%     {ok, Vat} = ecapnp_vat:start_link({echo, self()}),
+%%     {ok, _Promise} = ecapnp_vat:import_capability(<<"test-cap">>, Vat),
+%%     {ok, Req} = receive {captured, Data} -> {ok, Data} after 10 -> missing_data end,
+%%     {ok, Msg} = ecapnp_get:root('Message', rpc_capnp, ecapnp_message:read(Req)),
+%%     {restore, Res} = ecapnp:get(Msg),
+%%     Obj = ecapnp_obj:to_text(ecapnp:get(objectId, Res)),
+%%     ?assertEqual(<<"test-cap">>, Obj).
 
 %% test_process_restore_message() ->
 %%     {ok, Vat} = ecapnp_vat:start_link({echo, self()}),
@@ -59,6 +59,8 @@ test_restore_capability() ->
 %%     _Content = ecapnp:get(content, Payload),
 %%     [Cap] = ecapnp:get(capTable, Payload),
 %%     ?assertEqual({senderHosted, ExportId}, ecapnp:get(Cap)).
+
+
 %% sturdy_capability_test() ->
 %%     ecapnp_vat:register_capability("Basic", basicCap, test_capnp:'BasicCap'()).
 

@@ -161,12 +161,13 @@ get_cap_test() ->
              3,0,0,0, 22,0,0,0  %% cap ptr 22 (obj)
            >>],
     {ok, R} = ecapnp:get_root('CapTest', test_capnp, Msg),
-    Pid = spawn(fun() -> ok end),
-    Root = ecapnp_obj:set_cap_table([{11, self()}, {22, Pid}], R),
+    Cap1 = #capability{ id = 1 },
+    Cap2 = #capability{ id = 2 },
+    Root = ecapnp_obj:set_cap_table([{11, Cap1}, {22, Cap2}], R),
     Basic = ecapnp:get(basic, Root),
     Obj = ecapnp:get(obj, Root),
-    ?assertEqual(self(), Basic#object.ref#ref.kind#interface_ref.pid),
-    ?assertEqual(Pid, Obj#object.ref#ref.kind#interface_ref.pid).
+    ?assertEqual(Cap1, Basic#object.ref#ref.kind#interface_ref.cap),
+    ?assertEqual(Cap2, Obj#object.ref#ref.kind#interface_ref.cap).
 
 
 -endif.

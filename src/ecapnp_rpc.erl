@@ -31,37 +31,48 @@
 %% API functions
 %% ===================================================================
 
+request(MethodName, #object{ ref = #ref{ kind = #interface_ref{ cap = Cap } } }) ->
+    do_request(MethodName, Cap#capability.interfaces, Cap);
+request(MethodName, #object{ ref = #promise{}=Cap, schema = #schema_node{ kind = #interface{}}=I }) ->
+    do_request(MethodName, [I], Cap);
 request(MethodName, #capability{ interfaces = Is }=Cap) ->
-    {ok, Interface, Method} = ecapnp_schema:find_method_by_name(
-                                MethodName, Is),
-    {ok, Params} = ecapnp_set:root(
-                     ecapnp_schema:lookup(Method#method.paramType, Interface)),
-    #rpc_call{
-       target = Cap,
-       interface = Interface,
-       method = Method,
-       params = Params }.
+    do_request(MethodName, Is, Cap).
 
-send(#rpc_call{ target = #capability{ id = {remote, _} }}=Req) ->
-    ecapnp_vat:send(Req);
-send(#rpc_call{
-        target = #capability{ id = {local, Cap} },
-        interface = #schema_node{ id = IntfId },
-        method = #method{ id = MethId },
-        params = Params
-       }) ->
+send(#rpc_call{ target = #capability{ id = {local, Cap} },
+                interface = #schema_node{ id = IntfId }=Node,
+                method = #method{ id = MethId, resultType = ResultType },
+                params = Params
+              }) ->
     Pid = self(),
-    {ok, spawn_link(
-           fun () ->
-                   Result = ecapnp_capability:dispatch_call(
-                              Cap, IntfId, MethId, Params),
-                   Pid ! {promise_result, self(), Result}
-           end)}.
+    {ok, #object{
+            ref=#promise{
+                   id = {local, spawn_link(
+                                  fun () ->
+                                          Result = ecapnp_capability:dispatch_call(
+                                                     Cap, IntfId, MethId, Params),
+                                          Pid ! {promise_result, self(), Result}
+                                  end)}},
+            schema = ecapnp_schema:get(ResultType, Node)
+           }};
+send(#rpc_call{ target = #promise{ id = {local, _} }=Promise }=Req) ->
+    {ok, #object{
+            ref = #ref{
+                     kind = #interface_ref{
+                               cap = Cap }}}
+    } = wait(Promise),
+    send(Req#rpc_call{ target = Cap }).
 
-wait(Promise) ->
+wait(#object{ ref = #promise{}=Promise }) ->
+    wait(Promise);
+wait(#promise{ id = {local, Pid}, transform = Ts }) ->
     receive
-        {promise_result, Promise, Result} ->
-            Result
+        {promise_result, Pid, {ok, Result}} ->
+            {ok, lists:foldr(
+                   fun ({ptr, Idx}, Obj) ->
+                           ecapnp:get(Idx, Obj)
+                   end,
+                   Result, Ts)};
+        {promise_result, Pid, Err} -> Err
     end.
 
 
@@ -69,3 +80,10 @@ wait(Promise) ->
 %% internal functions
 %% ===================================================================
 
+do_request(MethodName, Interfaces, Target) ->
+    {ok, Interface, Method} = ecapnp_schema:find_method_by_name(
+                                MethodName, Interfaces),
+    {ok, Params} = ecapnp_set:root(
+                     ecapnp_schema:lookup(Method#method.paramType, Interface)),
+    #rpc_call{ target = Target, interface = Interface,
+               method = Method, params = Params }.

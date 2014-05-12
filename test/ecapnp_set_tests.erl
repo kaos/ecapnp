@@ -205,12 +205,14 @@ set_struct_test() ->
 set_cap_test() ->
     {ok, Root} = ecapnp:set_root('CapTest', test_capnp),
 
-    Obj1 = ecapnp:set(obj, {{interface, 'BasicCap'}, self()}, Root),
-    ?assertEqual(self(), Obj1#object.ref#ref.kind#interface_ref.pid),
+    Cap1 = #capability{ id = 1 },
+    Cap2 = #capability{ id = 2 },
 
-    Pid = spawn(fun() -> ok end),
-    Obj2 = ecapnp:set(basic, Pid, Root),
-    ?assertEqual(Pid, Obj2#object.ref#ref.kind#interface_ref.pid),
+    Obj1 = ecapnp:set(obj, {{interface, 'BasicCap'}, Cap1}, Root),
+    ?assertEqual(Cap1, Obj1#object.ref#ref.kind#interface_ref.cap),
+
+    Obj2 = ecapnp:set(basic, Cap2, Root),
+    ?assertEqual(Cap2, Obj2#object.ref#ref.kind#interface_ref.cap),
 
     Data = ecapnp_data:get_segments(Root#object.ref#ref.data#builder.pid),
     ?assertEqual(

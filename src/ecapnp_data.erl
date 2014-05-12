@@ -26,9 +26,9 @@
 -behaviour(gen_server).
 
 %% API
--export([start/1, start_link/1, stop/1,
-         alloc/3, update_segment/3, get_segment/4,
-         get_segment_size/2, get_segments/1, get_cap_idx/2]).
+-export([start/1, start_link/1, stop/1, alloc/3, update_segment/3,
+         get_segment/4, get_segment_size/2, get_segments/1, get_cap/2,
+         get_cap_idx/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -96,6 +96,9 @@ get_segment_size(Id, Pid) ->
 get_segments(Pid) ->
     data_request(get_segments, Pid).
 
+get_cap(Idx, Pid) ->
+    data_request({get_cap, Idx}, Pid).
+
 get_cap_idx(Cap, Pid) ->
     data_request({get_cap_idx, Cap}, Pid).
 
@@ -122,6 +125,9 @@ handle_call({get_segment_size, Id}, _From, State) ->
     {reply, Reply, State1};
 handle_call(get_segments, _From, State) ->
     {Reply, State1} = do_get_segments(State),
+    {reply, Reply, State1};
+handle_call({get_cap, Idx}, _From, State) ->
+    {Reply, State1} = do_get_cap(Idx, State),
     {reply, Reply, State1};
 handle_call({get_cap_idx, Cap}, _From, State) ->
     {Reply, State1} = do_get_cap_idx(Cap, State),
@@ -232,6 +238,13 @@ do_get_segment_size(Id, State) ->
     case get_segment(Id, State) of
         #seg{ data = Segment } ->
             {size(Segment) div 8, State}
+    end.
+
+%% ===================================================================
+do_get_cap(Idx, #state{ caps = CapTable }=State) ->
+    case lists:keyfind(Idx, 1, CapTable) of
+        false -> undefined;
+        {Idx, Cap} -> {Cap, State}
     end.
 
 %% ===================================================================

@@ -524,7 +524,7 @@ read_ref(<<OffsetAndKind:32/integer-signed-little,
               interface ->
                   #ref{ offset = Size, %% CapTable index
                         kind = #interface_ref{
-                                  pid = get_cap_pid(Size, Data)
+                                  cap = get_cap(Size, Data)
                                  }}
           end,
     Ref#ref{ data = Data }.
@@ -629,12 +629,12 @@ element_size(inlineComposite) -> 7.
 
 
 %% only supported for builders, as readers should not need to lookup cap index
-get_cap_idx(#interface_ref{ pid = Cap }, #builder{ pid = Pid }) ->
+get_cap_idx(#interface_ref{ cap = Cap }, #builder{ pid = Pid }) ->
     ecapnp_data:get_cap_idx(Cap, Pid).
 
-get_cap_pid(Idx, #builder{ pid = Pid }) ->
-    ecapnp_data:get_cap_pid(Idx, Pid);
-get_cap_pid(Idx, #reader{ caps = CapTable }) ->
+get_cap(Idx, #builder{ pid = Pid }) ->
+    ecapnp_data:get_cap(Idx, Pid);
+get_cap(Idx, #reader{ caps = CapTable }) ->
     case lists:keyfind(Idx, 1, CapTable) of
         {Idx, Cap} -> Cap;
         false -> undefined
