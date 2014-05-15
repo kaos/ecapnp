@@ -157,13 +157,13 @@ text_list_test() ->
 
 get_cap_test() ->
     Msg = [<<0,0,0,0, 0,0,2,0, %% root struct w 2 ptrs
-             3,0,0,0, 11,0,0,0, %% cap ptr 11 (basic)
-             3,0,0,0, 22,0,0,0  %% cap ptr 22 (obj)
+             3,0,0,0, 1,0,0,0, %% cap ptr 11 (basic)
+             3,0,0,0, 2,0,0,0  %% cap ptr 22 (obj)
            >>],
     {ok, R} = ecapnp:get_root('CapTest', test_capnp, Msg),
     Cap1 = #capability{ id = 1 },
     Cap2 = #capability{ id = 2 },
-    Root = ecapnp_obj:set_cap_table([{11, Cap1}, {22, Cap2}], R),
+    Root = ecapnp_obj:set_cap_table([dummy, Cap1, Cap2], R),
     Basic = ecapnp:get(basic, Root),
     Obj = ecapnp:get(obj, Root),
     ?assertEqual(Cap1, Basic#object.ref#ref.kind#interface_ref.cap),

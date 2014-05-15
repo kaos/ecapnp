@@ -24,7 +24,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 -behaviour(gen_server).
 
--export([start/2, start_link/2, stop/1, dispatch_call/4]).
+-export([start/2, start_link/2, stop/1, dispatch_call/4, dispatch_call/5]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -56,7 +56,10 @@ stop(Cap) ->
     gen_server:call(Cap, stop).
 
 dispatch_call(Cap, ItfID, MethID, Params) ->
-    gen_server:call(Cap, {call, ItfID, MethID, Params}).
+    dispatch_call(Cap, ItfID, MethID, Params, undefined).
+
+dispatch_call(Cap, ItfID, MethID, Params, Results) ->
+    gen_server:call(Cap, {call, ItfID, MethID, {Params, Results}}, infinity).
 
 
 %%--------------------------------------------------------------------
@@ -87,14 +90,14 @@ init([Mod, Interfaces]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({call, Intf, Meth, Params}, _From, State) ->
+handle_call({call, Intf, Meth, Args}, _From, State) ->
     case find_interface(Intf, State) of
         false -> {reply, {error, {unsupported_interface, Intf}}, State};
         Interface ->
             case find_method(Meth, Interface) of
                 false -> {reply, {error, {unknown_method, Intf, Meth}}, State};
                 Method ->
-                    dispatch(Interface, Method, Params, State)
+                    dispatch(Interface, Method, Args, State)
             end
     end;
 handle_call(stop, _From, State) ->
@@ -156,11 +159,27 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 dispatch(#schema_node{ name = InterfaceName }=Interface,
-         #method{ name = MethodName, resultType = ResultType },
-         Params, #state{ impl = Mod }=State) ->
-    {ok, Results} = ecapnp_set:root(
-                      ecapnp_schema:get(ResultType, Interface)),
-    ok = apply(Mod, handle_call, [InterfaceName, MethodName, Params, Results]),
+         #method{ name = MethodName,
+                  paramType = ParamType,
+                  resultType = ResultType },
+         Args, #state{ impl = Mod }=State) ->
+
+    ParamSchema = ecapnp_schema:get(ParamType, Interface),
+    ResultSchema = ecapnp_schema:get(ResultType, Interface),
+
+    {Params, Results} =
+        case Args of
+            {Ps, undefined} ->
+                {ok, Rs} = ecapnp_set:root(ResultSchema),
+                {Ps, Rs};
+            {Ps, Payload} ->
+                Content = ecapnp:init(content, ResultSchema, Payload),
+                {Ps, Content}
+        end,
+    ok = apply(Mod, handle_call,
+               [InterfaceName, MethodName,
+                ecapnp_obj:to_struct(ParamSchema, Params),
+                Results]),
     {reply, {ok, Results}, State}.
 
 find_interface(IntfId, #state{ interfaces = Ns }) ->

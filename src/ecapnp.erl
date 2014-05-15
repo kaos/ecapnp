@@ -29,8 +29,8 @@
 %% Public API
 %% ===================================================================
 
--export([get_root/3, get/1, get/2, set_root/2, set/2, set/3,
-         const/2, request/2, send/1, wait/1]).
+-export([get_root/3, get/1, get/2, set_root/2, set/2, set/3, init/2,
+         init/3, const/2, request/2, send/1, wait/1, wait/2]).
 
 %% ===================================================================
 %% Public Types
@@ -234,6 +234,13 @@ set(Field, Value, #rpc_call{ params = Object }) ->
 set(Field, Value, Object) ->
     ecapnp_set:field(Field, Value, Object).
 
+init(Value, Object) ->
+    ecapnp_obj:init(ecapnp_set:field(Value, Object)).
+
+init(Field, Type, Object) ->
+    ecapnp_obj:init(
+      ecapnp_obj:to_struct(
+        Type, ecapnp_set:field(Field, Object))).
 
 -spec const(type_name()|type_id(), schema()) -> value().
 %% @doc Get const value from schema.
@@ -251,17 +258,38 @@ const(Name, Schema) ->
 request(Name, Cap) ->
     ecapnp_rpc:request(Name, Cap).
 
-send(#rpc_call{ target = #capability{ id = {remote, _} }}=Req) ->
-    ecapnp_vat:send(Req);
 send(#rpc_call{ target = #capability{ id = {local, _} }}=Req) ->
     ecapnp_rpc:send(Req);
-send(#rpc_call{ target = #promise{ id = {remote, _} }}=Req) ->
-    ecapnp_vat:send(Req);
 send(#rpc_call{ target = #promise{ id = {local, _} }}=Req) ->
-    ecapnp_rpc:send(Req).
+    ecapnp_rpc:send(Req);
+send(#rpc_call{ target = #capability{ id = {_, Vat} }}=Req) ->
+    ecapnp_vat:send(Req, Vat);
+send(#rpc_call{ target = #promise{ id = {_, Vat} }}=Req) ->
+    ecapnp_vat:send(Req, Vat).
+
 
 wait(Promise) ->
-    ecapnp_rpc:wait(Promise).
+    wait(Promise, infinity).
+
+wait(#object{ ref = #promise{}=Promise }, Timeout) ->
+    wait(Promise, Timeout);
+wait(#promise{ id = Id, transform = Ts }, Timeout) ->
+    Result = case Id of
+                 {local, _} ->
+                     ecapnp_rpc:wait(Id, Timeout);
+                 _ ->
+                     ecapnp_vat:wait(Id, Timeout)
+             end,
+    case Result of
+        {ok, Obj} ->
+            {ok, lists:foldr(
+                   fun ({getPointerField, Idx}, Ptr) ->
+                           ecapnp:get(Idx, Ptr)
+                   end,
+                   Obj, Ts)};
+        _ ->
+            Result
+    end.
 
 
 %% ===================================================================

@@ -26,9 +26,8 @@
 
 %% API
 
--export([start/0, start_link/0, start_link/1, stop/1,
-         import_capability/2, export_capability/2,
-         find_capability/2]).
+-export([start/0, start_link/0, start_link/1, start_link/2, stop/1,
+         send/2, wait/2, import_capability/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -38,7 +37,11 @@
 
 -record(questions, {
           next_id = 0 :: non_neg_integer(),
-          promises = [] :: list({non_neg_integer(), pid()})
+          promises = [] :: list({non_neg_integer(), list() | ecapnp:object()})
+         }).
+
+-record(answers, {
+          results = [] :: list({non_neg_integer(), list() | ecapnp:object()})
          }).
 
 -record(exports, {
@@ -46,12 +49,17 @@
           caps = [] :: list({non_neg_integer(), #capability{}})
          }).
 
+-record(imports, {
+          caps = []
+         }).
+
 -record(state, {
           owner,
           transport,
+          restorer,
           questions = #questions{} :: #questions{},
-          answers = [],
-          imports = [] :: list(),
+          answers = #answers{} :: #answers{},
+          imports = #imports{} :: #imports{},
           exports = #exports{} :: #exports{}
          }).
 
@@ -69,17 +77,20 @@ start_link() ->
 start_link(Transport) ->
     gen_server:start_link(?MODULE, setup_state(Transport), []).
 
+start_link(Transport, Restorer) ->
+    gen_server:start_link(?MODULE, setup_state(Transport, Restorer), []).
+
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
 
-import_capability(ObjectId, Vat) ->
-    gen_server:call(Vat, {import, ObjectId}, infinity).
+send(Req, {_Id, Vat}) ->
+    gen_server:call(Vat, {send_req, Req}).
 
-export_capability(Cap, Vat) ->
-    gen_server:call(Vat, {export, Cap}).
+wait({Kind, {Id, Vat}}, Timeout) ->
+    gen_server:call(Vat, {wait, {Kind, Id}}, Timeout).
 
-find_capability(Ref, Vat) ->
-    gen_server:call(Vat, {find, Ref}).
+import_capability(ObjectId, Schema, Vat) ->
+    gen_server:call(Vat, {import, ObjectId, Schema}).
 
 
 %% ===================================================================
@@ -89,25 +100,39 @@ find_capability(Ref, Vat) ->
 init(State) ->
     {ok, State}.
 
-handle_call({import, ObjectId}, _From, State) ->
-    {Reply, State1} = import(ObjectId, State),
-    {reply, Reply, State1};
-handle_call({export, Cap}, _From, State) ->
-    {Id, State1} = export(Cap, State),
-    {reply, {ok, Id}, State1};
-handle_call({find, Ref}, _From, State) ->
-    Reply = case find(Ref, State) of
-                false -> {unknown_capability, Ref};
-                Found -> {ok, Found}
-            end,
-    {reply, Reply, State};
+handle_call({send_req, Req}, _From, State) ->
+    send_req(Req, State);
+handle_call({send_message, Message}, _From, State) ->
+    {reply, ok, send_message(Message, process_message(Message, State))};
+handle_call({answer, Id, Content}, _From, State) ->
+    {reply, ok, set_promise_result(Id, Content, State)};
+handle_call({wait, Id}, From, State) ->
+    wait(Id, From, State);
+handle_call({import, ObjectId, Schema}, _From, State) ->
+    import_req(ObjectId, Schema, State);
+handle_call({restore, ObjectId}, From, State) ->
+    %% todo: better error handling...
+    spawn_link(
+      fun () ->
+              gen_server:reply(From, (State#state.restorer)(ObjectId))
+      end),
+    {noreply, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State}.
 
 handle_cast(_Cast, State) ->
     {noreply, State}.
 
+handle_info({receive_message, Data}, State) ->
+    handle_message(Data),
+    {noreply, State};
+handle_info({send_message, Message}, State) ->
+    {ok, State1} = send_message(Message, State),
+    {noreply, State1};
 handle_info(_Info, State) ->
+    io:format(
+      standard_error, "~p:ecapnp_vat(~p): unhandled info: ~n   ~p~n",
+      [self(), State#state.transport, _Info]),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
@@ -118,22 +143,252 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 %% ===================================================================
-%% internal functions
+%% internal server functions
 %% ===================================================================
 
 %% ===================================================================
-import(ObjectId, State) when is_binary(ObjectId) ->
-    {Id, Promise, State1} = new_question(State),
-    {ok, Msg} = ecapnp:set_root('Message', rpc_capnp),
-    Res = ecapnp_obj:init(ecapnp:set(restore, Msg)),
-    ok = ecapnp:set(questionId, Id, Res),
-    ok = ecapnp:set(objectId, {text, ObjectId}, Res),
-    ok = send(Msg, State1),
-    {{ok, Promise}, State1}.
+send_req(#rpc_call{ target = Target }=Req, State) ->
+    case Target of
+        #promise{ id = {answer, _} } -> send_local_req(Req, State);
+        #promise{ id = {remote, _} } -> send_remote_req(Req, State);
+        #capability{ id = {remote, _} } -> send_remote_req(Req, State);
+        #capability{ id = {exported, {Id, _Vat}} }=Cap ->
+            case find(Id, State#state.exports) of
+                false ->
+                    {reply, {error, unknown_capability}, State};
+                Exported ->
+                    {reply,
+                     ecapnp:send(Req#rpc_call{
+                                   target = Cap#capability{ id = Exported }
+                                  }),
+                     State}
+            end
+    end.
+
+send_remote_req(#rpc_call{ target = Target, interface = I, method = M,
+                           params = P, resultSchema = Schema }, State) ->
+    %% hackish approach. getting at the root element has not been implemented yet..
+    Msg = ecapnp_obj:from_ref(ecapnp_ref:get(0, 0, P#object.ref#ref.data), 'Message', rpc_capnp),
+    {call, Call} = ecapnp:get(Msg),
+
+    {Id, Promise, State1} = new_question(State, Schema),
+    ok = ecapnp:set(questionId, Id, Call),
+    ok = set_target(Target, ecapnp:init(target, Call)),
+    ok = ecapnp:set(interfaceId, I, Call),
+    ok = ecapnp:set(methodId, M, Call),
+
+    {reply, {ok, Promise}, send_message(Msg, process_message(Msg, State1))}.
+
+send_local_req(#rpc_call{ target = TargetPromise, resultSchema = ResultSchema }=Req, State) ->
+    ResultPromise = ecapnp_rpc:promise(
+                      fun () ->
+                              case ecapnp:wait(TargetPromise) of
+                                  {ok, #object{ ref = #ref{
+                                                         kind = #interface_ref{
+                                                                   cap = Cap } } }} ->
+
+                                      {ok, SendPromise} = ecapnp:send(Req#rpc_call{ target = Cap }),
+                                      ecapnp:wait(SendPromise);
+                                  _ ->
+                                      {error, invalid_capability}
+                              end
+                      end,
+                      ResultSchema),
+    {reply, {ok, ResultPromise}, State}.
+
+%% ===================================================================
+wait({remote, Id}, From, State) ->
+    case find(Id, State#state.questions) of
+        {promise, Id} ->
+            {noreply, wait_for_promise(Id, From, State)};
+        Result ->
+            {reply, Result, State}
+    end;
+wait({answer, Id}, From, State) ->
+    case find(Id, State#state.answers) of
+        {pending, Id} ->
+            {noreply, wait_for_answer(Id, From, State)};
+        Result ->
+            {reply, Result, State}
+    end.
+
+%% ===================================================================
+import_req(ObjectId, Schema, State) ->
+    {Id, Promise, State1} = new_question(State, Schema),
+    Restore = new_message(restore),
+    ok = ecapnp:set(questionId, Id, Restore),
+    ok = ecapnp:set(objectId, ObjectId, Restore),
+    {reply, {ok, Promise}, send_message(Restore, State1)}.
+
+%% ===================================================================
+handle_message(Data) ->
+    Vat = self(),
+    spawn_link(
+      fun () ->
+              {ok, Message} = ecapnp_get:root(
+                                rpc_capnp:'Message'(),
+                                ecapnp_message:read(Data)),
+              ok = handle_message(Message, Vat)
+      end).
+
+%% ===================================================================
+
+
+%% ===================================================================
+%% server utils
+%% ===================================================================
+
+%% ===================================================================
+setup_state() ->
+    #state{ owner = self() }.
+
+setup_state(Transport) ->
+    (setup_state())#state{ transport = Transport }.
+
+setup_state(Transport, Restorer) ->
+    (setup_state(Transport))#state{ restorer = Restorer }.
+
+%% ===================================================================
+send_message(Msg, #state{ transport = {Mod, Handle} }=State) ->
+    ok = Mod:send(Handle, ecapnp_message:write(Msg)),
+    State;
+%% called from message handler processes
+send_message(Msg, Vat) when is_pid(Vat) ->
+    gen_server:call(Vat, {send_message, Msg}, infinity).
+
+%% ===================================================================
+new_question(#state{ questions = #questions{
+                                    next_id = Id,
+                                    promises = Ps
+                                   }=Qs }=State,
+             Schema) ->
+    {Id, new_promise(Id, Schema),
+      State#state{
+        questions = Qs#questions{
+                      next_id = Id + 1,
+                      promises = [{Id, {[], Schema}}|Ps] }}
+    }.
+
+%% ===================================================================
+new_promise(Id, Schema) ->
+    #object{ ref = #promise{ id = {remote, {Id, self()}} },
+             schema = Schema }.
+
+%% ===================================================================
+new_message() ->
+    {ok, Msg} = ecapnp:set_root('Message', rpc_capnp), Msg.
+
+new_message(Type) ->
+    ecapnp:init(Type, new_message()).
+
+%% ===================================================================
+set_target(#capability{ id = {remote, {Id, _}} }, MsgTarget) ->
+    ecapnp:set({importedCap, Id}, MsgTarget);
+set_target(#promise{ id = {remote, {Id, _}}, transform = Ts }, MsgTarget) ->
+    PromisedAnswer = ecapnp:init(promisedAnswer, MsgTarget),
+    ok = ecapnp:set(questionId, Id, PromisedAnswer),
+    TObjs = ecapnp:set(transform, length(Ts), PromisedAnswer),
+    [ecapnp:set(T, Obj)
+     || {Obj, T} <- lists:zip(TObjs, lists:reverse(Ts))],
+    ok.
+
+%% ===================================================================
+find(Id, #imports{ caps = Cs }) ->
+    case lists:keyfind(Id, 1, Cs) of
+        false -> false;
+        {Id, Cap} -> {remote, Cap}
+    end;
+find(Id, #exports{ caps = Cs }) ->
+    case lists:keyfind(Id, 1, Cs) of
+        false -> false;
+        {Id, Cap} -> {local, Cap}
+    end;
+find(Id, #questions{ promises = Ps }) ->
+    case lists:keyfind(Id, 1, Ps) of
+        false -> false;
+        {Id, {Ws, _}} when is_list(Ws) -> {promise, Id};
+        {Id, Res} -> {ok, Res}
+    end;
+find(Id, #answers{ results = Rs }) ->
+    case lists:keyfind(Id, 1, Rs) of
+        false -> false;
+        {Id, {Ws, _}} when is_list(Ws) -> {pending, Id};
+        {Id, Res} -> {ok, Res}
+    end.
+
+%% ===================================================================
+set_result(Id, Result, List) ->
+    Result1 =
+        case lists:keyfind(Id, 1, List) of
+            false -> Result;
+            {Id, {Ws, Schema}} when is_list(Ws) ->
+                Res = ecapnp_obj:to_struct(Schema, Result),
+                [gen_server:reply(W, {ok, Res}) || W <- Ws],
+                Res
+    end,
+    lists:keystore(Id, 1, List, {Id, Result1}).
+
+wait_for_result(Id, W, List) ->
+    WsS =
+        case lists:keyfind(Id, 1, List) of
+            false -> {[W], undefined};
+            {Id, {Ws0, Schema}} when is_list(Ws0) ->
+                {[W|Ws0], Schema}
+        end,
+    lists:keystore(Id, 1, List, {Id, WsS}).
+
+%% ===================================================================
+set_promise_result(Id, Result, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    State#state{ questions = Qs#questions{ promises = set_result(Id, Result, Ps) }}.
+
+set_answer_result(Id, Result, #state{ answers = #answers{ results = Rs }=As }=State) ->
+    State#state{ answers = As#answers{ results = set_result(Id, Result, Rs) }}.
+
+wait_for_promise(Id, W, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    State#state{ questions = Qs#questions{ promises = wait_for_result(Id, W, Ps) }}.
+
+wait_for_answer(Id, W, #state{ answers = #answers{ results = Rs }=As }=State) ->
+    State#state{ answers = As#answers{ results = wait_for_result(Id, W, Rs) }}.
+
+%% ===================================================================
+process_message(Message, State) ->
+    case ecapnp:get(Message) of
+        {call, Call} ->
+            update_cap_table(ecapnp:get(params, Call), State);
+        {return, Return} ->
+            Id = ecapnp:get(answerId, Return),
+            {Result, State1} =
+                case ecapnp:get(Return) of
+                    {results, Payload} ->
+                        {ecapnp:get(content, Payload),
+                         update_cap_table(Payload, State)}
+                end,
+            set_answer_result(Id, Result, State1)
+    end.
+
+%% ===================================================================
+update_cap_table(Payload, State) ->
+    {ok, Caps} = ecapnp_obj:get_cap_table(Payload),
+    CapTable = ecapnp:set(capTable, length(Caps), Payload),
+    lists:foldl(
+      fun ({Cap, CapDesc}, State0) ->
+              case Cap#capability.id of
+                  {local, _} ->
+                      {Id, State1} = export(Cap, State0),
+                      ecapnp:set({senderHosted, Id}, CapDesc),
+                      State1;
+                  {remote, {Id, Pid}} when Pid =:= self() ->
+                      ecapnp:set({receiverHosted, Id}, CapDesc),
+                      State0
+                      %% other cases nyi..
+              end
+      end,
+      State, lists:zip(Caps, CapTable)
+     ).
 
 %% ===================================================================
 export(Cap, State) ->
-    case find(Cap, State) of
+    case find(Cap, State#state.exports) of
         {Id, Cap} -> {Id, State};
         false ->
             {Id, State1} = get_next_export_id(State),
@@ -147,32 +402,6 @@ do_export(Id, Cap, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
                  }
      }.
 
-%% ===================================================================
-find(Id, #state{ exports = #exports{ caps = Cs } }) ->
-    case lists:keyfind(Id, 1, Cs) of
-        false -> false;
-        {Id, Cap} -> Cap
-    end.
-
-%% ===================================================================
-
-
-%% ===================================================================
-%% utils
-%% ===================================================================
-
-%% ===================================================================
-setup_state() ->
-    #state{ owner = self() }.
-
-setup_state(Transport) ->
-    (setup_state())#state{ transport = Transport }.
-
-%% ===================================================================
-send(Msg, #state{ transport = {Mod, Handle} }) ->
-    Mod:send(Handle, ecapnp_message:write(Msg)).
-
-%% ===================================================================
 get_next_export_id(#state{ exports = #exports{
                                         next_id = Id
                                        }=Es }=State) ->
@@ -181,22 +410,116 @@ get_next_export_id(#state{ exports = #exports{
                                  }}}.
 
 %% ===================================================================
-new_question(#state{ questions = #questions{
-                                    next_id = Id,
-                                    promises = Ps
-                                   }=Qs }=State) ->
-    Promise = new_promise(),
-    {Id, Promise, State#state{
-                    questions = Qs#questions{
-                                  next_id = Id + 1,
-                                  promises = [Promise|Ps] }}
-    }.
 
 %% ===================================================================
-new_promise() ->
-    spawn_link(
-      fun () ->
-              receive done -> ok end
-      end).
+%% process messages, these are run in their own processes
+%% ===================================================================
+
+%% ===================================================================
+handle_message(Message, Vat) ->
+    case ecapnp:get(Message) of
+        {call, Call} -> handle_call(Call, Vat);
+        {return, Return} -> handle_return(Return, Vat);
+        {restore, Restore} -> handle_restore(Restore, Vat);
+        _ ->
+            Reply = ecapnp:set_root('Message', rpc_capnp),
+            ecapnp:set({unimplemented, Message}, Reply),
+            send_message(Reply, Vat)
+    end.
+
+%% ===================================================================
+handle_call(Call, Vat) ->
+    Target = get_message_target(ecapnp:get(target, Call), Vat),
+    Payload = ecapnp:get(params, Call),
+
+io:format("*DBG* ~p (vat ~p) call to ~p~n", [self(), Vat, Target]),
+
+    Message = new_message(),
+    Return = ecapnp:init(return, Message),
+    RetPayload = ecapnp:init(results, Return),
+
+    {ok, Promise} = ecapnp:send(
+                      #rpc_call{
+                         target = Target,
+                         interface = ecapnp:get(interfaceId, Call),
+                         method = ecapnp:get(methodId, Call),
+                         params = ecapnp:get(content, Payload),
+                         results = RetPayload
+                        }),
+
+    %% TODO: _Content may be in another object if Target doesn't point
+    %% at a local capability..
+    {ok, _Content} = ecapnp:wait(Promise),
+
+    Id = ecapnp:get(questionId, Call),
+    ok = ecapnp:set(answerId, Id, Return),
+
+io:format("*DBG* ~p call(~p) done:~n  RetPayload: ~p~n  _Content: ~p~n", [self(), Id, RetPayload, _Content]),
+
+    send_message(Message, Vat).
+
+%% ===================================================================
+handle_return(Return, Vat) ->
+    case ecapnp:get(Return) of
+        {results, Results} ->
+            Id = ecapnp:get(answerId, Return),
+            Payload = ecapnp_obj:set_cap_table(
+                        [translate_cap_descriptor(C, Vat)
+                         || C <- ecapnp:get(capTable, Results)],
+                        Results),
+            Content = ecapnp:get(content, Payload),
+            gen_server:call(Vat, {answer, Id, Content})
+    end.
+
+
+%% ===================================================================
+handle_restore(Restore, Vat) ->
+    {ok, Cap} = gen_server:call(
+                  Vat, {restore, ecapnp:get(objectId, Restore)},
+                  infinity),
+
+    Message = new_message(),
+    Return = ecapnp:init(return, Message),
+    ok = ecapnp:set(answerId, ecapnp:get(questionId, Restore), Return),
+    Payload = ecapnp:init(results, Return),
+    _Content = ecapnp:set(content, Cap, Payload),
+    send_message(Message, Vat).
+
+%% ===================================================================
+
+%% ===================================================================
+%% common utils
+%% ===================================================================
+
+%% ===================================================================
+get_message_target(MessageTarget, Vat) ->
+    case ecapnp:get(MessageTarget) of
+        {importedCap, Id} ->
+            #capability{ id = {exported, {Id, Vat}} };
+        {promisedAnswer, PromisedAnswer} ->
+            translate_promised_answer(PromisedAnswer, Vat)
+    end.
+
+%% ===================================================================
+translate_cap_descriptor(CapDescriptor, Vat) ->
+    case ecapnp:get(CapDescriptor) of
+        none -> undefined;
+        {senderHosted, Id} ->
+            #capability{ id = {remote, {Id, Vat}} };
+        {senderPromise, Id} ->
+            #promise{ id = {resolve, {Id, Vat}} };
+        {receiverHosted, Id} ->
+            #capability{ id = {exported, {Id, Vat}} };
+        {receiverAnswer, PromisedAnswer} ->
+            translate_promised_answer(PromisedAnswer, Vat)
+        %%{thirdPartyHosted, _} -> level 3 stuff, NYI
+    end.
+
+%% ===================================================================
+translate_promised_answer(PromisedAnswer, Vat) ->
+            Id = ecapnp:get(questionId, PromisedAnswer),
+            Ts = ecapnp:get(transform, PromisedAnswer),
+            #promise{ id = {answer, {Id, Vat}},
+                      transform = [ecapnp:get(T) || T <- Ts] }.
 
 %% ===================================================================

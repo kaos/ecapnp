@@ -23,7 +23,7 @@
 -module(ecapnp_set).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/1, root/2, field/3, union/2]).
+-export([root/1, root/2, field/2, field/3, union/2]).
 
 -include("ecapnp.hrl").
 
@@ -46,9 +46,16 @@ root(Node) when is_record(Node, schema_node) ->
 -spec field(field_name(), field_value(), object()) -> ok | list().
 %% @doc Write field value to object.
 field(FieldName, Value, Object) ->
-    set_field(
-      ecapnp_obj:field(FieldName, Object),
-      Value, Object).
+    case ecapnp_obj:field(FieldName, Object) of
+        false -> throw({unknown_field, FieldName});
+        Field -> set_field(Field, Value, Object)
+    end.
+
+field(FieldName, Object) ->
+    case ecapnp_obj:field(FieldName, Object) of
+        false -> union(FieldName, Object);
+        Field -> set_field(Field, {default}, Object)
+    end.
 
 -spec union({field_name(), field_value()} | field_name(), object()) -> ok.
 %% @doc Write unnamed union value in object.
@@ -117,17 +124,22 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
                 {ObjType, ObjValue} ->
                     set_field(Ptr#ptr{ type=ObjType }, ObjValue, Obj);
                 _ ->
-                    ObjType = if is_integer(Value); is_atom(Value) ->
-                                      ecapnp_schema:lookup(Value, Obj);
-                                 is_record(Value, schema_node) ->
-                                      Value;
-                                 true ->
-                                      throw({invalid_object, Value})
+                    {ObjType, ObjValue}
+                        = if is_integer(Value); is_atom(Value) ->
+                                  {ecapnp_schema:lookup(Value, Obj), Default};
+                             is_record(Value, schema_node) ->
+                                  {Value, Default};
+                             is_record(Value, capability);
+                             is_binary(Value) ->
+                                  {object, Value};
+                             true ->
+                                  throw({error, {invalid_object_value, Value}})
                               end,
-                    ObjRef = ecapnp_ref:alloc_data(
-                               ecapnp_schema:set_ref_to(
-                                 ObjType, ecapnp_ref:ptr(Idx, StructRef))),
-                    ecapnp_obj:from_ref(ObjRef, ObjType, Obj)
+                    write_obj(ObjType, ObjValue, ecapnp_ref:ptr(Idx, StructRef), Obj)
+                    %% ObjRef = ecapnp_ref:alloc_data(
+                    %%            ecapnp_schema:set_ref_to(
+                    %%              ObjType, ecapnp_ref:ptr(Idx, StructRef))),
+                    %% ecapnp_obj:from_ref(ObjRef, ObjType, Obj)
             end;
         {struct, StructType} ->
             write_obj(StructType, Value, ecapnp_ref:ptr(Idx, StructRef), Obj);

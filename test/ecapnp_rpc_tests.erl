@@ -24,15 +24,28 @@
 -import(ecapnp_capability_tests, [basicCap_funs/0]).
 
 -record(test, {
-          sup, basic, pipelines, mods
+          sup, basic, pipelines, mods, bridge, vat
          }).
 
--export([foo/0]).
-foo() ->
-    {setup, S, T, {with, [_T1, _T2, T3|_]}} = rpc_local_test_(),
+-define(RUN,1).
+-ifdef(RUN).
+%% code to easily run test in debugger..
+-export([run/0]).
+run() ->
+    {setup, S, T, {with, Ts}} = rpc_remote_test_(),
     X = S(),
-    T3(X),
+    [case P of
+         #capability{ id = {local, Pid} } ->
+             io:format("trace cap ~p~n", [Pid]),
+             sys:trace(Pid, true);
+         Pid when is_pid(Pid) ->
+             io:format("trace pid ~p~n", [Pid]),
+             sys:trace(Pid, true);
+         _ -> nop
+     end || P <- erlang:tuple_to_list(X), P /= X#test.bridge],
+    (lists:nth(?RUN, Ts))(X),
     T(X).
+-endif.
 
 rpc_local_test_() ->
     {setup,
@@ -58,20 +71,95 @@ rpc_local_test_() ->
        fun test_pipeline/1
       ]}}.
 
+rpc_remote_test_() ->
+    %% the remote test really is a local test, using two bridged
+    %% client vat processes, so works exactly the same as for a real
+    %% remote one, except there's no TCP/IP stack involved here..
+    {setup,
+     fun () ->
+             {ok, CapS} = ecapnp_capability_sup:start_link(),
+             {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
+             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'()),
+             Mods = [setup_meck(Mod, Funs)
+                     || {Mod, Funs} <-
+                            [{basicCap, basicCap_funs()},
+                             {pipelines, pipelines_funs(BasicCap)},
+                             {bridge_echo, echo_funs()}
+                            ]
+                    ],
+             Bridge = spawn_link(
+                       fun () ->
+                               Loop = fun (F, VatA, VatB) ->
+                                              receive
+                                                  {From, stop} ->
+                                                      [ecapnp_vat:stop(Vat) || Vat <- [VatA, VatB]],
+                                                      From ! self();
+                                                  {VatA, Data} ->
+                                                      VatB ! {receive_message, Data},
+                                                      F(F, VatA, VatB);
+                                                  {VatB, Data} ->
+                                                      VatA ! {receive_message, Data},
+                                                      F(F, VatA, VatB);
+                                                  Other ->
+                                                      %% doesn't expect anything here..
+                                                      io:format("bridge: ~p~n", [Other]),
+                                                      F(F, VatA, VatB)
+                                              end
+                                      end,
+                               receive
+                                   {VatA, VatB} ->
+                                       Loop(Loop, VatA, VatB)
+                               end
+                       end),
+             {ok, Client} = ecapnp_vat:start_link({bridge_echo, Bridge}),
+             {ok, Server} = ecapnp_vat:start_link({bridge_echo, Bridge},
+                                                  cap_restorer([{<<"basic">>, BasicCap},
+                                                                {<<"pipelines">>, PipelinesCap}])),
+             Bridge ! {Client, Server},
+             io:format("VAT A: ~p~nVAT B: ~p~n", [Client, Server]),
+             sys:trace(Server, true),
+             #test{ sup = CapS, basic = BasicCap, pipelines = PipelinesCap,
+                    mods = Mods, bridge = Bridge, vat = Client }
+     end,
+     fun (#test{ sup = CapS, mods = Mods, bridge = Bridge }) ->
+             Bridge ! {self(), stop},
+             receive Bridge -> ok end,
+             exit(CapS, normal),
+             [teardown_meck(Mod) || Mod <- Mods]
+     end,
+     {with,
+      [fun test_remote_basic/1
+       %%fun test_pipeline/1
+      ]}}.
+
+echo_funs() ->
+    [{send, fun (Pid, Data) -> Pid ! {self(), Data}, ok end}].
+
 pipelines_funs(BasicCap) ->
     [{handle_call, fun ('Pipelines', getBasic, _Params, Result) ->
                            ecapnp:set(basic, BasicCap, Result), ok
                    end}].
 
+cap_restorer(Caps) ->
+    fun (ObjectId) ->
+            case lists:keyfind(ecapnp_obj:to_text(ObjectId), 1, Caps) of
+                false -> undefined;
+                {_, Cap} -> {ok, Cap}
+            end
+    end.
+
 test_request(#test{ basic=Cap }) ->
     Req = ecapnp:request(add, Cap),
     Params = Req#rpc_call.params,
+    Schema = test_capnp:'BasicCap'(),
+    Method = hd(Schema#schema_node.kind#interface.methods),
     ?assertEqual(
        #rpc_call{
           target = Cap,
-          interface = test_capnp:'BasicCap'(),
-          method = hd((test_capnp:'BasicCap'())#schema_node.kind#interface.methods),
-          params = Params
+          interface = Schema#schema_node.id,
+          method = Method#method.id,
+          params = Params,
+          resultSchema = test_capnp:schema(Method#method.resultType)
          }, Req),
     ?assertEqual(
        ['BasicCap', [add, '$Params']],
@@ -103,41 +191,8 @@ test_pipeline(#test{ pipelines = Cap }) ->
     %% get data on a promise will wait until fulfilled, then proceed
     ?assertEqual(444, ecapnp:get(result, AddPromise)).
 
-%% request_test_() ->
-%%     meck([{ecapnp_vat, vat_funs()},
-%%           {basicCap, ecapnp_capability_tests:basicCap_funs()}
-%%          ],
-%%          [fun test_request/0
-%%          ]).
-
-%% send_test_() ->
-%%     meck([{ecapnp_vat, vat_funs()},
-%%           {basicCap, ecapnp_capability_tests:basicCap_funs()}
-%%          ],
-%%          [fun test_send/0
-%%          ]).
-
-
-
-%% vat_funs() ->
-%%     [{send,
-%%       fun (Req) ->
-%%               %% hard coding a lot of stuff here for now, just to get going..
-%%               Pid = self(),
-%%               {ok, spawn_link(
-%%                      fun () ->
-%%                              {ok, Result} = ecapnp_set:root(
-%%                                               test_capnp:schema(['BasicCap', [sub, '$Results']])),
-%%                              ok = ecapnp_capability:dispatch_call(
-%%                                     Req#rpc_call.target,
-%%                                     Req#rpc_call.interface,
-%%                                     Req#rpc_call.method,
-%%                                     Req#rpc_call.params,
-%%                                     Result),
-%%                              Pid ! {self(), Result}
-%%                      end)}
-%%       end}
-%%     ].
-
+test_remote_basic(#test{ vat = Vat }) ->
+    {ok, Promise} = ecapnp_vat:import_capability({text, <<"basic">>}, test_capnp:'BasicCap'(), Vat),
+    test_send(#test{ basic=Promise }).
 
 -endif.

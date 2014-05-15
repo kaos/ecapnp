@@ -54,7 +54,9 @@
 
 -record(rpc_call, {
           target :: #capability{} | #promise{},
-          interface :: ecapnp:schema_node(),
-          method :: #method{},
-          params :: ecapnp:object()
+          interface :: ecapnp:type_id(),
+          method :: non_neg_integer(),
+          params :: ecapnp:object(),
+          results :: ecapnp:object(),
+          resultSchema=object :: ecapnp:schema_node() | object
          }).

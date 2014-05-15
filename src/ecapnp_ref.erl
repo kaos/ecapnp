@@ -634,8 +634,6 @@ get_cap_idx(#interface_ref{ cap = Cap }, #builder{ pid = Pid }) ->
 
 get_cap(Idx, #builder{ pid = Pid }) ->
     ecapnp_data:get_cap(Idx, Pid);
-get_cap(Idx, #reader{ caps = CapTable }) ->
-    case lists:keyfind(Idx, 1, CapTable) of
-        {Idx, Cap} -> Cap;
-        false -> undefined
-    end.
+get_cap(Idx, #reader{ caps = CapTable }) when Idx < length(CapTable) ->
+    lists:nth(Idx + 1, CapTable);
+get_cap(_, _) -> undefined.

@@ -28,7 +28,7 @@
 %% API
 -export([start/1, start_link/1, stop/1, alloc/3, update_segment/3,
          get_segment/4, get_segment_size/2, get_segments/1, get_cap/2,
-         get_cap_idx/2]).
+         get_cap_idx/2, get_cap_table/1, set_cap_table/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -46,7 +46,7 @@
 
 -record(state, {
           segments = [] :: list(#seg{}),
-          caps = [] :: list({non_neg_integer(), pid()})
+          caps = [] :: list({non_neg_integer(), #capability{}})
          }).
 
 
@@ -102,6 +102,12 @@ get_cap(Idx, Pid) ->
 get_cap_idx(Cap, Pid) ->
     data_request({get_cap_idx, Cap}, Pid).
 
+get_cap_table(Pid) ->
+    data_request(get_cap_table, Pid).
+
+set_cap_table(CapTable, Pid) ->
+    data_request({set_cap_table, CapTable}, Pid).
+
 
 %% ===================================================================
 %% gen server callbacks
@@ -131,7 +137,11 @@ handle_call({get_cap, Idx}, _From, State) ->
     {reply, Reply, State1};
 handle_call({get_cap_idx, Cap}, _From, State) ->
     {Reply, State1} = do_get_cap_idx(Cap, State),
-    {reply, Reply, State1}.
+    {reply, Reply, State1};
+handle_call(get_cap_table, _From, #state{ caps = CapTable }=State) ->
+    {reply, {ok, CapTable}, State};
+handle_call({set_cap_table, CapTable}, _From, #state{ caps = [] }=State) ->
+    {reply, ok, State#state{ caps = CapTable }}.
 
 handle_cast({update_segment, {Id, Offset, Data}}, State) ->
     State1 = do_update_segment(Id, Offset, Data, State),
@@ -157,7 +167,6 @@ data_request(Request, Pid) when is_pid(Pid) ->
     gen_server:call(Pid, Request).
 
 %% ===================================================================
-
 do_alloc([Id|Ids], Size, State0) ->
     case do_alloc_data(Id, Size, State0) of
         {false, State} -> do_alloc(Ids, Size, State);
@@ -192,7 +201,6 @@ do_alloc_data(Id, Size, State) ->
     end.
 
 %% ===================================================================
-
 do_update_segment(Id, Offset, Data, State) ->
     Size = size(Data),
     case get_segment(Id, State) of
@@ -212,7 +220,6 @@ do_update_segment(Id, Offset, Data, State) ->
     end.
 
 %% ===================================================================
-
 do_get_segment(Id, Offset, all, State) ->
     #seg{ data =
               <<_:Offset/binary-unit:64,
@@ -227,13 +234,11 @@ do_get_segment(Id, Offset, Length, State) ->
     {Segment, State}.
 
 %% ===================================================================
-
 do_get_segments(State) ->
     {[binary:part(S#seg.data, 0, S#seg.usage)
       || S <- State#state.segments], State}.
 
 %% ===================================================================
-
 do_get_segment_size(Id, State) ->
     case get_segment(Id, State) of
         #seg{ data = Segment } ->
@@ -241,23 +246,25 @@ do_get_segment_size(Id, State) ->
     end.
 
 %% ===================================================================
-do_get_cap(Idx, #state{ caps = CapTable }=State) ->
-    case lists:keyfind(Idx, 1, CapTable) of
-        false -> undefined;
-        {Idx, Cap} -> {Cap, State}
-    end.
+do_get_cap(Idx, #state{ caps = CapTable }=State) when Idx < length(CapTable) ->
+    {lists:nth(Idx + 1, CapTable), State};
+do_get_cap(_, State) ->
+    {undefined, State}.
+
 
 %% ===================================================================
-
 do_get_cap_idx(Cap, #state{ caps = CapTable }=State) ->
-    case lists:keyfind(Cap, 2, CapTable) of
-        {Idx, Cap} -> {Idx, State};
+    case find_cap(Cap, CapTable, 0) of
         false ->
             Idx = length(CapTable),
-            {Idx, State#state{
-                    caps = lists:keystore(Idx, 1, CapTable, {Idx, Cap})
-                   }}
+            {Idx, State#state{ caps = [Cap|CapTable] }};
+        Idx ->
+            {Idx, State}
     end.
+
+find_cap(_Cap, [], _Idx) -> false;
+find_cap(Cap, [Cap|_], Idx) -> Idx;
+find_cap(Cap, [_|Caps], Idx) -> find_cap(Cap, Caps, Idx + 1).
 
 %% ===================================================================
 

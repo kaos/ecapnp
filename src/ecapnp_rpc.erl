@@ -22,7 +22,7 @@
 -module(ecapnp_rpc).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([request/2, send/1, wait/1]).
+-export([request/2, send/1, wait/2, promise/2]).
 
 -include("ecapnp.hrl").
 
@@ -39,41 +39,46 @@ request(MethodName, #capability{ interfaces = Is }=Cap) ->
     do_request(MethodName, Is, Cap).
 
 send(#rpc_call{ target = #capability{ id = {local, Cap} },
-                interface = #schema_node{ id = IntfId }=Node,
-                method = #method{ id = MethId, resultType = ResultType },
-                params = Params
+                interface = IntfId, method = MethId,
+                params = Params, results = Results,
+                resultSchema = ResultSchema
               }) ->
-    Pid = self(),
-    {ok, #object{
-            ref=#promise{
-                   id = {local, spawn_link(
-                                  fun () ->
-                                          Result = ecapnp_capability:dispatch_call(
-                                                     Cap, IntfId, MethId, Params),
-                                          Pid ! {promise_result, self(), Result}
-                                  end)}},
-            schema = ecapnp_schema:get(ResultType, Node)
-           }};
+    {ok, promise(
+           fun () ->
+                   ecapnp_capability:dispatch_call(
+                     Cap, IntfId, MethId, Params, Results)
+           end,
+           ResultSchema)
+    };
 send(#rpc_call{ target = #promise{ id = {local, _} }=Promise }=Req) ->
     {ok, #object{
             ref = #ref{
                      kind = #interface_ref{
                                cap = Cap }}}
-    } = wait(Promise),
+    } = ecapnp:wait(Promise),
     send(Req#rpc_call{ target = Cap }).
 
-wait(#object{ ref = #promise{}=Promise }) ->
-    wait(Promise);
-wait(#promise{ id = {local, Pid}, transform = Ts }) ->
+wait({local, Pid}, Timeout) ->
+    io:format("*DBG* ~p waiting on promise from ~p (~p)~n", [self(), Pid, Timeout]),
+    Pid ! {get_promise_result, self()},
     receive
-        {promise_result, Pid, {ok, Result}} ->
-            {ok, lists:foldr(
-                   fun ({ptr, Idx}, Obj) ->
-                           ecapnp:get(Idx, Obj)
-                   end,
-                   Result, Ts)};
-        {promise_result, Pid, Err} -> Err
+        {Pid, promise_result, Result} ->
+            io:format("*DBG* ~p promise fulfilled: ~p~n", [self(), Result]),
+            Result
+    after
+        Timeout ->
+            io:format("*DBG* ~p promise timeout!!~n", [self()]),
+            timeout
     end.
+
+promise(Fun, Schema) ->
+    Parent = self(),
+    Promise = spawn_link(
+                fun () ->
+                        Ref = monitor(process, Parent),
+                        fulfilled(Ref, Fun())
+                end),
+    #object{ ref = #promise{ id = {local, Promise} }, schema = Schema }.
 
 
 %% ===================================================================
@@ -83,7 +88,29 @@ wait(#promise{ id = {local, Pid}, transform = Ts }) ->
 do_request(MethodName, Interfaces, Target) ->
     {ok, Interface, Method} = ecapnp_schema:find_method_by_name(
                                 MethodName, Interfaces),
-    {ok, Params} = ecapnp_set:root(
-                     ecapnp_schema:lookup(Method#method.paramType, Interface)),
-    #rpc_call{ target = Target, interface = Interface,
-               method = Method, params = Params }.
+    {ok, Msg} = ecapnp_set:root('Message', rpc_capnp),
+    Call = ecapnp:init(call, Msg),
+    Payload = ecapnp:init(params, Call),
+    Content = ecapnp:init(
+                content, ecapnp_schema:lookup(
+                           Method#method.paramType, Interface),
+                Payload),
+    ResultSchema = ecapnp_schema:get(Method#method.resultType, Interface),
+
+    #rpc_call{ target = Target,
+               interface = Interface#schema_node.id,
+               method = Method#method.id,
+               params = Content,
+               resultSchema = ResultSchema
+             }.
+
+fulfilled(Ref, Result) ->
+    receive
+        {get_promise_result, From} ->
+            NewRef = monitor(process, From),
+            demonitor(Ref, [flush]),
+            From ! {self(), promise_result, Result},
+            fulfilled(NewRef, Result);
+        {'DOWN', Ref, process, _Pid, _Info} ->
+            exit(normal)
+    end.

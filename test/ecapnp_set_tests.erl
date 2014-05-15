@@ -109,7 +109,7 @@ object_field_test() ->
 
 object_as_struct_test() ->
     {ok, Root} = ecapnp_set:root('ListTest', test_capnp),
-    Obj = ecapnp:set(listAny, 'Simple', Root),
+    Obj = ecapnp:init(listAny, 'Simple', Root),
     ok = ecapnp:set(simpleMessage, <<"object text">>, Obj),
     Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
@@ -254,7 +254,7 @@ init_union_test() ->
 init_union_any_test() ->
     {ok, Root} = ecapnp:set_root('UnionTest', test_capnp),
 
-    Obj = ecapnp:set({any, 'Simple'}, Root),
+    Obj = ecapnp:init(any, 'Simple', Root),
     ?assertEqual('Simple', Obj#object.schema#schema_node.name),
     ?assertEqual(#struct_ref{ dsize=1, psize=2 }, Obj#object.ref#ref.kind),
     ok = ecapnp:set(value, 111, Obj),

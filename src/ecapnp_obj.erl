@@ -25,7 +25,8 @@
 
 -export([init/1, init/2, alloc/3, from_ref/3, from_data/2,
          from_data/3, field/2, copy/1, refresh/1, to_struct/2,
-         to_list/2, to_text/1, to_data/1, set_cap_table/2]).
+         to_list/2, to_text/1, to_data/1, set_cap_table/2,
+         get_cap_table/1]).
 
 -include("ecapnp.hrl").
 
@@ -137,7 +138,19 @@ set_cap_table(CapTable, #object{ ref = Ref }=Object) ->
 set_cap_table(CapTable, #ref{ data = Data }=Ref) ->
     Ref#ref{ data = set_cap_table(CapTable, Data) };
 set_cap_table(CapTable, Reader) when is_record(Reader, reader) ->
-    Reader#reader{ caps = CapTable }.
+    Reader#reader{ caps = CapTable };
+set_cap_table(CapTable, #builder{ pid = Pid }=Data) ->
+    ok = ecapnp_data:set_cap_table(CapTable, Pid),
+    Data.
+
+get_cap_table(#object{ ref = Ref }) ->
+    get_cap_table(Ref);
+get_cap_table(#ref{ data = Data }) ->
+    get_cap_table(Data);
+get_cap_table(#reader{ caps = CapTable }) ->
+    {ok, CapTable};
+get_cap_table(#builder{ pid = Pid }) ->
+    ecapnp_data:get_cap_table(Pid).
 
 
 %% ===================================================================
@@ -145,10 +158,7 @@ set_cap_table(CapTable, Reader) when is_record(Reader, reader) ->
 %% ===================================================================
 
 find_field(Key, Idx, List) ->
-    case lists:keyfind(Key, Idx, List) of
-        false -> throw({unknown_field, Key});
-        Field -> Field
-    end.
+    lists:keyfind(Key, Idx, List).
 
 init_schema(#schema_node{}=N) -> N;
 init_schema(#object{ schema = #schema_node{ module = Module } }) ->

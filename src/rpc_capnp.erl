@@ -1,6 +1,6 @@
 -file("rpc.capnp", 1).
 
-%% This file was generated 2014-05-12 12:27:52 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-13 04:40:14 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(rpc_capnp).
 
@@ -255,9 +255,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = reason, kind = #ptr{type = text, idx = 0, default = <<"">>}},
-				  #field{name = isCallersFault, kind = #data{type = bool, align = 7, default = <<0:1>>}},
-				  #field{name = durability,
+				 [#field{id = 0, name = reason, kind = #ptr{type = text, idx = 0, default = <<"">>}},
+				  #field{id = 1, name = isCallersFault, kind = #data{type = bool, align = 7, default = <<0:1>>}},
+				  #field{id = 2, name = durability,
 					 kind = #data{type = {enum, 13523986587913222488}, align = 16, default = <<0, 0>>}}]},
 		 nodes =
 		     [13523986587913222488]}.  %% Durability
@@ -277,8 +277,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = id, kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = vineId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = id,
+					 kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = vineId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}]}}.
 
 'SturdyRef'() -> '14883405629196290303'().
 
@@ -290,8 +291,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 0, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = hostId, kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = objectId,
+				 [#field{id = 0, name = hostId,
+					 kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = objectId,
 					 kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'PromisedAnswer'() -> '15564635848320162976'().
@@ -305,8 +307,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = transform,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = transform,
 					 kind =
 					     #ptr{type = {list, {struct, 17516350820840804481}}, idx = 0,
 						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
@@ -321,9 +324,9 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, noop, #field{name = noop, kind = void}},
-					     {1, getPointerField,
-					      #field{name = getPointerField, kind = #data{type = uint16, align = 16, default = <<0, 0>>}}}]},
+					    [#field{id = 0, name = noop, kind = void},
+					     #field{id = 1, name = getPointerField,
+						    kind = #data{type = uint16, align = 16, default = <<0, 0>>}}]},
 				       align = 0, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -339,20 +342,18 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, none, #field{name = none, kind = void}},
-					     {1, senderHosted,
-					      #field{name = senderHosted, kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}}},
-					     {2, senderPromise,
-					      #field{name = senderPromise, kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}}},
-					     {3, receiverHosted,
-					      #field{name = receiverHosted, kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}}},
-					     {4, receiverAnswer,
-					      #field{name = receiverAnswer,
-						     kind = #ptr{type = {struct, 15564635848320162976}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {5, thirdPartyHosted,
-					      #field{name = thirdPartyHosted,
-						     kind =
-							 #ptr{type = {struct, 15235686326393111165}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = none, kind = void},
+					     #field{id = 1, name = senderHosted,
+						    kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}},
+					     #field{id = 2, name = senderPromise,
+						    kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}},
+					     #field{id = 3, name = receiverHosted,
+						    kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}},
+					     #field{id = 4, name = receiverAnswer,
+						    kind = #ptr{type = {struct, 15564635848320162976}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 5, name = thirdPartyHosted,
+						    kind =
+							#ptr{type = {struct, 15235686326393111165}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 0, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -366,8 +367,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 0, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = content, kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = capTable,
+				 [#field{id = 0, name = content,
+					 kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = capTable,
 					 kind =
 					     #ptr{type = {list, {struct, 9593755465305995440}}, idx = 1,
 						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
@@ -384,12 +386,11 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, importedCap,
-					      #field{name = importedCap, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}},
-					     {1, promisedAnswer,
-					      #field{name = promisedAnswer,
-						     kind =
-							 #ptr{type = {struct, 15564635848320162976}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = importedCap,
+						    kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+					     #field{id = 1, name = promisedAnswer,
+						    kind =
+							#ptr{type = {struct, 15564635848320162976}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 32, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -403,10 +404,11 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = target,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = target,
 					 kind = #ptr{type = {struct, 10789521159760378817}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = keyPart,
+				  #field{id = 2, name = keyPart,
 					 kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Accept'() -> '15332985841292492822'().
@@ -419,9 +421,11 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = provision, kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = embargo, kind = #data{type = bool, align = 39, default = <<0:1>>}}]}}.
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = provision,
+					 kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 2, name = embargo, kind = #data{type = bool, align = 39, default = <<0:1>>}}]}}.
 
 'Provide'() -> '11270825879279873114'().
 
@@ -433,10 +437,11 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = target,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = target,
 					 kind = #ptr{type = {struct, 10789521159760378817}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = recipient,
+				  #field{id = 2, name = recipient,
 					 kind = #ptr{type = object, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Delete'() -> '9666541409743531671'().
@@ -449,8 +454,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = objectId,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = objectId,
 					 kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Restore'() -> '17009130564474155176'().
@@ -463,8 +469,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = objectId,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = objectId,
 					 kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Save'() -> '16433336749162137644'().
@@ -477,8 +484,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = target,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = target,
 					 kind =
 					     #ptr{type = {struct, 10789521159760378817}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
@@ -493,9 +501,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = target,
+				 [#field{id = 0, name = target,
 					 kind = #ptr{type = {struct, 10789521159760378817}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = context, kind = #group{id = 15376050949367520589}}]}}.
+				  #field{id = 1, name = context, kind = #group{id = 15376050949367520589}}]}}.
 
 '15376050949367520589'() ->
     #schema_node{module = rpc_capnp, name = ['Disembargo', context], id = 15376050949367520589,
@@ -505,13 +513,12 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, senderLoopback,
-					      #field{name = senderLoopback, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}},
-					     {1, receiverLoopback,
-					      #field{name = receiverLoopback, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}},
-					     {2, accept, #field{name = accept, kind = void}},
-					     {3, provide,
-					      #field{name = provide, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = senderLoopback,
+						    kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+					     #field{id = 1, name = receiverLoopback,
+						    kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+					     #field{id = 2, name = accept, kind = void},
+					     #field{id = 3, name = provide, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}]},
 				       align = 32, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -525,8 +532,9 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = id, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = referenceCount, kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = id, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = referenceCount,
+					 kind = #data{type = uint32, align = 32, default = <<0, 0, 0, 0>>}}]}}.
 
 'Resolve'() -> '13529541526594062446'().
 
@@ -540,16 +548,15 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, cap,
-					      #field{name = cap,
-						     kind = #ptr{type = {struct, 9593755465305995440}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {1, exception,
-					      #field{name = exception,
-						     kind =
-							 #ptr{type = {struct, 15430940935639230746}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = cap,
+						    kind = #ptr{type = {struct, 9593755465305995440}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 1, name = exception,
+						    kind =
+							#ptr{type = {struct, 15430940935639230746}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 32, default = <<0, 0>>},
 			     fields =
-				 [#field{name = promiseId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}]}}.
+				 [#field{id = 0, name = promiseId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}}]}}.
 
 'Finish'() -> '15239388059401719395'().
 
@@ -561,8 +568,10 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 1, psize = 0, esize = eightBytes, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = releaseResultCaps, kind = #data{type = bool, align = 39, default = <<1:1>>}}]}}.
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = releaseResultCaps,
+					 kind = #data{type = bool, align = 39, default = <<1:1>>}}]}}.
 
 'Return'() -> '11392333052105676602'().
 
@@ -576,24 +585,21 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, results,
-					      #field{name = results,
-						     kind = #ptr{type = {struct, 11100916931204903995}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {1, exception,
-					      #field{name = exception,
-						     kind = #ptr{type = {struct, 15430940935639230746}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {2, canceled, #field{name = canceled, kind = void}},
-					     {3, resultsSentElsewhere, #field{name = resultsSentElsewhere, kind = void}},
-					     {4, takeFromOtherQuestion,
-					      #field{name = takeFromOtherQuestion,
-						     kind = #data{type = uint32, align = 64, default = <<0, 0, 0, 0>>}}},
-					     {5, acceptFromThirdParty,
-					      #field{name = acceptFromThirdParty,
-						     kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = results,
+						    kind = #ptr{type = {struct, 11100916931204903995}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 1, name = exception,
+						    kind = #ptr{type = {struct, 15430940935639230746}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 2, name = canceled, kind = void},
+					     #field{id = 3, name = resultsSentElsewhere, kind = void},
+					     #field{id = 4, name = takeFromOtherQuestion,
+						    kind = #data{type = uint32, align = 64, default = <<0, 0, 0, 0>>}},
+					     #field{id = 5, name = acceptFromThirdParty,
+						    kind = #ptr{type = object, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 48, default = <<0, 0>>},
 			     fields =
-				 [#field{name = answerId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = releaseParamCaps, kind = #data{type = bool, align = 39, default = <<1:1>>}}]}}.
+				 [#field{id = 0, name = answerId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = releaseParamCaps,
+					 kind = #data{type = bool, align = 39, default = <<1:1>>}}]}}.
 
 'Call'() -> '9469473312751832276'().
 
@@ -606,16 +612,17 @@ root([]) -> '12903543124727603792'().
 		 kind =
 		     #struct{dsize = 3, psize = 3, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = questionId, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = target,
+				 [#field{id = 0, name = questionId,
+					 kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = target,
 					 kind = #ptr{type = {struct, 10789521159760378817}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = interfaceId,
+				  #field{id = 2, name = interfaceId,
 					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = methodId, kind = #data{type = uint16, align = 32, default = <<0, 0>>}},
-				  #field{name = params,
+				  #field{id = 3, name = methodId, kind = #data{type = uint16, align = 32, default = <<0, 0>>}},
+				  #field{id = 4, name = params,
 					 kind = #ptr{type = {struct, 11100916931204903995}, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = sendResultsTo, kind = #group{id = 15774052265921044377}},
-				  #field{name = allowThirdPartyTailCall,
+				  #field{id = 5, name = sendResultsTo, kind = #group{id = 15774052265921044377}},
+				  #field{id = 6, name = allowThirdPartyTailCall,
 					 kind = #data{type = bool, align = 135, default = <<0:1>>}}]}}.
 
 '15774052265921044377'() ->
@@ -626,11 +633,9 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, caller, #field{name = caller, kind = void}},
-					     {1, yourself, #field{name = yourself, kind = void}},
-					     {2, thirdParty,
-					      #field{name = thirdParty,
-						     kind = #ptr{type = object, idx = 2, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = caller, kind = void}, #field{id = 1, name = yourself, kind = void},
+					     #field{id = 2, name = thirdParty,
+						    kind = #ptr{type = object, idx = 2, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 48, default = <<0, 0>>},
 			     fields = []}}.
 
@@ -646,48 +651,34 @@ root([]) -> '12903543124727603792'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, unimplemented,
-					      #field{name = unimplemented,
-						     kind = #ptr{type = {struct, 10500036013887172658}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {1, abort,
-					      #field{name = abort,
-						     kind = #ptr{type = {struct, 15430940935639230746}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {2, call,
-					      #field{name = call,
-						     kind = #ptr{type = {struct, 9469473312751832276}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {3, return,
-					      #field{name = return,
-						     kind = #ptr{type = {struct, 11392333052105676602}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {4, finish,
-					      #field{name = finish,
-						     kind = #ptr{type = {struct, 15239388059401719395}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {5, resolve,
-					      #field{name = resolve,
-						     kind = #ptr{type = {struct, 13529541526594062446}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {6, release,
-					      #field{name = release,
-						     kind = #ptr{type = {struct, 12473400923157197975}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {7, save,
-					      #field{name = save,
-						     kind = #ptr{type = {struct, 16433336749162137644}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {8, restore,
-					      #field{name = restore,
-						     kind = #ptr{type = {struct, 17009130564474155176}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {9, delete,
-					      #field{name = delete,
-						     kind = #ptr{type = {struct, 9666541409743531671}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {10, provide,
-					      #field{name = provide,
-						     kind = #ptr{type = {struct, 11270825879279873114}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {11, accept,
-					      #field{name = accept,
-						     kind = #ptr{type = {struct, 15332985841292492822}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {12, join,
-					      #field{name = join,
-						     kind = #ptr{type = {struct, 18149955118657700271}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}},
-					     {13, disembargo,
-					      #field{name = disembargo,
-						     kind =
-							 #ptr{type = {struct, 17970548384007534353}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}}]},
+					    [#field{id = 0, name = unimplemented,
+						    kind = #ptr{type = {struct, 10500036013887172658}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 1, name = abort,
+						    kind = #ptr{type = {struct, 15430940935639230746}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 2, name = call,
+						    kind = #ptr{type = {struct, 9469473312751832276}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 3, name = return,
+						    kind = #ptr{type = {struct, 11392333052105676602}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 4, name = finish,
+						    kind = #ptr{type = {struct, 15239388059401719395}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 5, name = resolve,
+						    kind = #ptr{type = {struct, 13529541526594062446}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 6, name = release,
+						    kind = #ptr{type = {struct, 12473400923157197975}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 7, name = save,
+						    kind = #ptr{type = {struct, 16433336749162137644}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 8, name = restore,
+						    kind = #ptr{type = {struct, 17009130564474155176}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 9, name = delete,
+						    kind = #ptr{type = {struct, 9666541409743531671}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 10, name = provide,
+						    kind = #ptr{type = {struct, 11270825879279873114}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 11, name = accept,
+						    kind = #ptr{type = {struct, 15332985841292492822}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 12, name = join,
+						    kind = #ptr{type = {struct, 18149955118657700271}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 13, name = disembargo,
+						    kind =
+							#ptr{type = {struct, 17970548384007534353}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
 				       align = 0, default = <<0, 0>>},
 			     fields = []}}.

@@ -80,10 +80,10 @@ read_field(#field{ id = Id, kind = Kind },
         %% #ptr{ type = object } ->
         %%     ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] }, Obj);
         #ptr{ type = {struct, Type} } ->
-            ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] },
+            ecapnp_obj:init(P#promise{ transform = [{getPointerField, Id}|Ts] },
                             ecapnp_schema:get(Type, Obj));
         #ptr{ type = {interface, Type} } ->
-            ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] },
+            ecapnp_obj:init(P#promise{ transform = [{getPointerField, Id}|Ts] },
                             ecapnp_schema:get(Type, Obj));
         _ ->
             {ok, Res} = ecapnp:wait(P),

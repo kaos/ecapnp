@@ -20,12 +20,12 @@
 -include("include/ecapnp.hrl").
 -import(ecapnp_test_utils, [meck/3]).
 
-export_capability_test() ->
-    {ok, Vat} = ecapnp_vat:start_link(),
-    Cap = #capability{},
-    {ok, ExportId} = ecapnp_vat:export_capability(Cap, Vat),
-    ?assertEqual(0, ExportId),
-    ?assertEqual({ok, Cap}, ecapnp_vat:find_capability(ExportId, Vat)).
+%% export_capability_test() ->
+%%     {ok, Vat} = ecapnp_vat:start_link(),
+%%     Cap = #capability{},
+%%     {ok, ExportId} = ecapnp_vat:export_capability(Cap, Vat),
+%%     ?assertEqual(0, ExportId),
+%%     ?assertEqual({ok, Cap}, ecapnp_vat:find_capability(ExportId, Vat)).
 
 %% restore_capability_test__() ->
 %%     meck(echo, transport_funs(),
