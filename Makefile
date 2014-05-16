@@ -84,7 +84,8 @@ erl: bld
 
 e: bld
 	erl -pa ebin test -pa deps/meck/ebin -noinput \
-		-eval "case eunit:test(\"test\") of ok -> halt(0); _ -> halt(1) end"
+		-eval "case eunit:test(\"test\", [no_tty, {report, {eunit_progress,\
+				[colored]}}]) of ok -> halt(0); _ -> halt(1) end"
 
 p: bld
 	erl -pa ebin test -noinput \

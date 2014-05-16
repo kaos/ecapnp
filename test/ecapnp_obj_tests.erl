@@ -56,7 +56,7 @@ object_test() ->
     NullRef = #ref{ data=Data },
     NullObj = ecapnp_obj:from_ref(NullRef, object, test_capnp),
 
-    ListRef = #ref{ kind=#list_ref{ size=byte }, data=Data },
+    ListRef = #ref{ kind=#list_ref{ size=8 }, data=Data },
     ListObj = ecapnp_obj:from_ref(ListRef, object, test_capnp),
 
     T = test_capnp:'Test'(),

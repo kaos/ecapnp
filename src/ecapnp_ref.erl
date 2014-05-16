@@ -119,23 +119,19 @@ refresh(#ref{ segment=SegmentId, pos=Pos, data=Data }) ->
 ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                kind=#struct_ref{ dsize=DSize, psize=PSize } })
   when Idx >= 0, Idx < PSize ->
-    #ref{ segment=SegmentId,
-          pos=Pos + 1 + Offset + DSize + Idx,
-          data=Data };
+    #ref{ segment=SegmentId, data=Data,
+          pos=Pos + 1 + Offset + DSize + Idx };
 ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                kind=#list_ref{ size=pointer, count=Count } })
   when Idx >= 0, Idx < Count ->
-    #ref{ segment=SegmentId,
-          pos=Pos + 1 + Offset + Idx,
-          data=Data };
+    #ref{ segment=SegmentId, data=Data,
+          pos=Pos + 1 + Offset + Idx };
 ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
-               kind=#list_ref{ size=inlineComposite, count=Size } }) ->
-    TagOffset = Pos + 1 + Offset,
-    #ref{ offset=Count }=Tag = get(SegmentId, TagOffset, Data),
-    if Idx >= 0, Idx < Count ->
-            Tag#ref{ pos=-1, offset=TagOffset + 1
-                     + ((Size div Count) * Idx) }
-    end.
+               kind=#list_ref{ size={inlineComposite, Tag}, count=Count } })
+  when Idx >= 0, Idx < Count ->
+    #ref{ segment=SegmentId, data=Data, pos=-1,
+          offset=Pos + Offset + 1 +
+              (ref_data_size(Tag) * Idx) }.
 
 %% @doc Read from data section of a struct ref.
 %%
@@ -184,31 +180,31 @@ read_list(Ref) -> read_list(Ref, []).
 %% @doc Read elements from a list ref.
 -spec read_list(ref(), any()) -> [ref()] | [binary()] | any().
 read_list(#ref{ kind=#list_ref{ count=0 } }, _) -> [];
+read_list(#ref{ kind=null }, Default) -> Default;
 read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
-                kind=#list_ref{ size=Size, count=Count } }, _) ->
+                kind=#list_ref{ size=Size, count=Count }=Kind }=Ref, _) ->
     TagOffset = Pos + 1 + Offset,
-    if Size == inlineComposite ->
-            #ref{ offset=Len }=Tag = get(SegmentId, TagOffset, Data),
-            [Tag#ref{ pos=-1, offset=O }
+    case Size of
+        {inlineComposite, Tag} ->
+            ElementRef = Ref#ref{ kind = Tag, pos=-1 },
+            ElementSize = ref_data_size(Tag),
+            [ElementRef#ref{ offset=O }
              || O <- lists:seq(TagOffset + 1,
-                               TagOffset + Count,
-                               Count div Len)];
-       Size == pointer ->
+                               TagOffset + (Count * ElementSize),
+                               ElementSize)];
+       pointer ->
             List = read(SegmentId, TagOffset, Count, Data),
             [read_segment(SegmentId, TagOffset + I,
                           binary_part(List, I*8, 8),
                           Data, true)
              || I <- lists:seq(0, (Count - 1))];
-       Size == empty ->
-            lists:duplicate(Count, <<>>);
-       true ->
-            ElementSize = list_element_size(Size),
-            List = read(SegmentId, TagOffset,
-                        1 + ((ElementSize * Count - 1) div 64),
-                        Data),
-            read_list_elements(ElementSize, List, Count, [])
-    end;
-read_list(#ref{ kind=null }, Default) -> Default.
+        0 ->
+            lists:duplicate(Count, void);
+        _ ->
+            ListSize = ref_data_size(Kind),
+            ListData = read(SegmentId, TagOffset, ListSize, Data),
+            read_list_elements(Size, ListData, Count, [])
+    end.
 
 %% @doc Read text.
 %%
@@ -222,8 +218,8 @@ read_text(Ref) -> read_text(Ref, <<>>).
 %% NOTICE: The required trailing `NULL' byte is silently dropped when
 %% reading the text.
 -spec read_text(ref(), any()) -> binary() | any().
-read_text(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
-read_text(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
+read_text(#ref{ kind=#list_ref{ size=8, count=0 } }, _) -> <<>>;
+read_text(#ref{ kind=#list_ref{ size=8, count=Count } }=Ref, _) ->
     binary_part(read(1 + ((Count - 2) div 8), Ref), 0, Count - 1);
 read_text(#ref{ kind=null }, Default) -> Default.
 
@@ -233,8 +229,8 @@ read_data(Ref) -> read_data(Ref, <<>>).
 
 %% @doc Read data.
 -spec read_data(ref(), any()) -> binary() | any().
-read_data(#ref{ kind=#list_ref{ size=byte, count=0 } }, _) -> <<>>;
-read_data(#ref{ kind=#list_ref{ size=byte, count=Count } }=Ref, _) ->
+read_data(#ref{ kind=#list_ref{ size=8, count=0 } }, _) -> <<>>;
+read_data(#ref{ kind=#list_ref{ size=8, count=Count } }=Ref, _) ->
     binary_part(read(1 + ((Count - 1) div 8), Ref), 0, Count);
 read_data(#ref{ kind=null }, Default) -> Default.
 
@@ -274,7 +270,7 @@ write_text(Text, Ptr, Ref) ->
 -spec write_data(binary(), ref(), ref()) -> ok.
 write_data(Data, Ptr, Ref) ->
     check_ptr(Ptr, Ref),
-    ListRef = #list_ref{ size = byte, count = size(Data) },
+    ListRef = #list_ref{ size = 8, count = size(Data) },
     Ptr1 = alloc_data(Ptr#ref{ kind = ListRef }),
     write(Data, Ptr1).
 
@@ -320,35 +316,43 @@ alloc_data(Size, #ref{ segment=SegmentId, data=#builder{ pid=Pid } }=Ref) ->
 %%
 %% @see alloc_data/1
 -spec alloc_list(integer(), ref_kind(), ref()) -> ref().
-alloc_list(Idx, #list_ref{ size=#struct_ref{ dsize=DSize, psize=PSize }=Tag,
-                           count=Count }=Kind,
-           Ref) ->
-    #ref{ pos=Pos, offset=Offset }=List
-        = alloc_list(Idx, Kind#list_ref{ size=inlineComposite,
-                                         count=Count * (DSize + PSize) },
-                     Ref),
-    ok = write(List#ref{ pos=Pos + 1 + Offset, offset=Count, kind=Tag }),
-    List;
-alloc_list(Idx, Kind, Ref) ->
+alloc_list(Idx, #list_ref{ size=Size, count=Count }=Kind, Ref) ->
     Ptr = ptr(Idx, Ref),
-    alloc_data(Ptr#ref{ kind=Kind }).
+    #ref{ pos=Pos, offset=Offset }=List =
+        alloc_data(Ptr#ref{ kind=Kind }),
+    case Size of
+        {inlineComposite, Tag} ->
+            ok = write(List#ref{ pos=Pos + 1 + Offset,
+                                 kind=Tag, offset=Count }),
+            List;
+        _ ->
+            List
+    end.
 
 %% @doc Write list element.
 -spec write_list(integer(), integer(), binary(), ref()) -> ok.
-write_list(Idx, ElementIdx, Value, Ref) ->
-    #ref{ kind=#list_ref{ size=Size, count=_Count }}=Ptr
-        = read_struct_ptr(Idx, Ref, undefined),
-    Len = list_element_size(Size),
-    Align = if Size == inlineComposite ->
-                    1 + (ElementIdx * Len);
-               Size == bit ->
-                    round((8 * ((ElementIdx div 8)
-                                + ((7 - (ElementIdx rem 8)) / 8))) * Len);
-               true -> ElementIdx * Len
-            end,
-    <<Pre:Align/bits, _:Len/bits, Post/bits>>
-        = read(1 + ((Align + Len - 1) div 64), Ptr),
-    write(<<Pre/bits, Value:Len/bits, Post/bits>>, Ptr).
+write_list(Idx, ElementIdx, Value, Ref) when ElementIdx >= 0 ->
+    {Ptr, Size} =
+        case read_struct_ptr(Idx, Ref, undefined) of
+            #ref{ kind=#list_ref{ size=S, count=C } }=P
+              when ElementIdx < C -> {P, S}
+        end,
+    {Align, ElementSize} =
+        case Size of
+            {inlineComposite, Tag} ->
+                L = ref_data_size(Tag),
+                {1 + (ElementIdx * L), L * 64};
+            pointer ->
+                {ElementIdx * 64, 64};
+            1 ->
+                %% take special care for bitfields, as capnproto wants them in big endian order..!
+                {round(8 * ((ElementIdx div 8) +
+                                ((7 - (ElementIdx rem 8)) / 8))), 1};
+            _ -> {ElementIdx * Size, Size}
+        end,
+    <<Pre:Align/bits, _:ElementSize/bits, Post/bits>>
+        = read(1 + ((Align + ElementSize - 1) div 64), Ptr),
+    write(<<Pre/bits, Value:ElementSize/bits, Post/bits>>, Ptr).
 
 %% @doc Resolve a far pointer.
 %%
@@ -412,14 +416,20 @@ null_ref(#ref{ data=Data }) -> #ref{ pos=-1, data=Data }.
 %% internal functions
 %% ===================================================================
 
-ref_data_size(#ref{ kind=Kind }) -> ref_data_size(Kind);
-ref_data_size(null) -> 0;
-ref_data_size(#list_ref{ size=Size, count=Count }) ->
-    case list_element_size(Size) of
-        inlineComposite -> Count + 1;
-        Bits -> 1 + (((Count * Bits) - 1) div 64)
-    end;
-ref_data_size(#struct_ref{ dsize=DSize, psize=PSize }) -> DSize + PSize.
+%% ref_size() -> {DSize, PSize}
+ref_size(#ref{ kind=Kind }) -> ref_size(Kind);
+ref_size(null) -> {0, 0};
+ref_size(#struct_ref{ dsize=DSize, psize=PSize }) -> {DSize, PSize};
+ref_size(#list_ref{ size=0 }) -> {0, 0};
+ref_size(#list_ref{ size={inlineComposite, Ref}, count=Count }) ->
+    {1, (Count * ref_data_size(Ref))};
+ref_size(#list_ref{ count=0 }) -> {0, 0};
+ref_size(#list_ref{ size=pointer, count=Count }) -> {0, Count};
+ref_size(#list_ref{ size=Bits, count=Count }) ->
+    {1 + (((Count * Bits) - 1) div 64), 0}.
+
+ref_data_size(Ref) ->
+    {D, P} = ref_size(Ref), D + P.
 
 ptr_type(0, 0) -> null;
 ptr_type(Offset, _) ->
@@ -430,22 +440,24 @@ ptr_type(1) -> list;
 ptr_type(2) -> far_ptr;
 ptr_type(3) -> interface.
 
-list_element_size(0) -> empty;
-list_element_size(1) -> bit;
-list_element_size(2) -> byte;
-list_element_size(3) -> twoBytes;
-list_element_size(4) -> fourBytes;
-list_element_size(5) -> eightBytes;
-list_element_size(6) -> pointer;
-list_element_size(7) -> inlineComposite;
-list_element_size(empty) -> 0;
-list_element_size(bit) -> 1;
-list_element_size(byte) -> 8;
-list_element_size(twoBytes) -> 16;
-list_element_size(fourBytes) -> 32;
-list_element_size(eightBytes) -> 64;
-list_element_size(pointer) -> 64;
-list_element_size(inlineComposite) -> inlineComposite.
+decode_list_element_size(0) -> 0;
+decode_list_element_size(1) -> 1;
+decode_list_element_size(2) -> 8;
+decode_list_element_size(3) -> 16;
+decode_list_element_size(4) -> 32;
+decode_list_element_size(5) -> 64;
+decode_list_element_size(6) -> pointer;
+decode_list_element_size(7) -> inlineComposite.
+
+%% element size encoded value
+encode_element_size(0) -> 0;
+encode_element_size(1) -> 1;
+encode_element_size(8) -> 2;
+encode_element_size(16) -> 3;
+encode_element_size(32) -> 4;
+encode_element_size(64) -> 5;
+encode_element_size(pointer) -> 6;
+encode_element_size({inlineComposite, _}) -> 7.
 
 read(Len, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data }) ->
     read(SegmentId, Pos + Offset + 1, Len, Data).
@@ -471,63 +483,68 @@ write(#ref{ offset=Offset }=Ref) ->
 
 check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
           #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
-                kind=#struct_ref{ dsize=DSize, psize=PSize } })
-  when Ptr >= (Pos + 1 + Offset + DSize),
-       Ptr <  (Pos + 1 + Offset + DSize + PSize) -> ok;
-check_ptr(#ref{ segment=SegmentId, pos=Ptr, data=Data },
-          #ref{ segment=SegmentId, pos=Pos, data=Data, offset=Offset,
-                kind=#list_ref{ size=pointer, count=Count } })
-  when Ptr >= (Pos + 1 + Offset),
-       Ptr <  (Pos + 1 + Offset + Count) -> ok;
-check_ptr(#ref{ segment=SegmentId, pos=-1, offset=Ptr, data=Data },
-          #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
-                kind=#list_ref{ size=inlineComposite, count=Size } }) ->
-    TagOffset = Pos + 1 + Offset,
-    Tag = get(SegmentId, TagOffset, Data),
-    End = Ptr + ref_data_size(Tag),
-    if Ptr > TagOffset, End =< TagOffset + 1 + Size -> ok end.
+                kind=Kind }) ->
+    {DSize, PSize} = ref_size(Kind),
+    Start = Pos + Offset + 1 + DSize,
+    if Ptr >= Start,
+       Ptr < (Start + PSize) ->
+            ok
+    end.
 
 update_offset(Target, #ref{ pos=Pos }=Ref) ->
     Ref#ref{ offset=Target - Pos - 1 }.
 
 read_segment(SegmentId, Pos, Segment, Data, FollowFar)
   when size(Segment) == 8 ->
-    Ref = read_ref(Segment, Data),
-    case {FollowFar, Ref#ref.kind} of
-        {true, #far_ref{}} -> follow_far(Ref);
-        _ -> Ref#ref{ segment=SegmentId, pos=Pos }
+    Ref = read_ref(Segment, #ref{ segment=SegmentId, pos=Pos, data=Data }),
+    if FollowFar, is_record(Ref#ref.kind, far_ref) -> follow_far(Ref);
+       true -> Ref
     end;
 %% list data
 read_segment(SegmentId, _, _, Data, _) ->
     #ref{ segment=SegmentId, pos=-1, data=Data }.
 
 read_ref(<<OffsetAndKind:32/integer-signed-little,
-           Size:32/integer-little>>, Data) ->
-    Ref = case ptr_type(OffsetAndKind, Size) of
-              null -> #ref{};
-              struct ->
-                  #ref{ offset = OffsetAndKind bsr 2,
-                        kind = #struct_ref{
-                                  dsize=Size band 16#ffff,
-                                  psize=Size bsr 16 }};
-              list ->
-                  #ref{ offset = OffsetAndKind bsr 2,
-                        kind = #list_ref{
-                                  size=list_element_size(Size band 7),
-                                  count=Size bsr 3 }};
-              far_ptr ->
-                  #ref{ offset = OffsetAndKind bsr 3,
-                        kind = #far_ref{
-                                  segment=Size,
-                                  double_far=OffsetAndKind band 4 > 0
-                                 }};
-              interface ->
-                  #ref{ offset = Size, %% CapTable index
-                        kind = #interface_ref{
-                                  cap = get_cap(Size, Data)
-                                 }}
-          end,
-    Ref#ref{ data = Data }.
+           Size:32/integer-little>>, Ref) ->
+    case ptr_type(OffsetAndKind, Size) of
+        null -> Ref#ref{ kind = null };
+        struct ->
+            Ref#ref{ offset = OffsetAndKind bsr 2,
+                     kind = #struct_ref{
+                               dsize=Size band 16#ffff,
+                               psize=Size bsr 16 }};
+        list ->
+            read_list_ref(
+              decode_list_element_size(Size band 7),
+              Size bsr 3,
+              Ref#ref{ offset = OffsetAndKind bsr 2 });
+        far_ptr ->
+            Ref#ref{ offset = OffsetAndKind bsr 3,
+                     kind = #far_ref{
+                               segment=Size,
+                               double_far=OffsetAndKind band 4 > 0
+                              }};
+        interface ->
+            Ref#ref{ offset = Size, %% CapTable index
+                     kind = #interface_ref{
+                               cap = get_cap(Size, Ref#ref.data)
+                              }}
+    end.
+
+read_list_ref(inlineComposite, Size, Ref) ->
+    #ref{ offset = Count,
+          kind = Tag } = read_ref(read(1, Ref), Ref),
+    %% sanity check data
+    Size = Count * ref_data_size(Tag),
+    %% set ref kind and offset
+    Ref#ref{ kind = #list_ref{
+                       size = {inlineComposite, Tag},
+                       count = Count
+                      } };
+read_list_ref(Size, Count, Ref) ->
+    Ref#ref{ kind = #list_ref{
+                       size = Size,
+                       count = Count }}.
 
 read_list_elements(_, _, 0, Acc) -> lists:reverse(Acc);
 read_list_elements(1, <<Byte:1/bytes, Rest/binary>>, Count, Acc) ->
@@ -555,21 +572,17 @@ copy_ref(#ref{ kind=#struct_ref{ dsize=DSize, psize=PSize } }=Ref) ->
               true -> 0
            end,
     {Ref, Size, [StructData|StructPtrs]};
-copy_ref(#ref{ kind=#list_ref{ size=Size, count=Count } }=Ref) ->
-    case Size of
-        inlineComposite ->
-            Tag = get(Ref#ref.segment,
-                      Ref#ref.pos + Ref#ref.offset + 1,
-                      Ref#ref.data),
-            {Ref, Count + 1, [create_ptr(Tag#ref.offset, Tag)
-                              |[copy_ref(Elem)
-                                || Elem <- read_list(Ref)]]};
+copy_ref(#ref{ kind=#list_ref{ size=ElementSize, count=Count } }=Ref) ->
+    Size = ref_data_size(Ref),
+    case ElementSize of
+        {inlineComposite, Tag} ->
+            {Ref, Size, [create_ptr(Count, Tag)
+                         |[copy_ref(Elem) || Elem <- read_list(Ref)]
+                        ]};
         pointer ->
-            {Ref, Count, [copy_ref(Elem) || Elem <- read_list(Ref)]};
+            {Ref, Size, [copy_ref(Elem) || Elem <- read_list(Ref)]};
         _ ->
-            ElementSize = list_element_size(Size),
-            Len = 1 + (((ElementSize * Count) - 1) div 64),
-            {Ref, Len, [read(Len, Ref)]}
+            {Ref, Size, [read(Size, Ref)]}
     end.
 
 flatten_ref_copy({Ref, Len, Copy}) ->
@@ -602,11 +615,17 @@ create_ptr(Offset, #struct_ref{ dsize=DSize, psize=PSize }) ->
       DSize:16/integer-little,
       PSize:16/integer-little>>;
 %% list ptr
-create_ptr(Offset, #list_ref{ size=Size, count=Count }) ->
+create_ptr(Offset, #list_ref{ size = ElementSize, count=Count }) ->
     Off = (Offset bsl 2) + 1,
-    Sz = (Count bsl 3) + element_size(Size),
+    Size =
+        case ElementSize of
+             {inlineComposite, Tag} ->
+                ((Count * ref_data_size(Tag)) bsl 3) + 7;
+             _ ->
+                 (Count bsl 3) + encode_element_size(ElementSize)
+         end,
     <<Off:32/integer-little,
-      Sz:32/integer-little>>;
+      Size:32/integer-little>>;
 %% far ptr
 create_ptr(Offset, #far_ref{ segment=Seg, double_far = false }) ->
     Off = (Offset bsl 3) + 2,
@@ -614,18 +633,6 @@ create_ptr(Offset, #far_ref{ segment=Seg, double_far = false }) ->
 %% capability ptr
 create_ptr(Idx, #interface_ref{}) ->
     <<3:32/integer-little, Idx:32/integer-little>>.
-
-
-
-%% element size encoded value
-element_size(empty) -> 0;
-element_size(bit) -> 1;
-element_size(byte) -> 2;
-element_size(twoBytes) -> 3;
-element_size(fourBytes) -> 4;
-element_size(eightBytes) -> 5;
-element_size(pointer) -> 6;
-element_size(inlineComposite) -> 7.
 
 
 %% only supported for builders, as readers should not need to lookup cap index

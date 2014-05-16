@@ -21,8 +21,8 @@
          }).
 
 -record(list_ref, {
-          size=empty :: ecapnp:element_size(),
-          count=0 :: non_neg_integer()
+          size=0 :: ecapnp:bit_count() | pointer | {inlineComposite, #struct_ref{}},
+          count=0 :: non_neg_integer() %% ALWAYS number of elements in list
          }).
 
 -record(far_ref, {
@@ -35,7 +35,7 @@
          }).
 
 -record(object, {
-          ref=null :: #builder{} | #reader{}, %% | #promise{} | #rpc_call{},
+          ref=null :: #ref{}, %% | #promise{} | #rpc_call{},
           schema :: atom() | ecapnp:schema_node()
          }).
 

@@ -230,23 +230,19 @@ list_element_size(data, _) -> pointer;
 list_element_size(object, _) -> pointer;
 list_element_size({list, _}, _) -> pointer;
 list_element_size({Simple, _}, _)
-  when Simple == enum; Simple == union -> twoBytes;
+  when Simple == enum; Simple == union -> 16;
 list_element_size({_, Type}, Obj) ->
-    case ecapnp_schema:lookup(Type, Obj) of
-        #schema_node{
-           kind=#struct{
-                   esize=inlineComposite,
-                   dsize=DSize, psize=PSize }} ->
-            #struct_ref{ dsize=DSize, psize=PSize };
-        #schema_node{
-           kind=#struct{ esize=Size }} -> Size
+    #schema_node{ kind=Kind } = ecapnp_schema:lookup(Type, Obj),
+    case Kind#struct.esize of
+        empty -> 0;
+        bit -> 1;
+        byte -> 8;
+        twoBytes -> 16;
+        fourBytes -> 32;
+        eightBytes -> 64;
+        pointer -> pointer;
+        inlineComposite ->
+            {inlineComposite, ecapnp_schema:get_ref_kind(Kind)}
     end;
 list_element_size(Type, _) ->
-    list_element_size(ecapnp_val:size(Type)).
-
-list_element_size(0) -> empty;
-list_element_size(1) -> bit;
-list_element_size(8) -> byte;
-list_element_size(16) -> twoBytes;
-list_element_size(32) -> fourBytes;
-list_element_size(64) -> eightBytes.
+    ecapnp_val:size(Type).

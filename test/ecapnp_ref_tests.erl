@@ -29,12 +29,14 @@ get_test() ->
        ecapnp_ref:get(0, 0, Data)).
 
 read_struct_ptr_test() ->
-    Data = data([<<0,0,0,0, 0,0, 1,0,  41,0,0,0, 23,0,0,0>>]),
+    Data = data([<<0,0,0,0, 0,0, 1,0,  41,0,0,0, 119,0,0,0,
+                   0:10/integer-unit:64, 8,0,0,0, 3,0, 4,0
+                 >>]),
     Ref = ecapnp_ref:get(0, 0, Data),
     ?assertEqual(
-       #ref{ segment=0, pos=1, offset=10,
-             kind=#list_ref{ size=inlineComposite, count=2 },
-             data=Data },
+       #ref{ segment=0, pos=1, offset=10, data=Data,
+             kind=#list_ref{ size={inlineComposite, #struct_ref{ dsize=3, psize=4 }},
+                             count=2 } },
        ecapnp_ref:read_struct_ptr(0, Ref)).
 
 read_struct_data_test() ->
@@ -45,11 +47,17 @@ read_struct_data_test() ->
        ecapnp_ref:read_struct_data(32, 16, Ref)).
 
 read_composite_list_test() ->
-    Data = data(<<1,0,0,0, 55,0,0,0,
-                  8,0,0,0, 1,0, 2,0,
-                  0:(6*64)/integer
+    Data = data(<<1,0,0,0, 55,0,0,0, %% 6 words inline composite data
+                  8,0,0,0, 1,0, 2,0, %% tag, count 2, 1 word data + 2 ptrs / element
+                  0:6/integer-unit:64
                 >>),
     Ref = ecapnp_ref:get(0, 0, Data),
+    ?assertEqual(
+       #ref{ segment=0, pos=0, offset=0, data=Data,
+             kind = #list_ref{
+                       size = {inlineComposite, #struct_ref{ dsize=1, psize=2 }},
+                       count = 2 }
+           }, Ref),
     ?assertEqual(
        [#ref{ segment=0, pos=-1, offset=2, data=Data,
               kind=#struct_ref{ dsize=1, psize=2 } },
@@ -72,9 +80,9 @@ read_pointer_list_test() ->
     List = ecapnp_ref:read_list(ListRef),
     ?assertEqual(
        [#ref{ segment=0, pos=1, offset=1, data=Data,
-              kind=#list_ref{ size=byte, count=4 } },
+              kind=#list_ref{ size=8, count=4 } },
         #ref{ segment=0, pos=2, offset=1, data=Data,
-              kind=#list_ref{ size=byte, count=4 } }],
+              kind=#list_ref{ size=8, count=4 } }],
        List),
     ?assertEqual(
        [<<"foo">>, <<"bar">>],
@@ -220,7 +228,7 @@ write_struct_list_test() ->
     Data = data(10),
     Kind = #struct_ref{ dsize=1, psize=2 },
     Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
-    _ListRef = ecapnp_ref:alloc_list(0, #list_ref{ size=bit, count=8 }, Ref),
+    _ListRef = ecapnp_ref:alloc_list(0, #list_ref{ size=1, count=8 }, Ref),
     ok = ecapnp_ref:write_list(0, 0, <<1:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 2, <<0:1>>, Ref),
     ok = ecapnp_ref:write_list(0, 1, <<1:1>>, Ref),
@@ -240,7 +248,8 @@ write_composite_list_test() ->
     Kind = #struct_ref{ dsize=1, psize=2 },
     Ref = ecapnp_ref:alloc(Kind, 0, 4, Data),
     ListRef = ecapnp_ref:alloc_list(
-                0, #list_ref{ size=#struct_ref{ dsize=2, psize=0 }, count=2 },
+                0, #list_ref{ size={inlineComposite, #struct_ref{ dsize=2, psize=0 }},
+                              count=2 },
                 Ref),
     [Ref1, Ref2] = ecapnp_ref:read_list(ListRef),
     ok = ecapnp_ref:write_struct_data(16, 32, <<1,2,3,4>>, Ref1),
