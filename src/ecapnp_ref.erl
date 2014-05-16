@@ -27,10 +27,11 @@
 -export([alloc/3, alloc/4, alloc_data/1, alloc_data/2, alloc_list/3,
          copy/1, create_ptr/2, follow_far/1, get/3, get/4, null_ref/1,
          paste/2, ptr/2, read_data/1, read_data/2, read_list/1,
-         read_list/2, read_struct_data/3, read_struct_data/4,
-         read_struct_ptr/2, read_struct_ptr/3, read_text/1,
-         read_text/2, refresh/1, set/2, write_data/3, write_list/4,
-         write_struct_data/4, write_struct_ptr/2, write_text/3]).
+         read_list/2, read_list_refs/3, read_struct_data/3,
+         read_struct_data/4, read_struct_ptr/2, read_struct_ptr/3,
+         read_text/1, read_text/2, refresh/1, set/2, write_data/3,
+         write_list/4, write_struct_data/4, write_struct_ptr/2,
+         write_text/3]).
 
 -include("ecapnp.hrl").
 
@@ -147,9 +148,11 @@ read_struct_data(Align, Len, Ref) ->
 %% `Len' is number of bits to read.
 -spec read_struct_data(integer(), integer(), ref(), any()) -> binary() | any().
 read_struct_data(_, _, #ref{ kind=null }, Default) -> Default;
-read_struct_data(Align, Len,
-                 #ref{ kind=#struct_ref{ dsize = DSize } }=Ref,
+read_struct_data(FAlign, Len,
+                 #ref{ align=DAlign,
+                       kind=#struct_ref{ dsize = DSize } }=Ref,
                  Default) ->
+    Align = FAlign + DAlign,
     if Align + Len =< DSize * 64 ->
             <<_:Align/bits, Value:Len/bits, _/bits>>
                 = read(1 + ((Align + Len - 1) div 64), Ref),
@@ -175,36 +178,15 @@ read_struct_ptr(Idx, #ref{ segment=SegmentId, pos=Pos,
 
 %% @doc Read elements from a list ref.
 -spec read_list(ref()) -> [ref()] | [binary()].
-read_list(Ref) -> read_list(Ref, []).
+read_list(Ref) -> do_read_list(Ref, default, []).
 
 %% @doc Read elements from a list ref.
 -spec read_list(ref(), any()) -> [ref()] | [binary()] | any().
-read_list(#ref{ kind=#list_ref{ count=0 } }, _) -> [];
-read_list(#ref{ kind=null }, Default) -> Default;
-read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
-                kind=#list_ref{ size=Size, count=Count }=Kind }=Ref, _) ->
-    TagOffset = Pos + 1 + Offset,
-    case Size of
-        {inlineComposite, Tag} ->
-            ElementRef = Ref#ref{ kind = Tag, pos=-1 },
-            ElementSize = ref_data_size(Tag),
-            [ElementRef#ref{ offset=O }
-             || O <- lists:seq(TagOffset + 1,
-                               TagOffset + (Count * ElementSize),
-                               ElementSize)];
-       pointer ->
-            List = read(SegmentId, TagOffset, Count, Data),
-            [read_segment(SegmentId, TagOffset + I,
-                          binary_part(List, I*8, 8),
-                          Data, true)
-             || I <- lists:seq(0, (Count - 1))];
-        0 ->
-            lists:duplicate(Count, void);
-        _ ->
-            ListSize = ref_data_size(Kind),
-            ListData = read(SegmentId, TagOffset, ListSize, Data),
-            read_list_elements(Size, ListData, Count, [])
-    end.
+read_list(Ref, Default) -> do_read_list(Ref, default, Default).
+
+%% @doc Read elements from a list ref, forcing the result into a list of refs.
+read_list_refs(Ref, ElementRefKind, Default) ->
+    do_read_list(Ref, ElementRefKind, Default).
 
 %% @doc Read text.
 %%
@@ -236,12 +218,15 @@ read_data(#ref{ kind=null }, Default) -> Default.
 
 %% @doc Write to struct data section.
 -spec write_struct_data(integer(), integer(), binary(), ref()) -> ok.
-write_struct_data(Align, Len, Value,
-                  #ref{ kind=#struct_ref{ dsize=DSize } }=Ref)
-  when Align + Len =< DSize * 64 ->
-    <<Pre:Align/bits, _:Len/bits, Post/bits>>
-        = read(1 + ((Align + Len - 1) div 64), Ref),
-    write(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref).
+write_struct_data(FAlign, Len, Value,
+                  #ref{ align=DAlign,
+                        kind=#struct_ref{ dsize=DSize } }=Ref) ->
+    Align = FAlign + DAlign,
+    if Align + Len =< DSize * 64 ->
+            <<Pre:Align/bits, _:Len/bits, Post/bits>>
+                = read(1 + ((Align + Len - 1) div 64), Ref),
+            write(<<Pre/bits, Value:Len/bits, Post/bits>>, Ref)
+    end.
 
 %% @doc Write pointer reference.
 %%
@@ -545,6 +530,43 @@ read_list_ref(Size, Count, Ref) ->
     Ref#ref{ kind = #list_ref{
                        size = Size,
                        count = Count }}.
+
+do_read_list(#ref{ kind=#list_ref{ count=0 } }, _RefKind, _Default) -> [];
+do_read_list(#ref{ kind=null }, _RefKind, Default) -> Default;
+do_read_list(#ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
+                   kind=#list_ref{ size=Size, count=Count }=Kind }=Ref,
+             ElementRefKind, _Default) ->
+    TagOffset = Pos + 1 + Offset,
+    case {Size, ElementRefKind} of
+        {{inlineComposite, Tag}, _} ->
+            ElementRef = Ref#ref{ kind=Tag, pos=-1 },
+            ElementSize = ref_data_size(Tag),
+            [ElementRef#ref{ offset=O }
+             || O <- lists:seq(TagOffset + 1,
+                               TagOffset + (Count * ElementSize),
+                               ElementSize)];
+        {pointer, _} ->
+            List = read(SegmentId, TagOffset, Count, Data),
+            [read_segment(SegmentId, TagOffset + I,
+                          binary_part(List, I*8, 8),
+                          Data, true)
+             || I <- lists:seq(0, (Count - 1))];
+        {0, default} ->
+            lists:duplicate(Count, void);
+        {0, _} ->
+            lists:duplicate(Count, #ref{ data=Data });
+        {_, default} when is_integer(Size) ->
+            ListSize = ref_data_size(Kind),
+            ListData = read(SegmentId, TagOffset, ListSize, Data),
+            read_list_elements(Size, ListData, Count, []);
+        {_, K} when is_integer(Size) ->
+            ElementRef = Ref#ref{ kind = K, pos=-1 },
+            StartOffset = TagOffset * (64 div Size),
+            [begin
+                 Off = O * Size,
+                 ElementRef#ref{ offset=Off div 64, align=Off rem 64 }
+             end || O <- lists:seq(StartOffset, StartOffset + (Count - 1))]
+    end.
 
 read_list_elements(_, _, 0, Acc) -> lists:reverse(Acc);
 read_list_elements(1, <<Byte:1/bytes, Rest/binary>>, Count, Acc) ->

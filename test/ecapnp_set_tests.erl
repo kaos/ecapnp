@@ -272,5 +272,24 @@ init_union_any_test() ->
           0:2/integer-unit:64
         >>], Data).
 
+packed_struct_list_test() ->
+    {ok, Root} = ecapnp:set_root('PackedListTest', test_capnp),
+    [O1, O2, O3] = ecapnp:set(packedList, 3, Root),
+    ok = ecapnp:set(flag, true, O1),
+    ok = ecapnp:set(toggle, true, O1),
+    ok = ecapnp:set(flag, true, O2),
+    ok = ecapnp:set(toggle, true, O3),
+    ok = ecapnp:set(value, 123, O1),
+    ok = ecapnp:set(value, 234, O2),
+    ok = ecapnp:set(value, 345, O3),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+       [<<0,0,0,0, 0,0,1,0,  %% root struct, 0 data, 1 ptr
+          1,0,0,0, 27,0,0,0, %% list, offset 0, count 3, type 3
+          3, 123, %% O1
+          1, 234, %% O2
+          2, 345, %% O3
+          0:16/integer %% padding
+        >>], Data).
 
 -endif.

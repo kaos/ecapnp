@@ -1,6 +1,6 @@
 -file("test.capnp", 1).
 
-%% This file was generated 2014-05-12 14:57:01 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-16 10:39:57 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(test_capnp).
 
@@ -16,7 +16,8 @@
 	 '10376444823742217855'/0, '18397524501497330844'/0, '14954489407150623152'/0, 'ThirdCap'/0,
 	 'ThirdCap'/1, '18123859541809896974'/0, '14187451716366646039'/0, '16272584843106476340'/0,
 	 'CapTest'/0, 'CapTest'/1, '17442731430661771208'/0, 'UnionTest'/0, 'UnionTest'/1,
-	 '16940705001995499374'/0, root/0, root/1, '16752831063434032545'/0]).
+	 '16940705001995499374'/0, 'PackedListTest'/0, 'PackedListTest'/1, '14810986415762040486'/0,
+	 '17446286598800356999'/0, root/0, root/1, '16752831063434032545'/0]).
 
 -types([{17364400218949434058, testAnno}, {18038429679936549741, 'Test'},
 	{12292473172826227401, ['Test', meta]}, {9356761420570873088, ['Test', opts]},
@@ -32,7 +33,8 @@
 	{14954489407150623152, ['OtherCap', [sqroot, '$Params']]}, {18123859541809896974, 'ThirdCap'},
 	{14187451716366646039, ['ThirdCap', [square, '$Results']]},
 	{16272584843106476340, ['ThirdCap', [square, '$Params']]}, {17442731430661771208, 'CapTest'},
-	{16940705001995499374, 'UnionTest'}, {16752831063434032545, root}]).
+	{16940705001995499374, 'UnionTest'}, {14810986415762040486, 'PackedListTest'},
+	{17446286598800356999, ['PackedListTest', 'Opts']}, {16752831063434032545, root}]).
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
@@ -192,6 +194,11 @@ schema(['CapTest']) -> '17442731430661771208'();
 schema(16940705001995499374) -> '16940705001995499374'();
 schema('UnionTest') -> '16940705001995499374'();
 schema(['UnionTest']) -> '16940705001995499374'();
+schema(14810986415762040486) -> '14810986415762040486'();
+schema('PackedListTest') -> '14810986415762040486'();
+schema(['PackedListTest']) -> '14810986415762040486'();
+schema(17446286598800356999) -> '17446286598800356999'();
+schema(['PackedListTest', 'Opts']) -> '17446286598800356999'();
 schema(16752831063434032545) -> '16752831063434032545'();
 schema(root) -> '16752831063434032545'();
 schema([root]) -> '16752831063434032545'();
@@ -214,7 +221,36 @@ root([]) -> '16752831063434032545'().
 		      10376444823742217855,  %% OtherCap
 		      18123859541809896974,  %% ThirdCap
 		      17442731430661771208,  %% CapTest
-		      16940705001995499374]}.  %% UnionTest
+		      16940705001995499374,  %% UnionTest
+		      14810986415762040486]}.  %% PackedListTest
+
+'PackedListTest'() -> '14810986415762040486'().
+
+'PackedListTest'(['Opts']) -> '17446286598800356999'();
+'PackedListTest'([]) -> '14810986415762040486'().
+
+'14810986415762040486'() ->
+    #schema_node{module = test_capnp, name = 'PackedListTest', id = 14810986415762040486,
+		 scope = 16752831063434032545, src = <<"test.capnp:PackedListTest">>,
+		 kind =
+		     #struct{dsize = 0, psize = 1, esize = pointer, union_field = none,
+			     fields =
+				 [#field{id = 0, name = packedList,
+					 kind =
+					     #ptr{type = {list, {struct, 17446286598800356999}}, idx = 0,
+						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
+		 nodes =
+		     [17446286598800356999]}.  %% Opts
+
+'17446286598800356999'() ->
+    #schema_node{module = test_capnp, name = ['PackedListTest', 'Opts'], id = 17446286598800356999,
+		 scope = 14810986415762040486, src = <<"test.capnp:PackedListTest.Opts">>,
+		 kind =
+		     #struct{dsize = 1, psize = 0, esize = twoBytes, union_field = none,
+			     fields =
+				 [#field{id = 0, name = flag, kind = #data{type = bool, align = 7, default = <<0:1>>}},
+				  #field{id = 1, name = value, kind = #data{type = uint8, align = 8, default = <<0>>}},
+				  #field{id = 2, name = toggle, kind = #data{type = bool, align = 6, default = <<0:1>>}}]}}.
 
 'UnionTest'() -> '16940705001995499374'().
 

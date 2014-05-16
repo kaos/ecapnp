@@ -129,32 +129,7 @@ read_ptr(#ptr{ type=Type, default=Default }, #object{ ref = Ref }=Obj) ->
         object -> read_obj(object, Obj, Default);
         {struct, StructType} -> read_obj(StructType, Obj, Default);
         {interface, InterfaceType} -> read_obj(InterfaceType, Obj, Default);
-        {list, ElementType} ->
-            case ecapnp_ref:read_list(Ref, undefined) of
-                undefined ->
-                    if is_binary(Default) ->
-                            ecapnp_obj:from_data(Default, Type, Obj);
-                       true ->
-                            Default
-                    end;
-                Refs when is_record(hd(Refs), ref) ->
-                    [read_ptr(
-                       #ptr{ type=ElementType },
-                       ecapnp_obj:init(R, Obj))
-                     || R <- Refs];
-                Values ->
-                    case ElementType of
-                        {enum, EnumType} ->
-                            [get_enum_value(
-                               EnumType,
-                               ecapnp_val:get(uint16, Data),
-                               Obj)
-                             || Data <- Values];
-                        _ ->
-                            [ecapnp_val:get(ElementType, Data)
-                             || Data <- Values]
-                    end
-            end
+        {list, ElementType} -> read_list(ElementType, Default, Obj)
     end.
 
 read_obj(Type, #object{ ref = #ref{ kind=null } }=Obj, Default) ->
@@ -163,6 +138,50 @@ read_obj(Type, #object{ ref = #ref{ kind=null } }=Obj, Default) ->
     end;
 read_obj(Type, Obj, _) ->
     ecapnp_obj:to_struct(Type, Obj).
+
+read_list({struct, StructType}, Default, #object{ ref = Ref }=Obj) ->
+    Schema = ecapnp_schema:get(StructType, Obj),
+    case ecapnp_ref:read_list_refs(
+           Ref, ecapnp_schema:get_ref_kind(Schema), undefined)
+    of
+        [] -> [];
+        undefined ->
+            if is_binary(Default) ->
+                    ecapnp_obj:from_data(Default, {list, {struct, StructType}}, Obj);
+               true -> Default
+            end;
+        Refs when is_record(hd(Refs), ref) ->
+            [read_ptr(#ptr{ type = {struct, StructType} },
+                      ecapnp_obj:init(R, Obj))
+             || R <- Refs]
+    end;
+read_list(ElementType, Default, #object{ ref = Ref }=Obj) ->
+    case ecapnp_ref:read_list(Ref, undefined) of
+        undefined ->
+            if is_binary(Default) ->
+                    ecapnp_obj:from_data(
+                      Default, {list, ElementType}, Obj);
+               true ->
+                    Default
+            end;
+        Refs when is_record(hd(Refs), ref) ->
+            [read_ptr(
+               #ptr{ type=ElementType },
+               ecapnp_obj:init(R, Obj))
+             || R <- Refs];
+        Values ->
+            case ElementType of
+                {enum, EnumType} ->
+                    [get_enum_value(
+                       EnumType,
+                       ecapnp_val:get(uint16, Data),
+                       Obj)
+                     || Data <- Values];
+                _ when is_atom(ElementType) ->
+                    [ecapnp_val:get(ElementType, Data)
+                     || Data <- Values]
+            end
+    end.
 
 get_enum_value(Type, Tag, Obj) ->
     #schema_node{ kind=#enum{ values=Values } }

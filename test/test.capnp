@@ -65,3 +65,11 @@ struct UnionTest @0xeb197971909ff76e {  # 8 bytes, 1 ptrs
     any @2 :AnyPointer;  # ptr[0], union tag = 2
   }
 }
+struct PackedListTest @0xcd8b31ac54a1e6a6 {  # 0 bytes, 1 ptrs, packed as pointer
+  packedList @0 :List(Opts);  # ptr[0]
+  struct Opts @0xf21da93a2b273687 {  # 8 bytes, 0 ptrs, packed as 16-bit
+    flag @0 :Bool;  # bits[0, 1)
+    value @1 :UInt8;  # bits[8, 16)
+    toggle @2 :Bool;  # bits[1, 2)
+  }
+}

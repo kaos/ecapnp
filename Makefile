@@ -80,7 +80,8 @@ erl: bld
 		"[i:ii(M) || M <- [ecapnp, ecapnp_obj, ecapnp_get, ecapnp_set,\
 			ecapnp_ref, ecapnp_data, ecapnp_schema, ecapnp_get_tests,\
 			ecapnp_set_tests, ecapnp_rpc, ecapnp_rpc_tests, ecapnp_vat,\
-			 ecapnp_vat_tests, ecapnp_capability, ecapnp_capability_sup]]"
+			ecapnp_vat_tests, ecapnp_capability, ecapnp_capability_sup,\
+			ecapnp_ref_tests]]"
 
 e: bld
 	erl -pa ebin test -pa deps/meck/ebin -noinput \
