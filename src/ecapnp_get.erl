@@ -46,6 +46,7 @@ root(Type, Schema, Segments) ->
 %% @see ecapnp:get/2
 -spec field(field_name(), object()) -> field_value().
 %%field(FieldName, #object{ ref=Ref }=Object)
+field(FieldName, #rpc_call{ params = Object }) -> field(FieldName, Object);
 field(FieldName, Object)
   when is_record(Object, object) ->
     read_field(ecapnp_obj:field(FieldName, Object), Object).
@@ -53,6 +54,7 @@ field(FieldName, Object)
 %% @doc Read the unnamed union value of object.
 %% @see ecapnp:get/1
 -spec union(object()) -> {field_name(), field_value()} | field_name().
+union(#rpc_call{ params = Object }) -> union(Object);
 union(#object{ schema=#schema_node{
                          kind=#struct{ union_field=Union }
                         }}=Object) ->

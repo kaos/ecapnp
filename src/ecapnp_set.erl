@@ -45,12 +45,15 @@ root(Node) when is_record(Node, schema_node) ->
 
 -spec field(field_name(), field_value(), object()) -> ok | list().
 %% @doc Write field value to object.
+field(FieldName, Value, #rpc_call{ params = Object }) ->
+    field(FieldName, Value, Object);
 field(FieldName, Value, Object) ->
     case ecapnp_obj:field(FieldName, Object) of
         false -> throw({unknown_field, FieldName});
         Field -> set_field(Field, Value, Object)
     end.
 
+field(FieldName, #rpc_call{ params = Object }) -> field(FieldName, Object);
 field(FieldName, Object) ->
     case ecapnp_obj:field(FieldName, Object) of
         false -> union(FieldName, Object);
@@ -59,6 +62,7 @@ field(FieldName, Object) ->
 
 -spec union({field_name(), field_value()} | field_name(), object()) -> ok.
 %% @doc Write unnamed union value in object.
+union(Value, #rpc_call{ params = Object }) -> union(Value, Object);
 union(Value, #object{
                 schema=#schema_node{
                           kind=#struct{ union_field=Union }}
@@ -136,10 +140,6 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
                                   throw({error, {invalid_object_value, Value}})
                               end,
                     write_obj(ObjType, ObjValue, ecapnp_ref:ptr(Idx, StructRef), Obj)
-                    %% ObjRef = ecapnp_ref:alloc_data(
-                    %%            ecapnp_schema:set_ref_to(
-                    %%              ObjType, ecapnp_ref:ptr(Idx, StructRef))),
-                    %% ecapnp_obj:from_ref(ObjRef, ObjType, Obj)
             end;
         {struct, StructType} ->
             write_obj(StructType, Value, ecapnp_ref:ptr(Idx, StructRef), Obj);
