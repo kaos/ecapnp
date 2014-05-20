@@ -205,14 +205,28 @@ set_struct_test() ->
 set_cap_test() ->
     {ok, Root} = ecapnp:set_root('CapTest', test_capnp),
 
-    Cap1 = #capability{ id = 1 },
-    Cap2 = #capability{ id = 2 },
+    Cap1 = #object{ ref=#ref{
+                           segment = 0, pos = 2,
+                           data = Root#object.ref#ref.data,
+                           kind = #interface_ref{
+                                     cap=#capability{ id = 1 }
+                                    } },
+                    schema = test_capnp:'BasicCap'()
+                  },
+    Cap2 = #object{ ref=#ref{
+                           segment = 0, pos = 1, offset = 1,
+                           data = Root#object.ref#ref.data,
+                           kind = #interface_ref{
+                                     cap=#capability{ id = 2 }
+                                    } },
+                    schema = test_capnp:'BasicCap'()
+                  },
 
     Obj1 = ecapnp:set(obj, {{interface, 'BasicCap'}, Cap1}, Root),
-    ?assertEqual(Cap1, Obj1#object.ref#ref.kind#interface_ref.cap),
+    ?assertEqual(Cap1, Obj1),
 
     Obj2 = ecapnp:set(basic, Cap2, Root),
-    ?assertEqual(Cap2, Obj2#object.ref#ref.kind#interface_ref.cap),
+    ?assertEqual(Cap2, Obj2),
 
     Data = ecapnp_data:get_segments(Root#object.ref#ref.data#builder.pid),
     ?assertEqual(
@@ -291,5 +305,65 @@ packed_struct_list_test() ->
           2, 345, %% O3
           0:16/integer %% padding
         >>], Data).
+
+group_field_test() ->
+    {ok, Root} = ecapnp:set_root('Test', test_capnp),
+    Grp = ecapnp:get(meta, Root),
+    ok = ecapnp:set(id, 123, Grp),
+    ok = ecapnp:set(tag, <<"foo bar">>, Grp),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+      [<<0:32/integer, 2,0, 6,0, %% Test struct, 16 bytes, 6 ptrs
+         0:80/integer, 123:16/integer-little, %% default data, meta.id
+         0:32/integer, %% padding
+         0:2/integer-unit:64, %% ptrs 0,1,
+         13,0,0,0, 66,0,0,0, %% ptr 2, meta.tag, offset 3, size 2, count 8
+         0:3/integer-unit:64, %% ptrs 3..5,
+         "foo bar",0
+       >>], Data).
+
+group_union_test() ->
+    {ok, Root} = ecapnp:set_root('Test', test_capnp),
+    Grp = ecapnp:get(opts, Root),
+    ok = ecapnp:set({text, <<"testing">>}, Grp),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+      [<<0:32/integer, 2,0, 6,0, %% Test struct, 16 bytes, 6 ptrs
+         0:64/integer, 1:16/integer-little, %% defalt data, opts tag = 1,
+         0:48/integer, %% padding
+         0:1/integer-unit:64, %% ptr 0
+         17,0,0,0, 66,0,0,0, %% ptr 2, meta.tag, offset 4, size 2, count 8
+         0:4/integer-unit:64, %% ptrs 2..5,
+         "testing",0
+       >>], Data).
+
+unnamed_union_field_test() ->
+    {ok, Root} = ecapnp:set_root('Test', test_capnp),
+    ok = ecapnp:set({boolField, true}, Root),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+      [<<0:32/integer, 2,0, 6,0, %% Test struct, 16 bytes, 6 ptrs
+         0:8/integer, 1:8/integer-little, %% default data, boolField = true
+         0:16/integer-little, %% union tag = 0,
+         0:96/integer, %% padding
+         0:6/integer-unit:64 %% ptr 0..5
+       >>], Data).
+
+unnamed_union_group_test() ->
+    {ok, Root} = ecapnp:set_root('Test', test_capnp),
+    Grp = ecapnp:set(groupField, Root),
+    ok = ecapnp:set(a, 0, Grp),
+    ok = ecapnp:set(c, 33, Grp),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+      [<<0:32/integer, 2,0, 6,0, %% Test struct, 16 bytes, 6 ptrs
+         0:8/integer, %% default data
+         -44:8/integer-little, %% groupField.a
+         1:16/integer-little, %% union tag = 1,
+         0:8/integer, %% groupField.b
+         33:8/integer-little, %% groupField.c
+         0:80/integer, %% padding
+         0:6/integer-unit:64 %% ptr 0..5
+       >>], Data).
 
 -endif.

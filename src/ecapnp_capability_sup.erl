@@ -38,9 +38,12 @@ start_link() ->
 start_capability(Module, Interfaces) when is_list(Interfaces) ->
     case supervisor:start_child(?SERVER, [Module, Interfaces]) of
         {ok, Pid} ->
-            {ok, #capability{
-                    id = {local, Pid},
-                    interfaces = Interfaces }};
+            Kind = #interface_ref{
+                      cap = #capability{ id = {local, Pid} }
+                     },
+            {ok, #object{ ref = #ref{ kind = Kind },
+                          schema = Interfaces
+                        }};
         Err -> Err
     end;
 start_capability(Module, Interface) ->

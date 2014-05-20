@@ -126,18 +126,22 @@ set_ref_to(Type, Ref) ->
     Ref#ref{ kind=get_ref_kind(Type, Ref) }.
 
 %% @doc Find Interface and Method.
-find_method_by_name(MethodName, []) ->
-    {error, {unknown_method, MethodName}};
+find_method_by_name(MethodName, #schema_node{
+                                   kind = #interface{ methods = Ms }
+                                  }=S) ->
+    case lists:keyfind(MethodName, #method.name, Ms) of
+        false -> undefined;
+        Method -> {ok, S, Method}
+    end;
 find_method_by_name(MethodName, [S|Ss]) ->
-    case lists:keyfind(
-           MethodName, #method.name,
-           S#schema_node.kind#interface.methods)
-    of
-        false ->
+    case find_method_by_name(MethodName, S) of
+        undefined ->
             find_method_by_name(MethodName, Ss);
-        Method ->
-            {ok, S, Method}
-    end.
+        Result ->
+            Result
+    end;
+find_method_by_name(_MethodName, []) -> undefined.
+
 
 %% ===================================================================
 %% internal functions

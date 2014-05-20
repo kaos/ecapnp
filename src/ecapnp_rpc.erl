@@ -22,7 +22,7 @@
 -module(ecapnp_rpc).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([request/2, send/1, wait/2, promise/2]).
+-export([request/2, send/2, wait/2, promise/2]).
 
 -include("ecapnp.hrl").
 
@@ -31,43 +31,29 @@
 %% API functions
 %% ===================================================================
 
-request(MethodName, #object{ ref = #ref{ kind = #interface_ref{ cap = Cap } } }) ->
-    do_request(MethodName, Cap#capability.interfaces, Cap);
-request(MethodName, #object{ ref = #promise{}=Cap, schema = #schema_node{ kind = #interface{}}=I }) ->
-    do_request(MethodName, [I], Cap);
-request(MethodName, #capability{ interfaces = Is }=Cap) ->
-    do_request(MethodName, Is, Cap).
+request(MethodName, Target) ->
+    do_request(MethodName, Target).
 
-send(#rpc_call{ target = #capability{ id = {local, Cap} },
-                interface = IntfId, method = MethId,
+send(#rpc_call{ interface = IntfId, method = MethId,
                 params = Params, results = Results,
                 resultSchema = ResultSchema
-              }) ->
+              },
+     #capability{ id = {local, Cap} }) ->
     {ok, promise(
            fun () ->
                    ecapnp_capability:dispatch_call(
                      Cap, IntfId, MethId, Params, Results)
            end,
            ResultSchema)
-    };
-send(#rpc_call{ target = #promise{ id = {local, _} }=Promise }=Req) ->
-    {ok, #object{
-            ref = #ref{
-                     kind = #interface_ref{
-                               cap = Cap }}}
-    } = ecapnp:wait(Promise),
-    send(Req#rpc_call{ target = Cap }).
+    }.
 
 wait({local, Pid}, Timeout) ->
-    io:format("*DBG* ~p waiting on promise from ~p (~p)~n", [self(), Pid, Timeout]),
     Pid ! {get_promise_result, self()},
     receive
         {Pid, promise_result, Result} ->
-            io:format("*DBG* ~p promise fulfilled: ~p~n", [self(), Result]),
             Result
     after
         Timeout ->
-            io:format("*DBG* ~p promise timeout!!~n", [self()]),
             timeout
     end.
 
@@ -78,16 +64,20 @@ promise(Fun, Schema) ->
                         Ref = monitor(process, Parent),
                         fulfilled(Ref, Fun())
                 end),
-    #object{ ref = #promise{ id = {local, Promise} }, schema = Schema }.
+    Kind = #interface_ref{
+              cap = #promise{ id = {local, Promise} }
+             },
+    #object{ ref = #ref{ kind = Kind },
+             schema = Schema }.
 
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
 
-do_request(MethodName, Interfaces, Target) ->
+do_request(MethodName, #object{ schema = Schema }=Target) ->
     {ok, Interface, Method} = ecapnp_schema:find_method_by_name(
-                                MethodName, Interfaces),
+                                MethodName, Schema),
     {ok, Msg} = ecapnp_set:root('Message', rpc_capnp),
     Call = ecapnp:init(call, Msg),
     Payload = ecapnp:init(params, Call),

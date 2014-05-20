@@ -77,18 +77,18 @@ ref_data(Type, Obj, Default) ->
 %% ===================================================================
 
 read_field(#field{ id = Id, kind = Kind },
-           #object{ ref = #promise{ transform = Ts }=P }=Obj) ->
+           #object{ ref = #ref{ kind = #interface_ref{
+                                          cap = #promise{}=P
+                                         } } }=Obj) ->
     case Kind of
         %% #ptr{ type = object } ->
         %%     ecapnp_obj:init(P#promise{ transform = [{ptr, Id}|Ts] }, Obj);
         #ptr{ type = {struct, Type} } ->
-            ecapnp_obj:init(P#promise{ transform = [{getPointerField, Id}|Ts] },
-                            ecapnp_schema:get(Type, Obj));
+            transform_promise(P, {getPointerField, Id}, ecapnp_schema:get(Type, Obj));
         #ptr{ type = {interface, Type} } ->
-            ecapnp_obj:init(P#promise{ transform = [{getPointerField, Id}|Ts] },
-                            ecapnp_schema:get(Type, Obj));
+            transform_promise(P, {getPointerField, Id}, ecapnp_schema:get(Type, Obj));
         _ ->
-            {ok, Res} = ecapnp:wait(P),
+            {ok, Res} = ecapnp:wait(Obj),
             read_field(Kind, Res)
     end;
 read_field(#field{ kind=Kind }, Object) -> read_field(Kind, Object);
@@ -190,3 +190,9 @@ get_enum_value(Type, Tag, Obj) ->
         {Tag, Value} -> Value;
         false -> Tag
     end.
+
+transform_promise(#promise{ transform = Ts }=P, T, Type) ->
+    Kind = #interface_ref{
+              cap = P#promise{ transform = [T|Ts] }
+             },
+    ecapnp_obj:init(#ref{ kind = Kind }, Type).

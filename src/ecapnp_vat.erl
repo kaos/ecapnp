@@ -83,7 +83,9 @@ start_link(Transport, Restorer) ->
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
 
-send(Req, {_Id, Vat}) ->
+send(Req, #capability{ id = {_, {_Id, Vat}} }) ->
+    gen_server:call(Vat, {send_req, Req});
+send(Req, #promise{ id = {_, {_Id, Vat}} }) ->
     gen_server:call(Vat, {send_req, Req}).
 
 wait({Kind, {Id, Vat}}, Timeout) ->
@@ -148,46 +150,47 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% ===================================================================
 send_req(#rpc_call{ target = Target }=Req, State) ->
-    case Target of
+    Ref = Target#object.ref#ref.kind,
+    Cap = Ref#interface_ref.cap,
+    case Cap of
         #promise{ id = {answer, _} } -> send_local_req(Req, State);
-        #promise{ id = {remote, _} } -> send_remote_req(Req, State);
-        #capability{ id = {remote, _} } -> send_remote_req(Req, State);
-        #capability{ id = {exported, {Id, _Vat}} }=Cap ->
+        #promise{ id = {remote, _} } -> send_remote_req(Req, Cap, State);
+        #capability{ id = {remote, _} } -> send_remote_req(Req, Cap, State);
+        #capability{ id = {exported, {Id, _Vat}} } ->
             case find(Id, State#state.exports) of
                 false ->
                     {reply, {error, unknown_capability}, State};
                 Exported ->
-                    {reply,
-                     ecapnp:send(Req#rpc_call{
-                                   target = Cap#capability{ id = Exported }
-                                  }),
+                    {reply, ecapnp:send(Req#rpc_call{ target = Exported }),
                      State}
             end
     end.
 
-send_remote_req(#rpc_call{ target = Target, interface = I, method = M,
-                           params = P, resultSchema = Schema }, State) ->
+send_remote_req(#rpc_call{ interface = I, method = M,
+                           params = P, resultSchema = Schema },
+                Cap, State) ->
     %% hackish approach. getting at the root element has not been implemented yet..
-    Msg = ecapnp_obj:from_ref(ecapnp_ref:get(0, 0, P#object.ref#ref.data), 'Message', rpc_capnp),
+    Msg = ecapnp_obj:from_ref(
+            ecapnp_ref:get(0, 0, P#object.ref#ref.data),
+            'Message', rpc_capnp),
     {call, Call} = ecapnp:get(Msg),
 
     {Id, Promise, State1} = new_question(State, Schema),
     ok = ecapnp:set(questionId, Id, Call),
-    ok = set_target(Target, ecapnp:init(target, Call)),
+    ok = set_target(Cap, ecapnp:init(target, Call)),
     ok = ecapnp:set(interfaceId, I, Call),
     ok = ecapnp:set(methodId, M, Call),
 
     {reply, {ok, Promise}, send_message(Msg, process_message(Msg, State1))}.
 
-send_local_req(#rpc_call{ target = TargetPromise, resultSchema = ResultSchema }=Req, State) ->
+send_local_req(#rpc_call{ target = TargetPromise,
+                          resultSchema = ResultSchema }=Req, State) ->
     ResultPromise = ecapnp_rpc:promise(
                       fun () ->
                               case ecapnp:wait(TargetPromise) of
-                                  {ok, #object{ ref = #ref{
-                                                         kind = #interface_ref{
-                                                                   cap = Cap } } }} ->
-
-                                      {ok, SendPromise} = ecapnp:send(Req#rpc_call{ target = Cap }),
+                                  {ok, ObjCap} ->
+                                      {ok, SendPromise} = ecapnp:send(
+                                                            Req#rpc_call{ target = ObjCap }),
                                       ecapnp:wait(SendPromise);
                                   _ ->
                                       {error, invalid_capability}
@@ -271,8 +274,9 @@ new_question(#state{ questions = #questions{
 
 %% ===================================================================
 new_promise(Id, Schema) ->
-    #object{ ref = #promise{ id = {remote, {Id, self()}} },
-             schema = Schema }.
+    Cap = #promise{ id = {remote, {Id, self()}} },
+    Kind = #interface_ref{ cap = Cap },
+    #object{ ref = #ref{ kind = Kind }, schema = Schema }.
 
 %% ===================================================================
 new_message() ->
@@ -432,8 +436,6 @@ handle_call(Call, Vat) ->
     Target = get_message_target(ecapnp:get(target, Call), Vat),
     Payload = ecapnp:get(params, Call),
 
-io:format("*DBG* ~p (vat ~p) call to ~p~n", [self(), Vat, Target]),
-
     Message = new_message(),
     Return = ecapnp:init(return, Message),
     RetPayload = ecapnp:init(results, Return),
@@ -453,8 +455,6 @@ io:format("*DBG* ~p (vat ~p) call to ~p~n", [self(), Vat, Target]),
 
     Id = ecapnp:get(questionId, Call),
     ok = ecapnp:set(answerId, Id, Return),
-
-io:format("*DBG* ~p call(~p) done:~n  RetPayload: ~p~n  _Content: ~p~n", [self(), Id, RetPayload, _Content]),
 
     send_message(Message, Vat).
 
@@ -493,27 +493,33 @@ handle_restore(Restore, Vat) ->
 
 %% ===================================================================
 get_message_target(MessageTarget, Vat) ->
-    case ecapnp:get(MessageTarget) of
-        {importedCap, Id} ->
-            #capability{ id = {exported, {Id, Vat}} };
-        {promisedAnswer, PromisedAnswer} ->
-            translate_promised_answer(PromisedAnswer, Vat)
-    end.
+    Cap =
+        case ecapnp:get(MessageTarget) of
+            {importedCap, Id} ->
+                #capability{ id = {exported, {Id, Vat}} };
+            {promisedAnswer, PromisedAnswer} ->
+                translate_promised_answer(PromisedAnswer, Vat)
+        end,
+    Kind = #interface_ref{ cap = Cap },
+    #object{ ref = #ref{ kind = Kind } }.
 
 %% ===================================================================
 translate_cap_descriptor(CapDescriptor, Vat) ->
-    case ecapnp:get(CapDescriptor) of
-        none -> undefined;
-        {senderHosted, Id} ->
-            #capability{ id = {remote, {Id, Vat}} };
-        {senderPromise, Id} ->
-            #promise{ id = {resolve, {Id, Vat}} };
-        {receiverHosted, Id} ->
-            #capability{ id = {exported, {Id, Vat}} };
-        {receiverAnswer, PromisedAnswer} ->
-            translate_promised_answer(PromisedAnswer, Vat)
-        %%{thirdPartyHosted, _} -> level 3 stuff, NYI
-    end.
+    Cap =
+        case ecapnp:get(CapDescriptor) of
+            none -> undefined;
+            {senderHosted, Id} ->
+                #capability{ id = {remote, {Id, Vat}} };
+            {senderPromise, Id} ->
+                #promise{ id = {resolve, {Id, Vat}} };
+            {receiverHosted, Id} ->
+                #capability{ id = {exported, {Id, Vat}} };
+            {receiverAnswer, PromisedAnswer} ->
+                translate_promised_answer(PromisedAnswer, Vat)
+                %%{thirdPartyHosted, _} -> level 3 stuff, NYI
+        end,
+    Kind = #interface_ref{ cap = Cap },
+    #object{ ref = #ref{ kind = Kind } }.
 
 %% ===================================================================
 translate_promised_answer(PromisedAnswer, Vat) ->

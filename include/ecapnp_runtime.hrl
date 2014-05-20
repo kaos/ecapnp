@@ -31,21 +31,8 @@
           double_far=false :: boolean()
          }).
 
--record(interface_ref, {
-          cap %%:: #capability{}
-         }).
-
--record(object, {
-          ref=null :: #ref{}, %% | #promise{} | #rpc_call{},
-          schema :: atom() | ecapnp:schema_node()
-         }).
-
-
-%% Capability & RPC
-
 -record(capability, {
-          id :: {local, pid()} | {remote, {non_neg_integer(), pid()}},
-          interfaces=[] :: list(ecapnp:schema_node())
+          id :: {local, pid()} | {remote, {non_neg_integer(), pid()}}
          }).
 
 -record(promise, {
@@ -53,8 +40,17 @@
           transform=[] :: list()
          }).
 
+-record(interface_ref, {
+          cap :: #capability{} | #promise{}
+         }).
+
+-record(object, {
+          ref=null :: #ref{},
+          schema :: atom() | ecapnp:schema_node()
+         }).
+
 -record(rpc_call, {
-          target :: #capability{} | #promise{},
+          target, %% :: #object{ ref = #ref{ kind = #interface_ref{} } },
           interface :: ecapnp:type_id(),
           method :: non_neg_integer(),
           params :: ecapnp:object(),

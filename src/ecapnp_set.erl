@@ -133,7 +133,7 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
                                   {ecapnp_schema:lookup(Value, Obj), Default};
                              is_record(Value, schema_node) ->
                                   {Value, Default};
-                             is_record(Value, capability);
+                             is_record(Value, object);
                              is_binary(Value) ->
                                   {object, Value};
                              true ->
@@ -197,19 +197,23 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
                                Value)], ok
             end
     end;
-set_field(#group{ id=Type }, Value, #object{ ref=StructRef }=Obj) ->
-    union(Value, ecapnp_obj:from_ref(StructRef, Type, Obj)).
+set_field(#group{ id=Type }, {default}, #object{ ref=StructRef }=Obj) ->
+    ecapnp_obj:from_ref(StructRef, Type, Obj).
 
 write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(
       ecapnp_ref:paste(Value, Ref),
       Type, Obj);
-write_obj(Type, Value, Ref, Obj) when is_record(Value, capability) ->
-    ecapnp_obj:from_ref(
-      ecapnp_ref:set(#interface_ref{ cap = Value }, Ref),
-      Type, Obj);
-write_obj(Type, #object{ schema=#schema_node{ id=Type }, ref=Value }, Ref, Obj) ->
-    write_obj(Type, ecapnp_ref:copy(Value), Ref, Obj).
+write_obj(Type, #object{ ref=Value, schema=_Schema }, Ref, Obj) ->
+    %% todo: check that Schema is compatible with Type
+    case Value of
+        #ref{ kind = Kind } when is_record(Kind, interface_ref) ->
+            ecapnp_obj:from_ref(
+              ecapnp_ref:set(Kind, Ref),
+              Type, Obj);
+        _ ->
+            write_obj(Type, ecapnp_ref:copy(Value), Ref, Obj)
+    end.
 
 union_tag({FieldName, Value}, [#field{ id = Tag, name = FieldName }=FieldType|_]) ->
     {Tag, {FieldType, Value}};
