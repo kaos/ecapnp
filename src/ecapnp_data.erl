@@ -257,7 +257,7 @@ do_get_cap_idx(Cap, #state{ caps = CapTable }=State) ->
     case find_cap(Cap, CapTable, 0) of
         false ->
             Idx = length(CapTable),
-            {Idx, State#state{ caps = [Cap|CapTable] }};
+            {Idx, State#state{ caps = CapTable ++ [Cap] }};
         Idx ->
             {Idx, State}
     end.

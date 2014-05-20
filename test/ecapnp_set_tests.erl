@@ -206,27 +206,20 @@ set_cap_test() ->
     {ok, Root} = ecapnp:set_root('CapTest', test_capnp),
 
     Cap1 = #object{ ref=#ref{
-                           segment = 0, pos = 2,
-                           data = Root#object.ref#ref.data,
                            kind = #interface_ref{
                                      cap=#capability{ id = 1 }
                                     } },
                     schema = test_capnp:'BasicCap'()
                   },
     Cap2 = #object{ ref=#ref{
-                           segment = 0, pos = 1, offset = 1,
-                           data = Root#object.ref#ref.data,
                            kind = #interface_ref{
                                      cap=#capability{ id = 2 }
                                     } },
                     schema = test_capnp:'BasicCap'()
                   },
 
-    Obj1 = ecapnp:set(obj, {{interface, 'BasicCap'}, Cap1}, Root),
-    ?assertEqual(Cap1, Obj1),
-
-    Obj2 = ecapnp:set(basic, Cap2, Root),
-    ?assertEqual(Cap2, Obj2),
+    ok = ecapnp:set(obj, {{interface, 'BasicCap'}, Cap1}, Root),
+    ok = ecapnp:set(basic, Cap2, Root),
 
     Data = ecapnp_data:get_segments(Root#object.ref#ref.data#builder.pid),
     ?assertEqual(

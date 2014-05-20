@@ -208,9 +208,7 @@ write_obj(Type, #object{ ref=Value, schema=_Schema }, Ref, Obj) ->
     %% todo: check that Schema is compatible with Type
     case Value of
         #ref{ kind = Kind } when is_record(Kind, interface_ref) ->
-            ecapnp_obj:from_ref(
-              ecapnp_ref:set(Kind, Ref),
-              Type, Obj);
+            ecapnp_ref:set(Kind, Ref), ok;
         _ ->
             write_obj(Type, ecapnp_ref:copy(Value), Ref, Obj)
     end.

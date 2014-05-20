@@ -273,88 +273,6 @@ new_question(#state{ questions = #questions{
     }.
 
 %% ===================================================================
-new_promise(Id, Schema) ->
-    Cap = #promise{ id = {remote, {Id, self()}} },
-    Kind = #interface_ref{ cap = Cap },
-    #object{ ref = #ref{ kind = Kind }, schema = Schema }.
-
-%% ===================================================================
-new_message() ->
-    {ok, Msg} = ecapnp:set_root('Message', rpc_capnp), Msg.
-
-new_message(Type) ->
-    ecapnp:init(Type, new_message()).
-
-%% ===================================================================
-set_target(#capability{ id = {remote, {Id, _}} }, MsgTarget) ->
-    ecapnp:set({importedCap, Id}, MsgTarget);
-set_target(#promise{ id = {remote, {Id, _}}, transform = Ts }, MsgTarget) ->
-    PromisedAnswer = ecapnp:init(promisedAnswer, MsgTarget),
-    ok = ecapnp:set(questionId, Id, PromisedAnswer),
-    TObjs = ecapnp:set(transform, length(Ts), PromisedAnswer),
-    [ecapnp:set(T, Obj)
-     || {Obj, T} <- lists:zip(TObjs, lists:reverse(Ts))],
-    ok.
-
-%% ===================================================================
-find(Id, #imports{ caps = Cs }) ->
-    case lists:keyfind(Id, 1, Cs) of
-        false -> false;
-        {Id, Cap} -> {remote, Cap}
-    end;
-find(Id, #exports{ caps = Cs }) ->
-    case lists:keyfind(Id, 1, Cs) of
-        false -> false;
-        {Id, Cap} -> {local, Cap}
-    end;
-find(Id, #questions{ promises = Ps }) ->
-    case lists:keyfind(Id, 1, Ps) of
-        false -> false;
-        {Id, {Ws, _}} when is_list(Ws) -> {promise, Id};
-        {Id, Res} -> {ok, Res}
-    end;
-find(Id, #answers{ results = Rs }) ->
-    case lists:keyfind(Id, 1, Rs) of
-        false -> false;
-        {Id, {Ws, _}} when is_list(Ws) -> {pending, Id};
-        {Id, Res} -> {ok, Res}
-    end.
-
-%% ===================================================================
-set_result(Id, Result, List) ->
-    Result1 =
-        case lists:keyfind(Id, 1, List) of
-            false -> Result;
-            {Id, {Ws, Schema}} when is_list(Ws) ->
-                Res = ecapnp_obj:to_struct(Schema, Result),
-                [gen_server:reply(W, {ok, Res}) || W <- Ws],
-                Res
-    end,
-    lists:keystore(Id, 1, List, {Id, Result1}).
-
-wait_for_result(Id, W, List) ->
-    WsS =
-        case lists:keyfind(Id, 1, List) of
-            false -> {[W], undefined};
-            {Id, {Ws0, Schema}} when is_list(Ws0) ->
-                {[W|Ws0], Schema}
-        end,
-    lists:keystore(Id, 1, List, {Id, WsS}).
-
-%% ===================================================================
-set_promise_result(Id, Result, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
-    State#state{ questions = Qs#questions{ promises = set_result(Id, Result, Ps) }}.
-
-set_answer_result(Id, Result, #state{ answers = #answers{ results = Rs }=As }=State) ->
-    State#state{ answers = As#answers{ results = set_result(Id, Result, Rs) }}.
-
-wait_for_promise(Id, W, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
-    State#state{ questions = Qs#questions{ promises = wait_for_result(Id, W, Ps) }}.
-
-wait_for_answer(Id, W, #state{ answers = #answers{ results = Rs }=As }=State) ->
-    State#state{ answers = As#answers{ results = wait_for_result(Id, W, Rs) }}.
-
-%% ===================================================================
 process_message(Message, State) ->
     case ecapnp:get(Message) of
         {call, Call} ->
@@ -375,20 +293,26 @@ update_cap_table(Payload, State) ->
     {ok, Caps} = ecapnp_obj:get_cap_table(Payload),
     CapTable = ecapnp:set(capTable, length(Caps), Payload),
     lists:foldl(
-      fun ({Cap, CapDesc}, State0) ->
-              case Cap#capability.id of
-                  {local, _} ->
-                      {Id, State1} = export(Cap, State0),
-                      ecapnp:set({senderHosted, Id}, CapDesc),
-                      State1;
-                  {remote, {Id, Pid}} when Pid =:= self() ->
-                      ecapnp:set({receiverHosted, Id}, CapDesc),
-                      State0
-                      %% other cases nyi..
-              end
-      end,
-      State, lists:zip(Caps, CapTable)
-     ).
+      fun set_cap_descriptor/2,
+      State, lists:zip(Caps, CapTable)).
+
+%% ===================================================================
+set_cap_descriptor({Cap, CapDesc}, State) ->
+    case Cap of
+        #capability{ id = {local, _} } ->
+            {Id, State1} = export(Cap, State),
+            ecapnp:set({senderHosted, Id}, CapDesc),
+            State1;
+        #capability{ id = {remote, {Id, Pid}} }
+          when Pid =:= self() ->
+            ecapnp:set({receiverHosted, Id}, CapDesc),
+            State;
+        #promise{ id = {remote, {Id, Pid}}, transform = Ts }
+          when Pid =:= self() ->
+            PromisedAnswer = ecapnp:init(receiverAnswer, CapDesc),
+            set_promised_answer(Id, Ts, PromisedAnswer),
+            State
+    end.
 
 %% ===================================================================
 export(Cap, State) ->
@@ -492,6 +416,68 @@ handle_restore(Restore, Vat) ->
 %% ===================================================================
 
 %% ===================================================================
+new_promise(Id, Schema) ->
+    Cap = #promise{ id = {remote, {Id, self()}} },
+    Kind = #interface_ref{ cap = Cap },
+    #object{ ref = #ref{ kind = Kind }, schema = Schema }.
+
+%% ===================================================================
+new_message() ->
+    {ok, Msg} = ecapnp:set_root('Message', rpc_capnp), Msg.
+
+new_message(Type) ->
+    ecapnp:init(Type, new_message()).
+
+%% ===================================================================
+set_target(#capability{ id = {remote, {Id, _}} }, MsgTarget) ->
+    ecapnp:set({importedCap, Id}, MsgTarget);
+set_target(#promise{ id = {remote, {Id, _}}, transform = Ts }, MsgTarget) ->
+    PromisedAnswer = ecapnp:init(promisedAnswer, MsgTarget),
+    set_promised_answer(Id, Ts, PromisedAnswer).
+
+%% ===================================================================
+set_promised_answer(Id, Ts, PromisedAnswer) ->
+    ok = ecapnp:set(questionId, Id, PromisedAnswer),
+    TObjs = ecapnp:set(transform, length(Ts), PromisedAnswer),
+    [ecapnp:set(T, Obj)
+     || {Obj, T} <- lists:zip(TObjs, lists:reverse(Ts))],
+    ok.
+
+%% ===================================================================
+set_result(Id, Result, List) ->
+    Result1 =
+        case lists:keyfind(Id, 1, List) of
+            false -> Result;
+            {Id, {Ws, Schema}} when is_list(Ws) ->
+                Res = ecapnp_obj:to_struct(Schema, Result),
+                [gen_server:reply(W, {ok, Res}) || W <- Ws],
+                Res
+    end,
+    lists:keystore(Id, 1, List, {Id, Result1}).
+
+wait_for_result(Id, W, List) ->
+    WsS =
+        case lists:keyfind(Id, 1, List) of
+            false -> {[W], undefined};
+            {Id, {Ws0, Schema}} when is_list(Ws0) ->
+                {[W|Ws0], Schema}
+        end,
+    lists:keystore(Id, 1, List, {Id, WsS}).
+
+%% ===================================================================
+set_promise_result(Id, Result, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    State#state{ questions = Qs#questions{ promises = set_result(Id, Result, Ps) }}.
+
+set_answer_result(Id, Result, #state{ answers = #answers{ results = Rs }=As }=State) ->
+    State#state{ answers = As#answers{ results = set_result(Id, Result, Rs) }}.
+
+wait_for_promise(Id, W, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    State#state{ questions = Qs#questions{ promises = wait_for_result(Id, W, Ps) }}.
+
+wait_for_answer(Id, W, #state{ answers = #answers{ results = Rs }=As }=State) ->
+    State#state{ answers = As#answers{ results = wait_for_result(Id, W, Rs) }}.
+
+%% ===================================================================
 get_message_target(MessageTarget, Vat) ->
     Cap =
         case ecapnp:get(MessageTarget) of
@@ -505,21 +491,18 @@ get_message_target(MessageTarget, Vat) ->
 
 %% ===================================================================
 translate_cap_descriptor(CapDescriptor, Vat) ->
-    Cap =
-        case ecapnp:get(CapDescriptor) of
-            none -> undefined;
-            {senderHosted, Id} ->
-                #capability{ id = {remote, {Id, Vat}} };
-            {senderPromise, Id} ->
-                #promise{ id = {resolve, {Id, Vat}} };
-            {receiverHosted, Id} ->
-                #capability{ id = {exported, {Id, Vat}} };
-            {receiverAnswer, PromisedAnswer} ->
-                translate_promised_answer(PromisedAnswer, Vat)
-                %%{thirdPartyHosted, _} -> level 3 stuff, NYI
-        end,
-    Kind = #interface_ref{ cap = Cap },
-    #object{ ref = #ref{ kind = Kind } }.
+    case ecapnp:get(CapDescriptor) of
+        none -> undefined;
+        {senderHosted, Id} ->
+            #capability{ id = {remote, {Id, Vat}} };
+        {senderPromise, Id} ->
+            #promise{ id = {resolve, {Id, Vat}} };
+        {receiverHosted, Id} ->
+            #capability{ id = {exported, {Id, Vat}} };
+        {receiverAnswer, PromisedAnswer} ->
+            translate_promised_answer(PromisedAnswer, Vat)
+            %%{thirdPartyHosted, _} -> level 3 stuff, NYI
+    end.
 
 %% ===================================================================
 translate_promised_answer(PromisedAnswer, Vat) ->
@@ -527,5 +510,29 @@ translate_promised_answer(PromisedAnswer, Vat) ->
             Ts = ecapnp:get(transform, PromisedAnswer),
             #promise{ id = {answer, {Id, Vat}},
                       transform = [ecapnp:get(T) || T <- Ts] }.
+
+%% ===================================================================
+find(Id, #imports{ caps = Cs }) ->
+    case lists:keyfind(Id, 1, Cs) of
+        false -> false;
+        {Id, Cap} -> {remote, Cap}
+    end;
+find(Id, #exports{ caps = Cs }) ->
+    case lists:keyfind(Id, 1, Cs) of
+        false -> false;
+        {Id, Cap} -> {local, Cap}
+    end;
+find(Id, #questions{ promises = Ps }) ->
+    case lists:keyfind(Id, 1, Ps) of
+        false -> false;
+        {Id, {Ws, _}} when is_list(Ws) -> {promise, Id};
+        {Id, Res} -> {ok, Res}
+    end;
+find(Id, #answers{ results = Rs }) ->
+    case lists:keyfind(Id, 1, Rs) of
+        false -> false;
+        {Id, {Ws, _}} when is_list(Ws) -> {pending, Id};
+        {Id, Res} -> {ok, Res}
+    end.
 
 %% ===================================================================
