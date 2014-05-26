@@ -45,6 +45,7 @@
          }).
 
 -record(state, {
+          owner :: pid(),
           segments = [] :: list(#seg{}),
           caps = [] :: list({non_neg_integer(), #capability{}})
          }).
@@ -55,10 +56,10 @@
 %% ===================================================================
 
 start(Init) ->
-    gen_server:start(?MODULE, {0, Init, #state{}}, []).
+    gen_server:start(?MODULE, {0, Init, #state{ owner = self() }}, []).
 
 start_link(Init) ->
-    gen_server:start_link(?MODULE, {0, Init, #state{}}, []).
+    gen_server:start_link(?MODULE, {0, Init, #state{ owner = self() }}, []).
 
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
@@ -116,9 +117,13 @@ set_cap_table(CapTable, Pid) ->
 init({Id, [S|Ss], State}) ->
     init({Id + 1, Ss, set_segment(Id, new_segment(S), State)});
 init({_, [], State}) ->
-    {ok, State};
+    {ok, init_state(State)};
 init({Id, Init, State}) ->
-    {ok, set_segment(Id, new_segment(Init), State)}.
+    {ok, set_segment(Id, new_segment(Init), init_state(State))}.
+
+init_state(#state{ owner = Owner }=State) ->
+    monitor(process, Owner),
+    State.
 
 handle_call({alloc, {Id, Size}}, _From, State) ->
     {Reply, State1} = do_alloc(Id, Size, State),
@@ -147,6 +152,8 @@ handle_cast({update_segment, {Id, Offset, Data}}, State) ->
     State1 = do_update_segment(Id, Offset, Data, State),
     {noreply, State1}.
 
+handle_info({'DOWN', _Ref, process, _Pid, Info}, State) ->
+    {stop, Info, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
