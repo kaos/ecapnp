@@ -128,9 +128,6 @@ handle_cast(_Cast, State) ->
 handle_info({receive_message, Data}, State) ->
     handle_message(Data),
     {noreply, State};
-handle_info({send_message, Message}, State) ->
-    {ok, State1} = send_message(Message, State),
-    {noreply, State1};
 handle_info(_Info, State) ->
     io:format(
       standard_error, "~p:ecapnp_vat(~p): unhandled info: ~n   ~p~n",
@@ -192,8 +189,8 @@ send_local_req(#rpc_call{ target = TargetPromise,
                                       {ok, SendPromise} = ecapnp:send(
                                                             Req#rpc_call{ target = ObjCap }),
                                       ecapnp:wait(SendPromise);
-                                  _ ->
-                                      {error, invalid_capability}
+                                  Other ->
+                                      {promise_error, TargetPromise, Other}
                               end
                       end,
                       ResultSchema),
@@ -210,6 +207,8 @@ wait({remote, Id}, From, State) ->
 wait({answer, Id}, From, State) ->
     case find(Id, State#state.answers) of
         {pending, Id} ->
+            {noreply, wait_for_answer(Id, From, State)};
+        false ->
             {noreply, wait_for_answer(Id, From, State)};
         Result ->
             {reply, Result, State}
@@ -447,7 +446,8 @@ set_promised_answer(Id, Ts, PromisedAnswer) ->
 set_result(Id, Result, List) ->
     Result1 =
         case lists:keyfind(Id, 1, List) of
-            false -> Result;
+            false ->
+                Result;
             {Id, {Ws, Schema}} when is_list(Ws) ->
                 Res = ecapnp_obj:to_struct(Schema, Result),
                 [gen_server:reply(W, {ok, Res}) || W <- Ws],
@@ -458,7 +458,8 @@ set_result(Id, Result, List) ->
 wait_for_result(Id, W, List) ->
     WsS =
         case lists:keyfind(Id, 1, List) of
-            false -> {[W], undefined};
+            false ->
+                {[W], undefined};
             {Id, {Ws0, Schema}} when is_list(Ws0) ->
                 {[W|Ws0], Schema}
         end,

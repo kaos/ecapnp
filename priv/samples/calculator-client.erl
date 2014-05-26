@@ -1,9 +1,6 @@
 -module('calculator-client').
 
--export([run/0, send/2]).
-
-send({Pid, Sock}, Data) ->
-    Pid ! {send, {Sock, Data}}, ok.
+-export([run/0]).
 
 run() ->
     {ok, Calculator} = connect(),
@@ -15,30 +12,18 @@ connect() ->
 
 connect({Addr, Port}) ->
     {ok, Socket} = gen_tcp:connect(Addr, Port, [binary, {active, false}]),
-    %% {ok, Vat} = ecapnp_vat:start_link({gen_tcp, Socket}),
-    {ok, Vat} = ecapnp_vat:start_link({?MODULE, {spawn(fun send_socket/0), Socket}}),
+    {ok, Vat} = ecapnp_vat:start_link({gen_tcp, Socket}),
     spawn_link(fun () -> read_socket(Socket, Vat) end),
     ecapnp_vat:import_capability(
       {text, <<"calculator">>},
       calculator_capnp:'Calculator'(),
       Vat).
 
-send_socket() ->
-    send_socket(5).
-
-send_socket(Delay) ->
-    receive
-        {send, {Sock, Data}} ->
-            receive
-            after Delay ->
-                    gen_tcp:send(Sock, Data)
-            end,
-            send_socket(Delay)
-    end.
-
 read_socket(Sock, Vat) ->
     case gen_tcp:recv(Sock, 0) of
         {ok, Data} ->
+            %% useful to check where/when ecapnp is waiting on response data
+            %% erlang:send_after(2000, Vat, {receive_message, Data}),
             Vat ! {receive_message, Data},
             read_socket(Sock, Vat);
         {error, closed} ->
