@@ -155,6 +155,7 @@ test_request(#test{ basic=Cap }) ->
     Method = hd(Schema#schema_node.kind#interface.methods),
     ?assertEqual(
        #rpc_call{
+          owner = self(),
           target = Cap,
           interface = Schema#schema_node.id,
           method = Method#method.id,

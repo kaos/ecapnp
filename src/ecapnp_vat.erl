@@ -35,22 +35,25 @@
 
 -include("ecapnp.hrl").
 
+-type request_list() :: list({non_neg_integer(), reference(), {list(), ecapnp:schema_node()} | ecapnp:object()}).
+-type cap_list() :: list({non_neg_integer(), non_neg_integer(), #capability{}}).
+
 -record(questions, {
           next_id = 0 :: non_neg_integer(),
-          promises = [] :: list({non_neg_integer(), list() | ecapnp:object()})
+          promises = [] :: request_list()
          }).
 
 -record(answers, {
-          results = [] :: list({non_neg_integer(), list() | ecapnp:object()})
+          results = [] :: request_list()
          }).
 
 -record(exports, {
           next_id = 0 :: non_neg_integer(),
-          caps = [] :: list({non_neg_integer(), #capability{}})
+          caps = [] :: cap_list()
          }).
 
 -record(imports, {
-          caps = []
+          caps = [] :: cap_list()
          }).
 
 -record(state, {
@@ -110,8 +113,8 @@ handle_call({answer, Id, Content}, _From, State) ->
     {reply, ok, set_promise_result(Id, Content, State)};
 handle_call({wait, Id}, From, State) ->
     wait(Id, From, State);
-handle_call({import, ObjectId, Schema}, _From, State) ->
-    import_req(ObjectId, Schema, State);
+handle_call({import, ObjectId, Schema}, {Pid, _Ref}=_From, State) ->
+    import_req(Pid, ObjectId, Schema, State);
 handle_call({restore, ObjectId}, From, State) ->
     %% todo: better error handling...
     spawn_link(
@@ -127,6 +130,9 @@ handle_cast(_Cast, State) ->
 
 handle_info({receive_message, Data}, State) ->
     handle_message(Data),
+    {noreply, State};
+handle_info({'DOWN', _MonRef, process, _Pid, _Info}, State) ->
+    %% TODO..
     {noreply, State};
 handle_info(_Info, State) ->
     io:format(
@@ -163,7 +169,7 @@ send_req(#rpc_call{ target = Target }=Req, State) ->
             end
     end.
 
-send_remote_req(#rpc_call{ interface = I, method = M,
+send_remote_req(#rpc_call{ owner = Pid, interface = I, method = M,
                            params = P, resultSchema = Schema },
                 Cap, State) ->
     %% hackish approach. getting at the root element has not been implemented yet..
@@ -172,7 +178,7 @@ send_remote_req(#rpc_call{ interface = I, method = M,
             'Message', rpc_capnp),
     {call, Call} = ecapnp:get(Msg),
 
-    {Id, Promise, State1} = new_question(State, Schema),
+    {Id, Promise, State1} = new_question(Pid, Schema, State),
     ok = ecapnp:set(questionId, Id, Call),
     ok = set_target(Cap, ecapnp:init(target, Call)),
     ok = ecapnp:set(interfaceId, I, Call),
@@ -215,8 +221,8 @@ wait({answer, Id}, From, State) ->
     end.
 
 %% ===================================================================
-import_req(ObjectId, Schema, State) ->
-    {Id, Promise, State1} = new_question(State, Schema),
+import_req(Pid, ObjectId, Schema, State) ->
+    {Id, Promise, State1} = new_question(Pid, Schema, State),
     Restore = new_message(restore),
     ok = ecapnp:set(questionId, Id, Restore),
     ok = ecapnp:set(objectId, ObjectId, Restore),
@@ -259,16 +265,18 @@ send_message(Msg, Vat) when is_pid(Vat) ->
     gen_server:call(Vat, {send_message, Msg}, infinity).
 
 %% ===================================================================
-new_question(#state{ questions = #questions{
+new_question(Pid, Schema,
+             #state{ questions = #questions{
                                     next_id = Id,
                                     promises = Ps
-                                   }=Qs }=State,
-             Schema) ->
+                                   }=Qs }=State) ->
     {Id, new_promise(Id, Schema),
       State#state{
         questions = Qs#questions{
                       next_id = Id + 1,
-                      promises = [{Id, {[], Schema}}|Ps] }}
+                      promises = [{Id, monitor(process, Pid), {[], Schema}}
+                                  |Ps]
+                     }}
     }.
 
 %% ===================================================================
@@ -316,18 +324,19 @@ set_cap_descriptor({Cap, CapDesc}, State) ->
 %% ===================================================================
 export(Cap, State) ->
     case find(Cap, State#state.exports) of
-        {Id, Cap} -> {Id, State};
+        {Id, RefCount, Cap} ->
+            do_export(Id, Cap, RefCount, State);
         false ->
             {Id, State1} = get_next_export_id(State),
-            {Id, do_export(Id, Cap, State1)}
+            do_export(Id, Cap, 0, State1)
     end.
 
-do_export(Id, Cap, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
-    State#state{
-      exports = Es#exports{
-                  caps = lists:keystore(Id, 1, Cs, {Id, Cap})
-                 }
-     }.
+do_export(Id, Cap, RefCount, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
+    {Id, State#state{
+           exports = Es#exports{
+                       caps = lists:keystore(Id, 1, Cs, {Id, RefCount + 1, Cap})
+                      }}
+    }.
 
 get_next_export_id(#state{ exports = #exports{
                                         next_id = Id
@@ -365,6 +374,7 @@ handle_call(Call, Vat) ->
 
     {ok, Promise} = ecapnp:send(
                       #rpc_call{
+                         owner = self(),
                          target = Target,
                          interface = ecapnp:get(interfaceId, Call),
                          method = ecapnp:get(methodId, Call),
@@ -444,26 +454,26 @@ set_promised_answer(Id, Ts, PromisedAnswer) ->
 
 %% ===================================================================
 set_result(Id, Result, List) ->
-    Result1 =
+    Entry =
         case lists:keyfind(Id, 1, List) of
             false ->
-                Result;
-            {Id, {Ws, Schema}} when is_list(Ws) ->
+                {Id, undefined, Result};
+            {Id, Mon, {Ws, Schema}} when is_list(Ws) ->
                 Res = ecapnp_obj:to_struct(Schema, Result),
                 [gen_server:reply(W, {ok, Res}) || W <- Ws],
-                Res
+                {Id, Mon, Res}
     end,
-    lists:keystore(Id, 1, List, {Id, Result1}).
+    lists:keystore(Id, 1, List, Entry).
 
 wait_for_result(Id, W, List) ->
-    WsS =
+    Entry =
         case lists:keyfind(Id, 1, List) of
             false ->
-                {[W], undefined};
-            {Id, {Ws0, Schema}} when is_list(Ws0) ->
-                {[W|Ws0], Schema}
+                {Id, undefined, {[W], undefined}};
+            {Id, Mon, {Ws0, Schema}} when is_list(Ws0) ->
+                {Id, Mon, {[W|Ws0], Schema}}
         end,
-    lists:keystore(Id, 1, List, {Id, WsS}).
+    lists:keystore(Id, 1, List, Entry).
 
 %% ===================================================================
 set_promise_result(Id, Result, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
@@ -516,24 +526,29 @@ translate_promised_answer(PromisedAnswer, Vat) ->
 find(Id, #imports{ caps = Cs }) ->
     case lists:keyfind(Id, 1, Cs) of
         false -> false;
-        {Id, Cap} -> {remote, Cap}
+        {Id, _RefCount, Cap} -> {remote, Cap}
     end;
 find(Id, #exports{ caps = Cs }) ->
     case lists:keyfind(Id, 1, Cs) of
         false -> false;
-        {Id, Cap} -> {local, Cap}
+        {Id, _RefCount, Cap} -> {local, Cap}
     end;
 find(Id, #questions{ promises = Ps }) ->
     case lists:keyfind(Id, 1, Ps) of
-        false -> false;
-        {Id, {Ws, _}} when is_list(Ws) -> {promise, Id};
-        {Id, Res} -> {ok, Res}
+        false ->
+            false;
+        {Id, _MonRef, {Ws, _}} when is_list(Ws) ->
+            {promise, Id};
+        {Id, _MonRef, Res} ->
+            {ok, Res}
     end;
 find(Id, #answers{ results = Rs }) ->
     case lists:keyfind(Id, 1, Rs) of
         false -> false;
-        {Id, {Ws, _}} when is_list(Ws) -> {pending, Id};
-        {Id, Res} -> {ok, Res}
+        {Id, _MonRef, {Ws, _}} when is_list(Ws) ->
+            {pending, Id};
+        {Id, _MonRef, Res} ->
+            {ok, Res}
     end.
 
 %% ===================================================================

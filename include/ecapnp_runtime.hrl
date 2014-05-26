@@ -50,6 +50,7 @@
          }).
 
 -record(rpc_call, {
+          owner :: pid(),
           target, %% :: #object{ ref = #ref{ kind = #interface_ref{} } },
           interface :: ecapnp:type_id(),
           method :: non_neg_integer(),

@@ -87,7 +87,8 @@ do_request(MethodName, #object{ schema = Schema }=Target) ->
                 Payload),
     ResultSchema = ecapnp_schema:get(Method#method.resultType, Interface),
 
-    #rpc_call{ target = Target,
+    #rpc_call{ owner = self(),
+               target = Target,
                interface = Interface#schema_node.id,
                method = Method#method.id,
                params = Content,
