@@ -76,7 +76,7 @@ dbg: bld
 tst: e p
 
 erl: bld
-	erl -pa ebin test -eval \
+	erl -pa ebin test priv/samples -eval \
 		"[i:ii(M) || M <- [ecapnp, ecapnp_obj, ecapnp_get, ecapnp_set,\
 			ecapnp_ref, ecapnp_data, ecapnp_schema, ecapnp_get_tests,\
 			ecapnp_set_tests, ecapnp_rpc, ecapnp_rpc_tests, ecapnp_vat,\

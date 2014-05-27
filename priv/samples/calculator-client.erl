@@ -4,8 +4,23 @@
 
 run() ->
     {ok, Calculator} = connect(),
-    [F(Calculator)
-     || F <- [fun eval_literal/1, fun add_and_subtract/1, fun pipelining/1]].
+    _ =
+        [begin
+             Ref = monitor(process, spawn(fun () -> exit(F(Calculator)) end)),
+             receive
+                 {'DOWN', Ref, process, _Pid, Info} -> {T, Info}
+             end
+         end || {T, F} <- [{eval_literal, fun eval_literal/1},
+                           {add_and_subtract, fun add_and_subtract/1},
+                           {pipelining, fun pipelining/1}
+                          ]
+        ],
+    %% proper shutdown not yet implemented..
+    %% give some time to let the last finish messages get out
+    receive after 500 ->
+                    io:format("~n~nAll done.~n"),
+                    halt(0)
+            end.
 
 connect() ->
     connect({"localhost", 55000}).
@@ -27,15 +42,14 @@ read_socket(Sock, Vat) ->
             Vat ! {receive_message, Data},
             read_socket(Sock, Vat);
         {error, closed} ->
-            io:format("tcp socket closed~n"),
-            halt(0);
+            io:format("tcp socket closed~n");
         {error, Reason} ->
             io:format("tcp socket error: ~p~n", [Reason]),
             halt(1)
     end.
 
 eval_literal(C) ->
-    io:format("Evaluating a literal... "),
+    io:format("~nEvaluating a literal... "),
     Req = ecapnp:request(evaluate, C),
     Expression = ecapnp:init(expression, Req),
     ok = ecapnp:set({literal, 123}, Expression),
@@ -45,13 +59,18 @@ eval_literal(C) ->
     {ok, Response} = ecapnp:wait(ReadPromise),
     case ecapnp:get(value, Response) of
         123.0 ->
-            io:format("PASS~n");
+            io:format("PASS");
         Other ->
-            io:format("Error: ~p~n", [Other])
+            io:format("Error: ~p", [Other]),
+            error
     end.
 
-add_and_subtract(C) ->
-    io:format("Using add and subtract... "),
+add_and_subtract(C0) ->
+    io:format("~nUsing add and subtract... "),
+    %% resolve the Calculator promise to use the imported cap, rather
+    %% than the promise
+    {ok, C} = ecapnp:wait(C0),
+
     Add = get_operator(add, C),
     Sub = get_operator(subtract, C),
 
@@ -75,13 +94,14 @@ add_and_subtract(C) ->
     {ok, Response} = ecapnp:wait(ReadPromise),
     case ecapnp:get(value, Response) of
         101.0 ->
-            io:format("PASS~n");
+            io:format("PASS");
         Other ->
-            io:format("Error: ~p~n", [Other])
+            io:format("Error: ~p", [Other]),
+            error
     end.
 
 pipelining(C) ->
-    io:format("Pipelining eval() calls... "),
+    io:format("~nPipelining eval() calls... "),
     Add = get_operator(add, C),
     Mul = get_operator(multiply, C),
 
@@ -121,12 +141,14 @@ pipelining(C) ->
         27.0 ->
             case ecapnp:get(value, Add5Value) of
                 29.0 ->
-                    io:format("PASS~n");
+                    io:format("PASS");
                 Other ->
-                    io:format("Add 5 value: ~p~n", [Other])
+                    io:format("Add 5 value: ~p", [Other]),
+                    error
             end;
         Other ->
-            io:format("Add 3 value: ~p~n", [Other])
+            io:format("Add 3 value: ~p", [Other]),
+            error
     end.
 
 get_operator(Op, C) ->

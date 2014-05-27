@@ -1,6 +1,6 @@
 -file("addressbook.capnp", 1).
 
-%% This file was generated 2014-05-02 14:32:02 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-27 10:20:43 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(addressbook_capnp).
 
@@ -19,7 +19,7 @@
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
--ecapnp_schema_version(2).
+-ecapnp_schema_version(3).
 
 -record(schema_node,
 	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
@@ -83,36 +83,36 @@
 	 {type, 47, list, [{type, 47, atom, []}]}}],
        []}).
 
--record(field, {name, kind, annotations = []}).
+-record(field, {id, name, kind, annotations = []}).
 
 -record(ptr, {type, idx = 0, default = null}).
 
 -type({{record, ptr},
-       [{typed_record_field, {record_field, 59, {atom, 59, type}},
-	 {type, 59, union, [{atom, 59, undefined}, {type, 59, term, []}]}},
-	{typed_record_field, {record_field, 60, {atom, 60, idx}, {integer, 60, 0}},
-	 {remote_type, 60, [{atom, 60, ecapnp}, {atom, 60, ptr_index}, []]}},
-	{typed_record_field, {record_field, 61, {atom, 61, default}, {atom, 61, null}},
-	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, value}, []]}}],
+       [{typed_record_field, {record_field, 60, {atom, 60, type}},
+	 {type, 60, union, [{atom, 60, undefined}, {type, 60, term, []}]}},
+	{typed_record_field, {record_field, 61, {atom, 61, idx}, {integer, 61, 0}},
+	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, ptr_index}, []]}},
+	{typed_record_field, {record_field, 62, {atom, 62, default}, {atom, 62, null}},
+	 {remote_type, 62, [{atom, 62, ecapnp}, {atom, 62, value}, []]}}],
        []}).
 
 -record(data, {type, align = 0, default}).
 
 -type({{record, data},
-       [{typed_record_field, {record_field, 65, {atom, 65, type}},
-	 {type, 65, union, [{atom, 65, undefined}, {type, 65, term, []}]}},
-	{typed_record_field, {record_field, 66, {atom, 66, align}, {integer, 66, 0}},
-	 {remote_type, 66, [{atom, 66, ecapnp}, {atom, 66, bit_count}, []]}},
-	{typed_record_field, {record_field, 67, {atom, 67, default}},
-	 {type, 67, union,
-	  [{atom, 67, undefined}, {remote_type, 67, [{atom, 67, ecapnp}, {atom, 67, value}, []]}]}}],
+       [{typed_record_field, {record_field, 66, {atom, 66, type}},
+	 {type, 66, union, [{atom, 66, undefined}, {type, 66, term, []}]}},
+	{typed_record_field, {record_field, 67, {atom, 67, align}, {integer, 67, 0}},
+	 {remote_type, 67, [{atom, 67, ecapnp}, {atom, 67, bit_count}, []]}},
+	{typed_record_field, {record_field, 68, {atom, 68, default}},
+	 {type, 68, union,
+	  [{atom, 68, undefined}, {remote_type, 68, [{atom, 68, ecapnp}, {atom, 68, value}, []]}]}}],
        []}).
 
 -record(group, {id = 0}).
 
 -type({{record, group},
-       [{typed_record_field, {record_field, 71, {atom, 71, id}, {integer, 71, 0}},
-	 {remote_type, 71, [{atom, 71, ecapnp}, {atom, 71, type_id}, []]}}],
+       [{typed_record_field, {record_field, 72, {atom, 72, id}, {integer, 72, 0}},
+	 {remote_type, 72, [{atom, 72, ecapnp}, {atom, 72, type_id}, []]}}],
        []}).
 
 -record(method, {id, name, paramType, resultType}).
@@ -162,7 +162,7 @@ root([]) -> '11435534567900897652'().
 		 kind =
 		     #struct{dsize = 0, psize = 1, esize = pointer, union_field = none,
 			     fields =
-				 [#field{name = people,
+				 [#field{id = 0, name = people,
 					 kind =
 					     #ptr{type = {list, {struct, 10988939875124296728}}, idx = 0,
 						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
@@ -180,13 +180,13 @@ root([]) -> '11435534567900897652'().
 		 kind =
 		     #struct{dsize = 1, psize = 4, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = id, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
-				  #field{name = name, kind = #ptr{type = text, idx = 0, default = <<"">>}},
-				  #field{name = email, kind = #ptr{type = text, idx = 1, default = <<"">>}},
-				  #field{name = phones,
+				 [#field{id = 0, name = id, kind = #data{type = uint32, align = 0, default = <<0, 0, 0, 0>>}},
+				  #field{id = 1, name = name, kind = #ptr{type = text, idx = 0, default = <<"">>}},
+				  #field{id = 2, name = email, kind = #ptr{type = text, idx = 1, default = <<"">>}},
+				  #field{id = 3, name = phones,
 					 kind =
 					     #ptr{type = {list, {struct, 9317543775882349264}}, idx = 2, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{name = employment, kind = #group{id = 13477914502553102653}}]},
+				  #field{id = 4, name = employment, kind = #group{id = 13477914502553102653}}]},
 		 nodes =
 		     [9317543775882349264]}.  %% PhoneNumber
 
@@ -196,8 +196,8 @@ root([]) -> '11435534567900897652'().
 		 kind =
 		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
-				 [#field{name = number, kind = #ptr{type = text, idx = 0, default = <<"">>}},
-				  #field{name = type,
+				 [#field{id = 0, name = number, kind = #ptr{type = text, idx = 0, default = <<"">>}},
+				  #field{id = 1, name = type,
 					 kind = #data{type = {enum, 10511609358742521391}, align = 0, default = <<0, 0>>}}]},
 		 nodes =
 		     [10511609358742521391]}.  %% Type
@@ -216,9 +216,9 @@ root([]) -> '11435534567900897652'().
 			     union_field =
 				 #data{type =
 					   {union,
-					    [{0, unemployed, #field{name = unemployed, kind = void}},
-					     {1, employer, #field{name = employer, kind = #ptr{type = text, idx = 3, default = <<"">>}}},
-					     {2, school, #field{name = school, kind = #ptr{type = text, idx = 3, default = <<"">>}}},
-					     {3, selfEmployed, #field{name = selfEmployed, kind = void}}]},
+					    [#field{id = 0, name = unemployed, kind = void},
+					     #field{id = 1, name = employer, kind = #ptr{type = text, idx = 3, default = <<"">>}},
+					     #field{id = 2, name = school, kind = #ptr{type = text, idx = 3, default = <<"">>}},
+					     #field{id = 3, name = selfEmployed, kind = void}]},
 				       align = 32, default = <<0, 0>>},
 			     fields = []}}.
