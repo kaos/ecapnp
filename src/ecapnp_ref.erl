@@ -130,8 +130,8 @@ ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
 ptr(Idx, #ref{ segment=SegmentId, pos=Pos, offset=Offset, data=Data,
                kind=#list_ref{ size={inlineComposite, Tag}, count=Count } })
   when Idx >= 0, Idx < Count ->
-    #ref{ segment=SegmentId, data=Data, pos=-1,
-          offset=Pos + Offset + 1 +
+    #ref{ segment=SegmentId, data=Data, kind=Tag,
+          pos=-1, offset=Pos + Offset + 2 +
               (ref_data_size(Tag) * Idx) }.
 
 %% @doc Read from data section of a struct ref.

@@ -198,7 +198,9 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
             end
     end;
 set_field(#group{ id=Type }, {default}, #object{ ref=StructRef }=Obj) ->
-    ecapnp_obj:from_ref(StructRef, Type, Obj).
+    ecapnp_obj:from_ref(StructRef, Type, Obj);
+set_field(#group{ id=Type }, Value, #object{ ref=StructRef }=Obj) ->
+    union(Value, ecapnp_obj:from_ref(StructRef, Type, Obj)).
 
 write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(
