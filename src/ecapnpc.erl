@@ -94,8 +94,8 @@ compile_file(FileName) ->
 -spec compile_data( binary() ) -> ok.
 compile_data(Data)
   when is_binary(Data) ->
-    compile_message(
-      ecapnp_message:read(Data)).
+    {ok, Message, <<>>} = ecapnp_message:read(Data),
+    compile_message(Message).
 
 %% @doc Compile the `CodeGeneratorRequest' message. The `Message'
 %% argument holds the raw segments data to process, no futher

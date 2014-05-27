@@ -24,10 +24,12 @@
 -module(ecapnp_message).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([read/1, write/1, read_file/1]).
+-export([read/1, read/2, write/1, read_file/1]).
 
 -include("ecapnp.hrl").
 
+-type continuation() :: binary() | {binary(), binary(), list(binary())}.
+-type read_result() :: {ok, message(), Rest::binary()} | {cont, continuation()}.
 
 %% ===================================================================
 %% API functions
@@ -35,10 +37,17 @@
 
 %% @doc Parse segment table in the (unpacked, but otherwise framed)
 %% message.
--spec read(binary()) -> {ok, message()}.
-read(Data)
-  when is_binary(Data) ->
+-spec read(binary()) -> read_result().
+read(Data) when is_binary(Data) ->
     read_message(Data).
+
+-spec read(binary(), continuation() | undefined) -> read_result().
+read(Data, <<>>) when is_binary(Data) -> read_message(Data);
+read(Data, {SegSizes, Rest, Segments}) when is_binary(Data) ->
+    read_message(SegSizes, <<Rest/binary, Data/binary>>, Segments);
+read(Data, Rest) when is_binary(Data), is_binary(Rest) ->
+    read_message(<<Rest/binary, Data/binary>>).
+
 
 %% @doc Write segment table for message and return it along with the
 %% segments data.
@@ -55,10 +64,10 @@ write(#object{ ref=#ref{ data=#reader{ data = Data } } }) ->
 
 %% @doc Read binary message from file.
 %% @see read/1
--spec read_file(string()) -> {ok, message()}.
+-spec read_file(string()) -> read_result().
 read_file(Filename) ->
     {ok, Data} = file:read_file(Filename),
-    read(Data).
+    read_message(Data).
 
 
 %% ===================================================================
@@ -66,10 +75,12 @@ read_file(Filename) ->
 %% ===================================================================
 
 read_message(<<SegCount:32/integer-little, Data/binary>>) ->
-    read_message(SegCount+1, SegCount rem 2, Data).
+    read_message(SegCount+1, SegCount rem 2, Data);
+read_message(Data) -> {cont, Data}.
 
 read_message(SegCount, Pad, Data)
-  when is_integer(SegCount), SegCount > 0 ->
+  when is_integer(SegCount), SegCount > 0,
+       size(Data) > (4 * (SegCount + Pad)) ->
     <<SegSizes:SegCount/binary-unit:32,
       _Padding:Pad/binary-unit:32,
       Rest/binary>> = Data,
@@ -77,8 +88,10 @@ read_message(SegCount, Pad, Data)
 read_message(<<SegSize:32/integer-little, SegSizes/binary>>, Data, Segments) ->
     <<Segment:SegSize/binary-unit:64, Rest/binary>> = Data,
     read_message(SegSizes, Rest, [Segment|Segments]);
-read_message(<<>>, <<>>, Segments) ->
-    lists:reverse(Segments).
+read_message(<<>>, Rest, Segments) ->
+    {ok, lists:reverse(Segments), Rest};
+read_message(SegSizes, Rest, Segments) ->
+    {cont, {SegSizes, Rest, Segments}}.
 
 write_message(Segments) ->
     SegCount = length(Segments) - 1,

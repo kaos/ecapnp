@@ -63,7 +63,8 @@
           questions = #questions{} :: #questions{},
           answers = #answers{} :: #answers{},
           imports = #imports{} :: #imports{},
-          exports = #exports{} :: #exports{}
+          exports = #exports{} :: #exports{},
+          cont_data = <<>>
          }).
 
 
@@ -129,11 +130,9 @@ handle_cast(_Cast, State) ->
     {noreply, State}.
 
 handle_info({receive_message, Data}, State) ->
-    handle_message(Data),
-    {noreply, State};
-handle_info({'DOWN', _MonRef, process, _Pid, _Info}, State) ->
-    %% TODO..
-    {noreply, State};
+    handle_message(Data, State);
+handle_info({'DOWN', MonRef, process, _Pid, _Info}, State) ->
+    purge_ref(MonRef, State);
 handle_info(_Info, State) ->
     io:format(
       standard_error, "~p:ecapnp_vat(~p): unhandled info: ~n   ~p~n",
@@ -229,15 +228,41 @@ import_req(Pid, ObjectId, Schema, State) ->
     {reply, {ok, Promise}, send_message(Restore, State1)}.
 
 %% ===================================================================
-handle_message(Data) ->
-    Vat = self(),
-    spawn_link(
-      fun () ->
-              {ok, Message} = ecapnp_get:root(
-                                rpc_capnp:'Message'(),
-                                ecapnp_message:read(Data)),
-              ok = handle_message(Message, Vat)
-      end).
+handle_message(<<>>, State) -> {noreply, State};
+handle_message(Data, #state{ cont_data = Cont }=State) ->
+    case ecapnp_message:read(Data, Cont) of
+        {cont, Cont1} -> {noreply, State#state{ cont_data = Cont1 }};
+        {ok, Message, Rest} ->
+            Vat = self(),
+            spawn_link(
+              fun () ->
+                      {ok, Root} = ecapnp_get:root(rpc_capnp:'Message'(), Message),
+                      ok = handle_message_process(Root, Vat)
+              end),
+            handle_message(Rest, State#state{ cont_data = <<>> })
+    end.
+
+%% ===================================================================
+purge_ref(Ref, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    case lists:keyfind(Ref, 2, Ps) of
+        false ->
+            {noreply, State};
+        {Id, Ref, Res} ->
+            Ps1 =
+                case Res of
+                    {Ws, _} when is_list(Ws) ->
+                        lists:keystore(Id, 1, Ps, {Id, 'DOWN', Res});
+                    _ ->
+                        lists:keydelete(Id, 1, Ps)
+                end,
+            State1 = State#state{
+                       questions = Qs#questions{
+                                     promises = Ps1
+                                    }},
+            Finish = new_message(finish),
+            ok = ecapnp:set(questionId, Id, Finish),
+            {noreply, send_message(Finish, State1)}
+    end.
 
 %% ===================================================================
 
@@ -352,7 +377,7 @@ get_next_export_id(#state{ exports = #exports{
 %% ===================================================================
 
 %% ===================================================================
-handle_message(Message, Vat) ->
+handle_message_process(Message, Vat) ->
     case ecapnp:get(Message) of
         {call, Call} -> handle_call(Call, Vat);
         {return, Return} -> handle_return(Return, Vat);
@@ -454,16 +479,20 @@ set_promised_answer(Id, Ts, PromisedAnswer) ->
 
 %% ===================================================================
 set_result(Id, Result, List) ->
-    Entry =
-        case lists:keyfind(Id, 1, List) of
-            false ->
-                {Id, undefined, Result};
-            {Id, Mon, {Ws, Schema}} when is_list(Ws) ->
-                Res = ecapnp_obj:to_struct(Schema, Result),
-                [gen_server:reply(W, {ok, Res}) || W <- Ws],
-                {Id, Mon, Res}
-    end,
-    lists:keystore(Id, 1, List, Entry).
+    case lists:keyfind(Id, 1, List) of
+        false ->
+            Entry = {Id, undefined, Result},
+            lists:keystore(Id, 1, List, Entry);
+        {Id, Mon, {Ws, Schema}} when is_list(Ws) ->
+            Res = ecapnp_obj:to_struct(Schema, Result),
+            [gen_server:reply(W, {ok, Res}) || W <- Ws],
+            if Mon =:= 'DOWN' ->
+                    lists:keydelete(Id, 1, List);
+               true ->
+                    Entry = {Id, Mon, Res},
+                    lists:keystore(Id, 1, List, Entry)
+            end
+    end.
 
 wait_for_result(Id, W, List) ->
     Entry =
