@@ -1,8 +1,9 @@
 -module('calculator-client').
 
--export([run/0]).
+-export([run/0, handle_call/4]).
 
 run() ->
+    ecapnp_capability_sup:start_link(),
     {ok, Calculator} = connect(),
     _ =
         [begin
@@ -13,7 +14,8 @@ run() ->
          end || {T, F} <- [{eval_literal, fun eval_literal/1},
                            {add_and_subtract, fun add_and_subtract/1},
                            {pipelining, fun pipelining/1},
-                           {def_functions, fun def_functions/1}
+                           {def_functions, fun def_functions/1},
+                           {callback, fun callback/1}
                           ]
         ],
     %% proper shutdown not yet implemented..
@@ -43,9 +45,9 @@ read_socket(Sock, Vat) ->
             Vat ! {receive_message, Data},
             read_socket(Sock, Vat);
         {error, closed} ->
-            io:format("tcp socket closed~n");
+            io:format("~ntcp socket closed~n");
         {error, Reason} ->
-            io:format("tcp socket error: ~p~n", [Reason]),
+            io:format("~ntcp socket error: ~p~n", [Reason]),
             halt(1)
     end.
 
@@ -88,7 +90,7 @@ add_and_subtract(C0) ->
     [Add1, Add2] = ecapnp:set(params, 2, AddCall),
     ok = ecapnp:set({literal, 123}, Add1),
     ok = ecapnp:set({literal, 45}, Add2),
-    
+
     {ok, Promise} = ecapnp:send(Req),
     Read = ecapnp:request(read, ecapnp:get(value, Promise)),
     {ok, ReadPromise} = ecapnp:send(Read),
@@ -112,10 +114,10 @@ pipelining(C) ->
 
     ok = ecapnp:set({literal, 4}, Mul1),
     ok = ecapnp:set({literal, 6}, Mul2),
-    
+
     {ok, MulPromise} = ecapnp:send(Req),
     MulValue = ecapnp:get(value, MulPromise),
-    
+
     Add3Req = ecapnp:request(evaluate, C),
     [Add3P1, Add3P2] = call_expression(
                          Add, 2, ecapnp:init(
@@ -232,6 +234,35 @@ def_functions(C0) ->
             error
     end.
 
+callback(C) ->
+    io:format("~nUsing a callback... "),
+
+    {ok, PowerFunction} = ecapnp_capability_sup:start_capability(
+                            ?MODULE, calculator_capnp:'Calculator'(['Function'])),
+
+    Add = get_operator(add, C),
+
+    %% expr: 2^(4+5)
+    Req = ecapnp:request(evaluate, C),
+    Exp = ecapnp:init(expression, Req),
+
+    [Arg1, Arg2] = call_expression(PowerFunction, 2, Exp),
+    [Add1, Add2] = call_expression(Add, 2, Arg2),
+    ok = ecapnp:set({literal, 2}, Arg1),
+    ok = ecapnp:set({literal, 4}, Add1),
+    ok = ecapnp:set({literal, 5}, Add2),
+
+    Value = req_value(Req),
+    case ecapnp:get(value, Value) of
+        512.0 ->
+            io:format("PASS");
+        Other ->
+            io:format("Error: ~p", [Other]),
+            error
+    end.
+
+%%% utils
+
 get_operator(Op, C) ->
     Req = ecapnp:request(getOperator, C),
     ok = ecapnp:set(op, Op, Req),
@@ -250,3 +281,8 @@ req_value(Req) ->
                       read, ecapnp:get(value, Promise)
                      )),
     Value.
+
+%% implement pow() function
+handle_call(['Calculator', 'Function'], 'call', Params, Results) ->
+    [Arg1, Arg2] = ecapnp:get(params, Params),
+    ecapnp:set(value, math:pow(Arg1, Arg2), Results).

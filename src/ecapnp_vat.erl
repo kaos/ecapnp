@@ -126,6 +126,8 @@ handle_call({restore, ObjectId}, From, State) ->
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State}.
 
+handle_cast({stop, Reason}, State) ->
+    {stop, Reason, State};
 handle_cast(_Cast, State) ->
     {noreply, State}.
 
@@ -162,8 +164,10 @@ send_req(#rpc_call{ target = Target }=Req, State) ->
             case find(Id, State#state.exports) of
                 false ->
                     {reply, {error, unknown_capability}, State};
-                Exported ->
-                    {reply, ecapnp:send(Req#rpc_call{ target = Exported }),
+                {local, Exported} ->
+                    Kind = #interface_ref{ cap=Exported },
+                    Target1 = Target#object{ ref = #ref{ kind=Kind } },
+                    {reply, ecapnp:send(Req#rpc_call{ target = Target1 }),
                      State}
             end
     end.
@@ -283,8 +287,13 @@ setup_state(Transport, Restorer) ->
 
 %% ===================================================================
 send_message(Msg, #state{ transport = {Mod, Handle} }=State) ->
-    ok = Mod:send(Handle, ecapnp_message:write(Msg)),
-    State;
+    case Mod:send(Handle, ecapnp_message:write(Msg)) of
+        ok -> State;
+        Err ->
+            gen_server:cast(self(), {stop, Err}),
+            State
+    end;
+
 %% called from message handler processes
 send_message(Msg, Vat) when is_pid(Vat) ->
     gen_server:call(Vat, {send_message, Msg}, infinity).
@@ -317,7 +326,9 @@ process_message(Message, State) ->
                         {ecapnp:get(content, Payload),
                          update_cap_table(Payload, State)}
                 end,
-            set_answer_result(Id, Result, State1)
+            set_answer_result(Id, Result, State1);
+        _ ->
+            State
     end.
 
 %% ===================================================================
@@ -348,7 +359,7 @@ set_cap_descriptor({Cap, CapDesc}, State) ->
 
 %% ===================================================================
 export(Cap, State) ->
-    case find(Cap, State#state.exports) of
+    case lists:keyfind(Cap, 3, State#state.exports#exports.caps) of
         {Id, RefCount, Cap} ->
             do_export(Id, Cap, RefCount, State);
         false ->
@@ -382,8 +393,10 @@ handle_message_process(Message, Vat) ->
         {call, Call} -> handle_call(Call, Vat);
         {return, Return} -> handle_return(Return, Vat);
         {restore, Restore} -> handle_restore(Restore, Vat);
+        %% {finish, Finish} -> handle_finish(Finish, Vat);
+        %% {release, Release} -> handle_release(Release, Vat);
         _ ->
-            Reply = ecapnp:set_root('Message', rpc_capnp),
+            {ok, Reply} = ecapnp:set_root('Message', rpc_capnp),
             ecapnp:set({unimplemented, Message}, Reply),
             send_message(Reply, Vat)
     end.
