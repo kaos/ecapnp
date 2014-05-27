@@ -12,7 +12,8 @@ run() ->
              end
          end || {T, F} <- [{eval_literal, fun eval_literal/1},
                            {add_and_subtract, fun add_and_subtract/1},
-                           {pipelining, fun pipelining/1}
+                           {pipelining, fun pipelining/1},
+                           {def_functions, fun def_functions/1}
                           ]
         ],
     %% proper shutdown not yet implemented..
@@ -151,6 +152,86 @@ pipelining(C) ->
             error
     end.
 
+def_functions(C0) ->
+    %% The calculator interface supports defining functions.  Here we
+    %% use it to define two functions and then make calls to them as
+    %% follows:
+    %%
+    %%   f(x, y) = x * 100 + y
+    %%   g(x) = f(x, x + 1) * 2;
+    %%   f(12, 34)
+    %%   g(21)
+    %%
+    %% Once again, the whole thing takes only one network round trip.
+
+    io:format("~nDefining functions... "),
+
+    %% this doesn't really wait, as the result is already there, but
+    %% merely retreives the result from the local vat's question
+    %% table.
+    {ok, C} = ecapnp:wait(C0),
+
+    %% get operators from server
+    Add = get_operator(add, C),
+    Mul = get_operator(multiply, C),
+
+    %% define f
+    F = (fun () ->
+                 Req = ecapnp:request(defFunction, C),
+                 ok = ecapnp:set(paramCount, 2, Req),
+                 Body = ecapnp:init(body, Req),
+                 [Add1, Add2] = call_expression(Add, 2, Body),
+                 [Mul1, Mul2] = call_expression(Mul, 2, Add1),
+                 ok = ecapnp:set({parameter, 0}, Mul1), %% x
+                 ok = ecapnp:set({literal, 100}, Mul2), %% * 100
+                 ok = ecapnp:set({parameter, 1}, Add2), %% + y
+                 {ok, Promise} = ecapnp:send(Req),
+                 ecapnp:get(func, Promise)
+         end)(),
+    %% define g
+    G = (fun () ->
+                 Req = ecapnp:request(defFunction, C),
+                 ok = ecapnp:set(paramCount, 1, Req),
+                 Body = ecapnp:init(body, Req),
+                 [Mul1, Mul2] = call_expression(Mul, 2, Body),
+                 [Call1, Call2] = call_expression(F, 2, Mul1),
+                 [Add1, Add2] = call_expression(Add, 2, Call2),
+                 ok = ecapnp:set({parameter, 0}, Call1), %% x
+                 ok = ecapnp:set({parameter, 0}, Add1), %% x
+                 ok = ecapnp:set({literal, 1}, Add2), %% + 1
+                 ok = ecapnp:set({literal, 2}, Mul2), %% * 2
+                 {ok, Promise} = ecapnp:send(Req),
+                 ecapnp:get(func, Promise)
+         end)(),
+    %% f(12, 34)
+    Freq = ecapnp:request(evaluate, C),
+    Fexpr = ecapnp:init(expression, Freq),
+    [F1, F2] = call_expression(F, 2, Fexpr),
+    ok = ecapnp:set({literal, 12}, F1),
+    ok = ecapnp:set({literal, 34}, F2),
+    Fvalue = req_value(Freq),
+
+    %% g(21)
+    Greq = ecapnp:request(evaluate, C),
+    Gexpr = ecapnp:init(expression, Greq),
+    [G1] = call_expression(G, 1, Gexpr),
+    ok = ecapnp:set({literal, 21}, G1),
+    Gvalue = req_value(Greq),
+
+    case ecapnp:get(value, Fvalue) of
+        1234.0 ->
+            case ecapnp:get(value, Gvalue) of
+                4244.0 ->
+                    io:format("PASS");
+                Other ->
+                    io:format("g(21): ~p", [Other]),
+                    error
+            end;
+        Other ->
+            io:format("f(12, 34): ~p", [Other]),
+            error
+    end.
+
 get_operator(Op, C) ->
     Req = ecapnp:request(getOperator, C),
     ok = ecapnp:set(op, Op, Req),
@@ -161,3 +242,11 @@ call_expression(Fun, ParamCount, Expr) ->
     Call = ecapnp:set(call, Expr),
     ok = ecapnp:set(function, Fun, Call),
     ecapnp:set(params, ParamCount, Call).
+
+req_value(Req) ->
+    {ok, Promise} = ecapnp:send(Req),
+    {ok, Value} = ecapnp:send(
+                    ecapnp:request(
+                      read, ecapnp:get(value, Promise)
+                     )),
+    Value.
