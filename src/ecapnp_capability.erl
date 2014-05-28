@@ -24,7 +24,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 -behaviour(gen_server).
 
--export([start/2, start_link/2, stop/1, dispatch_call/4, dispatch_call/5]).
+-export([start/3, start_link/3, stop/1, dispatch_call/4, dispatch_call/5]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -32,7 +32,7 @@
 
 -include("ecapnp.hrl").
 
--record(state, { impl, interfaces = [] }).
+-record(state, { impl, cap_state, interfaces = [] }).
 
 
 %% ===================================================================
@@ -46,11 +46,11 @@
 %% @spec start(schema_node(), list()) -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start(Impl, Interfaces) ->
-    gen_server:start(?MODULE, [Impl, Interfaces], []).
+start(Impl, Interfaces, Args) ->
+    gen_server:start(?MODULE, [Impl, Interfaces, Args], []).
 
-start_link(Impl, Interfaces) ->
-    gen_server:start_link(?MODULE, [Impl, Interfaces], []).
+start_link(Impl, Interfaces, Args) ->
+    gen_server:start_link(?MODULE, [Impl, Interfaces, Args], []).
 
 stop(Cap) ->
     gen_server:call(Cap, stop).
@@ -73,8 +73,9 @@ dispatch_call(Cap, ItfID, MethID, Params, Results) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Mod, Interfaces]) ->
-    {ok, #state{ impl = Mod, interfaces = list_interfaces(Interfaces) }}.
+init([Mod, Interfaces, Args]) ->
+    {ok, #state{ impl = Mod, cap_state = Mod:init(Args),
+                 interfaces = list_interfaces(Interfaces) }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -162,7 +163,7 @@ dispatch(#schema_node{ name = InterfaceName }=Interface,
          #method{ name = MethodName,
                   paramType = ParamType,
                   resultType = ResultType },
-         Args, #state{ impl = Mod }=State) ->
+         Args, #state{ impl = Mod, cap_state = CapState0 }=State) ->
 
     ParamSchema = ecapnp_schema:get(ParamType, Interface),
     ResultSchema = ecapnp_schema:get(ResultType, Interface),
@@ -176,11 +177,11 @@ dispatch(#schema_node{ name = InterfaceName }=Interface,
                 Content = ecapnp:init(content, ResultSchema, Payload),
                 {Ps, Content}
         end,
-    ok = apply(Mod, handle_call,
-               [InterfaceName, MethodName,
-                ecapnp_obj:to_struct(ParamSchema, Params),
-                Results]),
-    {reply, {ok, Results}, State}.
+    {ok, CapState1} = apply(Mod, handle_call,
+                            [InterfaceName, MethodName,
+                             ecapnp_obj:to_struct(ParamSchema, Params),
+                             Results, CapState0]),
+    {reply, {ok, Results}, State#state{ cap_state = CapState1 }}.
 
 find_interface(IntfId, #state{ interfaces = Ns }) ->
     lists:keyfind(IntfId, #schema_node.id, Ns).

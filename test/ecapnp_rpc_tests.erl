@@ -50,15 +50,15 @@ run() ->
 rpc_local_test_() ->
     {setup,
      fun () ->
-             {ok, CapS} = ecapnp_capability_sup:start_link(),
-             {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
-             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'()),
              Mods = [setup_meck(Mod, Funs)
                      || {Mod, Funs} <-
                             [{basicCap, basicCap_funs()},
-                             {pipelines, pipelines_funs(BasicCap)}
+                             {pipelines, pipelines_funs()}
                             ]
                     ],
+             {ok, CapS} = ecapnp_capability_sup:start_link(),
+             {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
+             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'(), BasicCap),
              #test{ sup = CapS, basic = BasicCap, pipelines = PipelinesCap, mods = Mods }
      end,
      fun (#test{ sup = CapS, mods = Mods }) ->
@@ -77,16 +77,16 @@ rpc_remote_test_() ->
     %% remote one, except there's no TCP/IP stack involved here..
     {setup,
      fun () ->
-             {ok, CapS} = ecapnp_capability_sup:start_link(),
-             {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
-             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'()),
              Mods = [setup_meck(Mod, Funs)
                      || {Mod, Funs} <-
                             [{basicCap, basicCap_funs()},
-                             {pipelines, pipelines_funs(BasicCap)},
+                             {pipelines, pipelines_funs()},
                              {bridge_echo, echo_funs()}
                             ]
                     ],
+             {ok, CapS} = ecapnp_capability_sup:start_link(),
+             {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
+             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'(), BasicCap),
              Bridge = spawn_link(
                        fun () ->
                                Loop = fun (F, VatA, VatB) ->
@@ -135,9 +135,11 @@ rpc_remote_test_() ->
 echo_funs() ->
     [{send, fun (Pid, Data) -> Pid ! {self(), Data}, ok end}].
 
-pipelines_funs(BasicCap) ->
-    [{handle_call, fun ('Pipelines', getBasic, _Params, Result) ->
-                           ecapnp:set(basic, BasicCap, Result), ok
+pipelines_funs() ->
+    [{init, fun (State) -> State end},
+     {handle_call, fun ('Pipelines', getBasic, _Params, Result, BasicCap) ->
+                           ecapnp:set(basic, BasicCap, Result),
+                           {ok, BasicCap}
                    end}].
 
 cap_restorer(Caps) ->
