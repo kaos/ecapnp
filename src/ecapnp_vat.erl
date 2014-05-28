@@ -123,6 +123,10 @@ handle_call({restore, ObjectId}, From, State) ->
               gen_server:reply(From, (State#state.restorer)(ObjectId))
       end),
     {noreply, State};
+handle_call({finish, Id, ReleaseResultCaps}, _From, State) ->
+    {reply, ok, purge_answer(Id, ReleaseResultCaps, State)};
+handle_call({release, Id, Count}, _From, State) ->
+    {reply, ok, release_export(Id, Count, State)};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State}.
 
@@ -263,12 +267,26 @@ purge_ref(Ref, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
                        questions = Qs#questions{
                                      promises = Ps1
                                     }},
+            %% releaseResultCaps is true by default, which is fine
+            %% until we've implemented sending release messages
             Finish = new_message(finish),
             ok = ecapnp:set(questionId, Id, Finish),
             {noreply, send_message(Finish, State1)}
     end.
 
 %% ===================================================================
+purge_answer(Id, false, State) ->
+    set_answer_result(Id, finish, State);
+purge_answer(Id, true, State) ->
+    case find(Id, State#state.answers) of
+        false -> State;
+        {ok, Res} ->
+            {ok, Caps} = ecapnp_obj:get_cap_table(Res),
+            State1 = release_caps(Caps, State),
+            purge_answer(Id, false, State1);
+        {pending, Id} ->
+            purge_answer(Id, false, State)
+    end.
 
 
 %% ===================================================================
@@ -361,19 +379,37 @@ set_cap_descriptor({Cap, CapDesc}, State) ->
 export(Cap, State) ->
     case lists:keyfind(Cap, 3, State#state.exports#exports.caps) of
         {Id, RefCount, Cap} ->
-            do_export(Id, Cap, RefCount, State);
+            {Id, update_export(Id, Cap, RefCount + 1, State)};
         false ->
             {Id, State1} = get_next_export_id(State),
-            do_export(Id, Cap, 0, State1)
+            {Id, update_export(Id, Cap, 1, State1)}
     end.
 
-do_export(Id, Cap, RefCount, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
-    {Id, State#state{
-           exports = Es#exports{
-                       caps = lists:keystore(Id, 1, Cs, {Id, RefCount + 1, Cap})
-                      }}
-    }.
+%% ===================================================================
+release_export(Id, Count, State) ->
+    case lists:keyfind(Id, 1, State#state.exports#exports.caps) of
+        {Id, RefCount, Cap} ->
+            if Count =:= all ->
+                    update_export(Id, Cap, 0, State);
+               true ->
+                    update_export(Id, Cap, RefCount - Count, State)
+            end;
+        false ->
+            State
+    end.
 
+%% ===================================================================
+update_export(Id, Cap, RefCount, #state{ exports = #exports{ caps = Cs }=Es }=State) ->
+    Caps =
+        if RefCount > 0 ->
+                lists:keystore(Id, 1, Cs, {Id, RefCount, Cap});
+           true ->
+                %% TODO: notify Cap about being released
+                lists:keydelete(Id, 1, Cs)
+        end,
+    State#state{ exports = Es#exports{ caps = Caps } }.
+
+%% ===================================================================
 get_next_export_id(#state{ exports = #exports{
                                         next_id = Id
                                        }=Es }=State) ->
@@ -382,19 +418,34 @@ get_next_export_id(#state{ exports = #exports{
                                  }}}.
 
 %% ===================================================================
+release_caps(Caps, State0) ->
+    Vat = self(),
+    lists:foldl(
+      fun (Cap, State) ->
+              case Cap of
+                  #capability{ id = {local, {Id, Vat}} } ->
+                      release_export(Id, all, State);
+                  _ ->
+                      %% TODO: how do we release the other capabilities..
+                      State
+              end
+      end, State0, Caps).
+
+%% ===================================================================
 
 %% ===================================================================
 %% process messages, these are run in their own processes
 %% ===================================================================
 
 %% ===================================================================
+-spec handle_message_process(Message::ecapnp:object(), Vat::pid()) -> ok.
 handle_message_process(Message, Vat) ->
     case ecapnp:get(Message) of
         {call, Call} -> handle_call(Call, Vat);
         {return, Return} -> handle_return(Return, Vat);
         {restore, Restore} -> handle_restore(Restore, Vat);
-        %% {finish, Finish} -> handle_finish(Finish, Vat);
-        %% {release, Release} -> handle_release(Release, Vat);
+        {finish, Finish} -> handle_finish(Finish, Vat);
+        {release, Release} -> handle_release(Release, Vat);
         _ ->
             {ok, Reply} = ecapnp:set_root('Message', rpc_capnp),
             ecapnp:set({unimplemented, Message}, Reply),
@@ -457,6 +508,18 @@ handle_restore(Restore, Vat) ->
     send_message(Message, Vat).
 
 %% ===================================================================
+handle_finish(Finish, Vat) ->
+    Id = ecapnp:get(questionId, Finish),
+    Release = ecapnp:get(releaseResultCaps, Finish),
+    gen_server:call(Vat, {finish, Id, Release}).
+
+%% ===================================================================
+handle_release(Release, Vat) ->
+    Id = ecapnp:get(id, Release),
+    Count = ecapnp:get(referenceCount, Release),
+    gen_server:call(Vat, {release, Id, Count}).
+
+%% ===================================================================
 
 %% ===================================================================
 %% common utils
@@ -494,17 +557,24 @@ set_promised_answer(Id, Ts, PromisedAnswer) ->
 set_result(Id, Result, List) ->
     case lists:keyfind(Id, 1, List) of
         false ->
-            Entry = {Id, undefined, Result},
-            lists:keystore(Id, 1, List, Entry);
+            if Result =:= finish -> List;
+               true ->
+                    Entry = {Id, undefined, Result},
+                    lists:keystore(Id, 1, List, Entry)
+            end;
         {Id, Mon, {Ws, Schema}} when is_list(Ws) ->
-            Res = ecapnp_obj:to_struct(Schema, Result),
+            Res = if Result =:= finish -> cancel;
+                     true -> ecapnp_obj:to_struct(Schema, Result)
+                  end,
             [gen_server:reply(W, {ok, Res}) || W <- Ws],
-            if Mon =:= 'DOWN' ->
+            if Mon =:= 'DOWN', Result =:= finish ->
                     lists:keydelete(Id, 1, List);
                true ->
                     Entry = {Id, Mon, Res},
                     lists:keystore(Id, 1, List, Entry)
-            end
+            end;
+        {Id, undefined, _Res} when Result =:= finish ->
+            lists:keydelete(Id, 1, List)
     end.
 
 wait_for_result(Id, W, List) ->
