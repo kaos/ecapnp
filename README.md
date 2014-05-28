@@ -3,27 +3,51 @@ ecapnp
 
 [Cap'n Proto](http://capnproto.com) library for Erlang.
 
-NOTICE: There's still some features missing..
+NOTICE: This is work-in-progress. Feedback appreciated.
 
-## Status update
 
-The compiler has been re-organized, and now produces standalone schema
-modules to either compiled `.beam` or in `.erl` source form.
+## Current Status
 
-The documentation is still not up-to-date with these changes..
+* Compiler
 
-In addition to the eunit tests, there are now also
-[PropEr](https://github.com/manopapad/proper) tests to cover more
-corner cases. I find that they complement each other well, as unit
-tests are easier to write for a specific slightly contrived scenario,
-while the property tests are well suited for a general approach
-covering as many different inputs as possible.
+  The compiler produces standalone schema modules to either compiled
+  `.beam` or in `.erl` source form.
+
+* API
+
+  The API are still quite verbose, and subject to change.
+
+* Serialization support
+
+  Most constructs should work. There are a few corner cases I haven't
+  tested yet. *Packed* messages are also supported.
+
+* RPC support
+
+  The RPC support is shaping up, aiming for a level 1 implementation
+  to be ready soon.
+
+* Tests
+
+  In addition to the eunit tests, there are now also
+  [PropEr](https://github.com/manopapad/proper) tests to cover more
+  corner cases. I find that they complement each other well, as unit
+  tests are easier to write for a specific slightly contrived
+  scenario, while the property tests are well suited for a general
+  approach covering as many different inputs as possible.
+
+* Future work
+
+  At this point, the goal is to get everything working properly. The
+  next step will be to re-factor it into beautiful code/design, and
+  after that, improvements for efficiency and performance.
 
 
 ### Note
 
 In order for `ecapnp` to work properly, `ecapnp` has to be on the
-Erlang lib path (i.e. `ERL_LIBS`), and `ecapnp/bin/capnpc-erl` needs to be on your `PATH`.
+Erlang lib path (i.e. `ERL_LIBS`), and `ecapnp/bin/capnpc-erl` needs
+to be on your `PATH`.
 
 
 Try it:
@@ -31,7 +55,7 @@ Try it:
     cd ../path/to/ecapnp
     export ERL_LIBS=$(dirname $(pwd))
     export PATH=$PATH:$(pwd)/bin
-    make sample
+    make samples
     capnpc -oerl .../my_schema.capnp
 
 This will _(given that everything is working as intended)_ produce a
