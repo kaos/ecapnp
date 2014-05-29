@@ -28,7 +28,7 @@
 %% API
 -export([start/1, start_link/1, stop/1, alloc/3, update_segment/3,
          get_segment/4, get_segment_size/2, get_segments/1, get_cap/2,
-         get_cap_idx/2, get_cap_table/1, set_cap_table/2]).
+         get_cap_idx/2, get_cap_table/1, set_cap_table/2, add_ref/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -45,7 +45,7 @@
          }).
 
 -record(state, {
-          owner :: pid(),
+          refs=[] :: list(reference()),
           segments = [] :: list(#seg{}),
           caps = [] :: list({non_neg_integer(), #capability{}})
          }).
@@ -56,10 +56,10 @@
 %% ===================================================================
 
 start(Init) ->
-    gen_server:start(?MODULE, {0, Init, #state{ owner = self() }}, []).
+    gen_server:start(?MODULE, {0, Init, self()}, []).
 
 start_link(Init) ->
-    gen_server:start_link(?MODULE, {0, Init, #state{ owner = self() }}, []).
+    gen_server:start_link(?MODULE, {0, Init, self()}, []).
 
 stop(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, stop).
@@ -109,21 +109,26 @@ get_cap_table(Pid) ->
 set_cap_table(CapTable, Pid) ->
     data_request({set_cap_table, CapTable}, Pid).
 
+add_ref(Ref, Pid) when is_pid(Ref) ->
+    data_request({add_ref, Ref}, Pid).
+
 
 %% ===================================================================
 %% gen server callbacks
 %% ===================================================================
 
-init({Id, [S|Ss], State}) ->
-    init({Id + 1, Ss, set_segment(Id, new_segment(S), State)});
-init({_, [], State}) ->
-    {ok, init_state(State)};
-init({Id, Init, State}) ->
-    {ok, set_segment(Id, new_segment(Init), init_state(State))}.
+init({Id, Init, Owner}) ->
+    init_segments({Id, Init, init_state(Owner)}).
 
-init_state(#state{ owner = Owner }=State) ->
-    monitor(process, Owner),
-    State.
+init_state(Owner) ->
+    #state{ refs = [monitor(process, Owner)] }.
+
+init_segments({Id, [S|Ss], State}) ->
+    init_segments({Id + 1, Ss, set_segment(Id, new_segment(S), State)});
+init_segments({_, [], State}) ->
+    {ok, State};
+init_segments({Id, Init, State}) ->
+    {ok, set_segment(Id, new_segment(Init), State)}.
 
 handle_call({alloc, {Id, Size}}, _From, State) ->
     {Reply, State1} = do_alloc(Id, Size, State),
@@ -146,14 +151,23 @@ handle_call({get_cap_idx, Cap}, _From, State) ->
 handle_call(get_cap_table, _From, #state{ caps = CapTable }=State) ->
     {reply, {ok, CapTable}, State};
 handle_call({set_cap_table, CapTable}, _From, #state{ caps = [] }=State) ->
-    {reply, ok, State#state{ caps = CapTable }}.
+    {reply, ok, State#state{ caps = CapTable }};
+handle_call({add_ref, Ref}, _From, #state{ refs = Refs }=State) ->
+    %% todo: should we also link to it.. ?
+    {reply, ok, State#state{ refs = [monitor(process, Ref)|Refs] }}.
 
 handle_cast({update_segment, {Id, Offset, Data}}, State) ->
     State1 = do_update_segment(Id, Offset, Data, State),
     {noreply, State1}.
 
-handle_info({'DOWN', _Ref, process, _Pid, Info}, State) ->
-    {stop, Info, State};
+handle_info({'DOWN', Ref, process, _Pid, _Info}, #state{ refs = Refs }=State) ->
+    %% todo: should we check for abnormal exits, and die along with it.. ?
+    case Refs -- [Ref] of
+        [] ->
+            {stop, normal, State};
+        Refs1 ->
+            {noreply, State#state{ refs = Refs1 }}
+    end;
 handle_info(_Info, State) ->
     {noreply, State}.
 

@@ -39,8 +39,11 @@ send(#rpc_call{ interface = IntfId, method = MethId,
                 resultSchema = ResultSchema
               },
      #capability{ id = {local, Cap} }) ->
+    %% there's a race here, in case the process calling send/1 exits before the promise has started,
+    %% then the add_ref/2 call may fail.
     {ok, promise(
            fun () ->
+                   ok = ecapnp_obj:add_ref(self(), Params),
                    ecapnp_capability:dispatch_call(
                      Cap, IntfId, MethId, Params, Results)
            end,
@@ -99,7 +102,12 @@ fulfilled(Ref, Result) ->
     receive
         {get_promise_result, From} ->
             NewRef = monitor(process, From),
-            demonitor(Ref, [flush]),
+            true = demonitor(Ref, [flush]),
+            case Result of
+                {ok, Res} ->
+                    ok = ecapnp_obj:add_ref(From, Res);
+                _ -> nop
+            end,
             From ! {self(), promise_result, Result},
             fulfilled(NewRef, Result);
         {'DOWN', Ref, process, _Pid, _Info} ->

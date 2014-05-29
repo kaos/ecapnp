@@ -26,7 +26,7 @@
 -export([init/1, init/2, alloc/3, from_ref/3, from_data/2,
          from_data/3, field/2, copy/1, refresh/1, to_struct/2,
          to_list/2, to_text/1, to_data/1, set_cap_table/2,
-         get_cap_table/1]).
+         get_cap_table/1, add_ref/2]).
 
 -include("ecapnp.hrl").
 
@@ -153,6 +153,10 @@ get_cap_table(#reader{ caps = CapTable }) ->
     {ok, CapTable};
 get_cap_table(#builder{ pid = Pid }) ->
     ecapnp_data:get_cap_table(Pid).
+
+add_ref(Ref, #object{ ref = #ref{ data = #builder{ pid = Pid } }})
+  when is_pid(Ref) -> ecapnp_data:add_ref(Ref, Pid);
+add_ref(_, #object{ ref = #ref{ data = #reader{} }}) -> ok.
 
 
 %% ===================================================================
