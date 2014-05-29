@@ -28,7 +28,7 @@
 
 -include("ecapnp.hrl").
 
--type continuation() :: binary() | {binary(), binary(), list(binary())}.
+-type continuation() :: term().
 -type read_result() :: {ok, message(), Rest::binary()} | {cont, continuation()}.
 
 %% ===================================================================
@@ -45,6 +45,8 @@ read(Data) when is_binary(Data) ->
 read(Data, <<>>) when is_binary(Data) -> read_message(Data);
 read(Data, {SegSizes, Rest, Segments}) when is_binary(Data) ->
     read_message(SegSizes, <<Rest/binary, Data/binary>>, Segments);
+read(Data, {SegCount, Rest}) when is_binary(Data) ->
+    read_message(SegCount, <<Rest/binary, Data/binary>>);
 read(Data, Rest) when is_binary(Data), is_binary(Rest) ->
     read_message(<<Rest/binary, Data/binary>>).
 
@@ -75,17 +77,21 @@ read_file(Filename) ->
 %% ===================================================================
 
 read_message(<<SegCount:32/integer-little, Data/binary>>) ->
-    read_message(SegCount+1, SegCount rem 2, Data);
+    read_message({SegCount + 1, SegCount rem 2}, Data);
 read_message(Data) -> {cont, Data}.
 
-read_message(SegCount, Pad, Data)
+read_message({SegCount, Pad}, Data)
   when is_integer(SegCount), SegCount > 0,
-       size(Data) > (4 * (SegCount + Pad)) ->
+       size(Data) >= (4 * (SegCount + Pad)) ->
     <<SegSizes:SegCount/binary-unit:32,
       _Padding:Pad/binary-unit:32,
       Rest/binary>> = Data,
     read_message(SegSizes, Rest, []);
-read_message(<<SegSize:32/integer-little, SegSizes/binary>>, Data, Segments) ->
+read_message(SegCount, Data) ->
+    {cont, {SegCount, Data}}.
+
+read_message(<<SegSize:32/integer-little, SegSizes/binary>>, Data, Segments)
+  when size(Data) >= (SegSize * 8) ->
     <<Segment:SegSize/binary-unit:64, Rest/binary>> = Data,
     read_message(SegSizes, Rest, [Segment|Segments]);
 read_message(<<>>, Rest, Segments) ->

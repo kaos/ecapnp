@@ -100,7 +100,10 @@ evaluate(Expr) -> evaluate(Expr, []).
 evaluate(Expr, EvalParams) ->
     case ecapnp:get(Expr) of
         {literal, Literal} -> Literal;
-        {previousResult, Value} -> ecapnp:get(value, Value);
+        {previousResult, Value} ->
+            ReadReq = ecapnp:request(read, Value),
+            {ok, ReadPromise} = ecapnp:send(ReadReq),
+            ecapnp:get(value, ReadPromise);
         {parameter, Idx} -> lists:nth(Idx + 1, EvalParams);
         {call, Call} ->
             Func = ecapnp:get(function, Call),
