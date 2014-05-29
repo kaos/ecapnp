@@ -24,7 +24,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 -behaviour(gen_server).
 
--export([start/3, start_link/3, stop/1, dispatch_call/4, dispatch_call/5]).
+-export([start/1, start_link/1, stop/1, dispatch_call/4, dispatch_call/5]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -46,11 +46,11 @@
 %% @spec start(schema_node(), list()) -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start(Impl, Interfaces, Args) ->
-    gen_server:start(?MODULE, [Impl, Interfaces, Args], []).
+start(Args) ->
+    gen_server:start(?MODULE, Args, []).
 
-start_link(Impl, Interfaces, Args) ->
-    gen_server:start_link(?MODULE, [Impl, Interfaces, Args], []).
+start_link(Args) ->
+    gen_server:start_link(?MODULE, Args, []).
 
 stop(Cap) ->
     gen_server:call(Cap, stop).
@@ -73,9 +73,16 @@ dispatch_call(Cap, ItfID, MethID, Params, Results) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Mod, Interfaces, Args]) ->
-    {ok, #state{ impl = Mod, cap_state = Mod:init(Args),
-                 interfaces = list_interfaces(Interfaces) }}.
+init([Mod, Interfaces|Opts]) ->
+    State =  #state{ impl = Mod, interfaces = list_interfaces(Interfaces) },
+    {ok, init_opts(Opts, State)}.
+
+init_opts([], State) -> State;
+init_opts([{init, CapArgs}|Opts], #state{ impl = Mod }=State) ->
+    init_opts(Opts, State#state{ cap_state = Mod:init(CapArgs) });
+init_opts([{monitor, Pid}|Opts], State) ->
+    monitor(process, Pid),
+    init_opts(Opts, State).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -127,6 +134,8 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({'DOWN', _Ref, process, _Pid, _Info}, State) ->
+    {stop, normal, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 

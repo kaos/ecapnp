@@ -39,8 +39,10 @@ start_capability(Module, Interfaces) ->
     start_capability(Module, Interfaces, []).
 
 %%--------------------------------------------------------------------
-start_capability(Module, Interfaces, Args) when is_list(Interfaces) ->
-    case supervisor:start_child(?SERVER, [Module, Interfaces, Args]) of
+start_capability(Module, Interfaces, Opts)
+  when is_list(Interfaces), is_list(Opts) ->
+    StartArgs = [Module, Interfaces | Opts],
+    case supervisor:start_child(?SERVER, [StartArgs]) of
         {ok, Pid} ->
             Kind = #interface_ref{
                       cap = #capability{ id = {local, Pid} }
@@ -50,8 +52,8 @@ start_capability(Module, Interfaces, Args) when is_list(Interfaces) ->
                         }};
         Err -> Err
     end;
-start_capability(Module, Interface, Args) ->
-    start_capability(Module, [Interface], Args).
+start_capability(Module, Interface, Opts) when is_list(Opts) ->
+    start_capability(Module, [Interface], Opts).
 
 
 %%%===================================================================

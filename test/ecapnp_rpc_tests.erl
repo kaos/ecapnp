@@ -58,7 +58,7 @@ rpc_local_test_() ->
                     ],
              {ok, CapS} = ecapnp_capability_sup:start_link(),
              {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
-             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'(), BasicCap),
+             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'(), [{init, BasicCap}]),
              #test{ sup = CapS, basic = BasicCap, pipelines = PipelinesCap, mods = Mods }
      end,
      fun (#test{ sup = CapS, mods = Mods }) ->
@@ -86,7 +86,7 @@ rpc_remote_test_() ->
                     ],
              {ok, CapS} = ecapnp_capability_sup:start_link(),
              {ok, BasicCap} = ecapnp_capability_sup:start_capability(basicCap, test_capnp:'BasicCap'()),
-             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'(), BasicCap),
+             {ok, PipelinesCap} = ecapnp_capability_sup:start_capability(pipelines, test_capnp:'Pipelines'(), [{init, BasicCap}]),
              Bridge = spawn_link(
                        fun () ->
                                Loop = fun (F, VatA, VatB) ->
@@ -143,7 +143,7 @@ pipelines_funs() ->
                    end}].
 
 cap_restorer(Caps) ->
-    fun (ObjectId) ->
+    fun (ObjectId, _Vat) ->
             case lists:keyfind(ecapnp_obj:to_text(ObjectId), 1, Caps) of
                 false -> undefined;
                 {_, Cap} -> {ok, Cap}

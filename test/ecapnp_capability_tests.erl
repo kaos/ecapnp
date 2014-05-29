@@ -26,7 +26,7 @@
 basicCap_test_() ->
     meck(basicCap, basicCap_funs(),
          [fun () ->
-                  {ok, Pid} = ecapnp_capability:start(basicCap, [test_capnp:'BasicCap'()], []),
+                  {ok, Pid} = ecapnp_capability:start([basicCap, [test_capnp:'BasicCap'()]]),
                   ?assert(is_process_alive(Pid)),
                   ok = ecapnp_capability:stop(Pid),
                   receive after 100 -> ok end, %% ugly hack, I know..
@@ -34,7 +34,7 @@ basicCap_test_() ->
           end,
           fun () ->
                   S = test_capnp:'BasicCap'(),
-                  {ok, Pid} = ecapnp_capability:start_link(basicCap, [S], []),
+                  {ok, Pid} = ecapnp_capability:start_link([basicCap, [S]]),
                   test_basicCap_add(Pid, S, 123, 456)
           end
          ]).
@@ -43,7 +43,7 @@ thirdCap_test_() ->
     meck(thirdCap, thirdCap_funs(),
          [fun () ->
                   S = test_capnp:'ThirdCap'(),
-                  {ok, Pid} = ecapnp_capability:start_link(thirdCap, [S], third),
+                  {ok, Pid} = ecapnp_capability:start_link([thirdCap, [S], {init, third}]),
                   test_basicCap_add(Pid, test_capnp:'BasicCap'(), 333, 666),
                   test_otherCap_sqroot(Pid, test_capnp:'OtherCap'(), 4),
                   test_thirdCap_square(Pid, S, 5)
@@ -51,9 +51,8 @@ thirdCap_test_() ->
          ]).
 
 basicCap_funs() ->
-    [{init, fun ([]) -> state end},
-     {handle_call, fun ('BasicCap', add, Params, Result, state) -> {basicCap_add(Params, Result), state};
-                       ('BasicCap', sub, Params, Result, state) -> {basicCap_sub(Params, Result), state}
+    [{handle_call, fun ('BasicCap', add, Params, Result, undefined) -> {basicCap_add(Params, Result), undefined};
+                       ('BasicCap', sub, Params, Result, undefined) -> {basicCap_sub(Params, Result), undefined}
                    end}].
 
 basicCap_add(Params, Results) ->

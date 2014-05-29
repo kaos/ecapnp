@@ -118,9 +118,10 @@ handle_call({import, ObjectId, Schema}, {Pid, _Ref}=_From, State) ->
     import_req(Pid, ObjectId, Schema, State);
 handle_call({restore, ObjectId}, From, State) ->
     %% todo: better error handling...
+    Vat = self(),
     spawn_link(
       fun () ->
-              gen_server:reply(From, (State#state.restorer)(ObjectId))
+              gen_server:reply(From, (State#state.restorer)(ObjectId, Vat))
       end),
     {noreply, State};
 handle_call({finish, Id, ReleaseResultCaps}, _From, State) ->
