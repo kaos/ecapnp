@@ -487,7 +487,7 @@ handle_call(Call, Vat) ->
                          target = Target,
                          interface = ecapnp:get(interfaceId, Call),
                          method = ecapnp:get(methodId, Call),
-                         params = ecapnp:get(content, Payload),
+                         params = get_payload_content(Payload, Vat),
                          results = RetPayload
                         }),
 
@@ -505,11 +505,7 @@ handle_return(Return, Vat) ->
     case ecapnp:get(Return) of
         {results, Results} ->
             Id = ecapnp:get(answerId, Return),
-            Payload = ecapnp_obj:set_cap_table(
-                        [translate_cap_descriptor(C, Vat)
-                         || C <- ecapnp:get(capTable, Results)],
-                        Results),
-            Content = ecapnp:get(content, Payload),
+            Content = get_payload_content(Results, Vat),
             gen_server:call(Vat, {answer, Id, Content})
     end.
 
@@ -676,5 +672,14 @@ find(Id, #answers{ results = Rs }) ->
         {Id, _MonRef, Res} ->
             {ok, Res}
     end.
+
+%% ===================================================================
+get_payload_content(Payload, Vat) ->
+    ecapnp:get(
+      content, ecapnp_obj:set_cap_table(
+                 [translate_cap_descriptor(C, Vat)
+                  || C <- ecapnp:get(capTable, Payload)],
+                 Payload)
+     ).
 
 %% ===================================================================

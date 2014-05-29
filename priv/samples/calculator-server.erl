@@ -74,23 +74,46 @@ read_socket(Sock, Vat) ->
 
 init(State) -> State.
 
-handle_call('Calculator', 'evaluate', Params, Results, State) ->
+handle_call('Calculator', evaluate, Params, Results, State) ->
     Expr = ecapnp:get(expression, Params),
     Value = evaluate(Expr),
-    {ecapnp:set(value, value(Value), Results), State};
-handle_call(['Calculator', 'Value'], 'read', _Params, Results, Value) ->
-    {ecapnp:set(value, Value, Results), Value}.
+    {ecapnp:set(value, cap('Value', Value), Results), State};
+handle_call('Calculator', getOperator, Params, Results, State) ->
+    {ecapnp:set(func, cap('Function', {op, ecapnp:get(op, Params)}), Results), State};
+handle_call(['Calculator', 'Value'], read, _Params, Results, Value) ->
+    {ecapnp:set(value, Value, Results), Value};
+handle_call(['Calculator', 'Function'], call, Params, Results, {op, Operator}=State) ->
+    [Op1, Op2] = ecapnp:get(params, Params),
+    Value =
+        case Operator of
+            add -> Op1 + Op2;
+            subtract -> Op1 - Op2;
+            multiply -> Op1 * Op2;
+            divide -> Op1 / Op2
+        end,
+    {ecapnp:set(value, Value, Results), State}.
 
 
 %% Cap utils
 
-evaluate(Expr) ->
+evaluate(Expr) -> evaluate(Expr, []).
+evaluate(Expr, EvalParams) ->
     case ecapnp:get(Expr) of
-        {literal, Literal} -> Literal
+        {literal, Literal} -> Literal;
+        {previousResult, Value} -> ecapnp:get(value, Value);
+        {parameter, Idx} -> lists:nth(Idx + 1, EvalParams);
+        {call, Call} ->
+            Func = ecapnp:get(function, Call),
+            CallParams = [evaluate(E, EvalParams)
+                          || E <- ecapnp:get(params, Call)],
+            CallReq = ecapnp:request(call, Func),
+            ecapnp:set(params, CallParams, CallReq),
+            {ok, CallPromise} = ecapnp:send(CallReq),
+            ecapnp:get(value, CallPromise)
     end.
 
-value(Value) ->
+cap(Type, Init) ->
     {ok, Cap} = ecapnp_capability_sup:start_capability(
-                  ?MODULE, calculator_capnp:schema(['Calculator', 'Value']),
-                  [{monitor, self()}, {init, Value}]),
+                  ?MODULE, calculator_capnp:schema(['Calculator', Type]),
+                  [{monitor, self()}, {init, Init}]),
     Cap.
