@@ -28,7 +28,8 @@
 %% API
 -export([start/1, start_link/1, stop/1, alloc/3, update_segment/3,
          get_segment/4, get_segment_size/2, get_segments/1, get_cap/2,
-         get_cap_idx/2, get_cap_table/1, set_cap_table/2, add_ref/2]).
+         get_cap_idx/2, get_cap_table/1, set_cap_table/2, add_ref/2,
+         discard_ref/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -45,7 +46,7 @@
          }).
 
 -record(state, {
-          refs=[] :: list(reference()),
+          refs=[] :: list({pid(), reference()}),
           segments = [] :: list(#seg{}),
           caps = [] :: list({non_neg_integer(), #capability{}})
          }).
@@ -112,6 +113,9 @@ set_cap_table(CapTable, Pid) ->
 add_ref(Ref, Pid) when is_pid(Ref) ->
     data_request({add_ref, Ref}, Pid).
 
+discard_ref(Ref, Pid) when is_pid(Ref) ->
+    data_request({discard_ref, Ref}, Pid).
+
 
 %% ===================================================================
 %% gen server callbacks
@@ -121,7 +125,7 @@ init({Id, Init, Owner}) ->
     init_segments({Id, Init, init_state(Owner)}).
 
 init_state(Owner) ->
-    #state{ refs = [monitor(process, Owner)] }.
+    #state{ refs = [{Owner, monitor(process, Owner)}] }.
 
 init_segments({Id, [S|Ss], State}) ->
     init_segments({Id + 1, Ss, set_segment(Id, new_segment(S), State)});
@@ -154,19 +158,24 @@ handle_call({set_cap_table, CapTable}, _From, #state{ caps = [] }=State) ->
     {reply, ok, State#state{ caps = CapTable }};
 handle_call({add_ref, Ref}, _From, #state{ refs = Refs }=State) ->
     %% todo: should we also link to it.. ?
-    {reply, ok, State#state{ refs = [monitor(process, Ref)|Refs] }}.
+    {reply, ok, State#state{ refs = [{Ref, monitor(process, Ref)}|Refs] }};
+handle_call({discard_ref, Ref}, _From, #state{ refs = Refs }=State) ->
+    Refs1 = lists:keydelete(Ref, 1, Refs),
+    State1 = State#state{ refs = Refs1 },
+    if length(Refs1) == 0 -> {stop, normal, ok, State1};
+       true -> {reply, ok, State1}
+    end.
 
 handle_cast({update_segment, {Id, Offset, Data}}, State) ->
     State1 = do_update_segment(Id, Offset, Data, State),
     {noreply, State1}.
 
-handle_info({'DOWN', Ref, process, _Pid, _Info}, #state{ refs = Refs }=State) ->
+handle_info({'DOWN', Ref, process, Pid, _Info}, #state{ refs = Refs }=State) ->
     %% todo: should we check for abnormal exits, and die along with it.. ?
-    case Refs -- [Ref] of
-        [] ->
-            {stop, normal, State};
-        Refs1 ->
-            {noreply, State#state{ refs = Refs1 }}
+    Refs1 = Refs -- [{Pid, Ref}],
+    State1 = State#state{ refs = Refs1 },
+    if length(Refs1) == 0 -> {stop, normal, State1};
+       true -> {noreply, State1}
     end;
 handle_info(_Info, State) ->
     {noreply, State}.

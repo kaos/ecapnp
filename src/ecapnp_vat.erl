@@ -216,6 +216,7 @@ wait({remote, Id}, From, State) ->
         {promise, Id} ->
             {noreply, wait_for_promise(Id, From, State)};
         Result ->
+            ok = add_result_ref(From, Result),
             {reply, Result, State}
     end;
 wait({answer, Id}, From, State) ->
@@ -225,8 +226,13 @@ wait({answer, Id}, From, State) ->
         false ->
             {noreply, wait_for_answer(Id, From, State)};
         Result ->
+            ok = add_result_ref(From, Result),
             {reply, Result, State}
     end.
+
+add_result_ref({From, _Ref}, {ok, Obj}) ->
+    ecapnp_obj:add_ref(From, Obj);
+add_result_ref(_, _) -> ok.
 
 %% ===================================================================
 import_req(Pid, ObjectId, Schema, State) ->
@@ -433,6 +439,19 @@ release_caps(Caps, State0) ->
       end, State0, Caps).
 
 %% ===================================================================
+set_promise_result(Id, Result, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    State#state{ questions = Qs#questions{ promises = set_result(Id, Result, Ps) }}.
+
+set_answer_result(Id, Result, #state{ answers = #answers{ results = Rs }=As }=State) ->
+    State#state{ answers = As#answers{ results = set_result(Id, Result, Rs) }}.
+
+wait_for_promise(Id, W, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
+    State#state{ questions = Qs#questions{ promises = wait_for_result(Id, W, Ps) }}.
+
+wait_for_answer(Id, W, #state{ answers = #answers{ results = Rs }=As }=State) ->
+    State#state{ answers = As#answers{ results = wait_for_result(Id, W, Rs) }}.
+
+%% ===================================================================
 
 %% ===================================================================
 %% process messages, these are run in their own processes
@@ -560,6 +579,7 @@ set_result(Id, Result, List) ->
         false ->
             if Result =:= finish -> List;
                true ->
+                    ok = ecapnp_obj:add_ref(self(), Result),
                     Entry = {Id, undefined, Result},
                     lists:keystore(Id, 1, List, Entry)
             end;
@@ -567,14 +587,20 @@ set_result(Id, Result, List) ->
             Res = if Result =:= finish -> cancel;
                      true -> ecapnp_obj:to_struct(Schema, Result)
                   end,
-            [gen_server:reply(W, {ok, Res}) || W <- Ws],
+            [case W of
+                 {From, _Ref} ->
+                     ok = ecapnp_obj:add_ref(From, Res),
+                     gen_server:reply(W, {ok, Res})
+             end || W <- Ws],
             if Mon =:= 'DOWN', Result =:= finish ->
                     lists:keydelete(Id, 1, List);
                true ->
+                    ok = ecapnp_obj:add_ref(self(), Res),
                     Entry = {Id, Mon, Res},
                     lists:keystore(Id, 1, List, Entry)
             end;
-        {Id, undefined, _Res} when Result =:= finish ->
+        {Id, undefined, Res} when Result =:= finish ->
+            ok = ecapnp_obj:discard_ref(self(), Res),
             lists:keydelete(Id, 1, List)
     end.
 
@@ -587,19 +613,6 @@ wait_for_result(Id, W, List) ->
                 {Id, Mon, {[W|Ws0], Schema}}
         end,
     lists:keystore(Id, 1, List, Entry).
-
-%% ===================================================================
-set_promise_result(Id, Result, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
-    State#state{ questions = Qs#questions{ promises = set_result(Id, Result, Ps) }}.
-
-set_answer_result(Id, Result, #state{ answers = #answers{ results = Rs }=As }=State) ->
-    State#state{ answers = As#answers{ results = set_result(Id, Result, Rs) }}.
-
-wait_for_promise(Id, W, #state{ questions = #questions{ promises = Ps }=Qs }=State) ->
-    State#state{ questions = Qs#questions{ promises = wait_for_result(Id, W, Ps) }}.
-
-wait_for_answer(Id, W, #state{ answers = #answers{ results = Rs }=As }=State) ->
-    State#state{ answers = As#answers{ results = wait_for_result(Id, W, Rs) }}.
 
 %% ===================================================================
 get_message_target(MessageTarget, Vat) ->

@@ -1,6 +1,29 @@
+%%
+%%  Copyright 2014, Andreas Stenius <kaos@astekk.se>
+%%
+%%   Licensed under the Apache License, Version 2.0 (the "License");
+%%   you may not use this file except in compliance with the License.
+%%   You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%%   Unless required by applicable law or agreed to in writing, software
+%%   distributed under the License is distributed on an "AS IS" BASIS,
+%%   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%   See the License for the specific language governing permissions and
+%%   limitations under the License.
+%%
+
+%% @copyright 2014, Andreas Stenius
+%% @author Andreas Stenius <kaos@astekk.se>
+%% @doc Calculator client sample application.
+%%
+%% The operations are based on the calculator client sample from the
+%% capnproto distribution.
+
 -module('calculator-client').
 
--export([run/0, handle_call/4]).
+-export([run/0, handle_call/5]).
 
 run() ->
     ecapnp_capability_sup:start_link(),
@@ -238,7 +261,8 @@ callback(C) ->
     io:format("~nUsing a callback... "),
 
     {ok, PowerFunction} = ecapnp_capability_sup:start_capability(
-                            ?MODULE, calculator_capnp:'Calculator'(['Function'])),
+                            ?MODULE, calculator_capnp:'Calculator'(['Function']),
+                            [{monitor, self()}]),
 
     Add = get_operator(add, C),
 
@@ -283,6 +307,6 @@ req_value(Req) ->
     Value.
 
 %% implement pow() function
-handle_call(['Calculator', 'Function'], 'call', Params, Results) ->
+handle_call(['Calculator', 'Function'], 'call', Params, Results, State) ->
     [Arg1, Arg2] = ecapnp:get(params, Params),
-    ecapnp:set(value, math:pow(Arg1, Arg2), Results).
+    {ecapnp:set(value, math:pow(Arg1, Arg2), Results), State}.
