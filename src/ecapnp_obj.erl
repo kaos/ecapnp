@@ -80,7 +80,9 @@ from_data(Data, Type) ->
     from_data(Data, Type, undefined).
 
 %% @doc Lookup field definition by name for object.
--spec field(field_name() | non_neg_integer(), object() | #struct{}) -> field_type().
+-spec field(field_name() | non_neg_integer() | {ptr, non_neg_integer()}, object()) -> field_type().
+field({ptr, Idx}, _) when is_number(Idx) ->
+    #field{ kind = #ptr{ type = object, idx = Idx } };
 field(NameOrId, #object{ schema=#schema_node{
                                    kind=#struct{ fields=Fields }
                                   }}) ->

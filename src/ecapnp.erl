@@ -295,7 +295,7 @@ do_wait(Mod, Id, Transform, Timeout) ->
         {ok, Obj} ->
             {ok, lists:foldr(
                    fun ({getPointerField, Idx}, Ptr) ->
-                           ecapnp:get(Idx, Ptr)
+                           ecapnp:get({ptr, Idx}, Ptr)
                    end,
                    Obj, Transform)};
         Result ->
