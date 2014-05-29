@@ -23,7 +23,21 @@
 
 -module('calculator-server').
 
--export([run/0, init/1, handle_call/5]).
+-export([dbg/0, run/0, init/1, handle_call/5]).
+
+-include_lib ("ecapnp/include/ecapnp.hrl").
+
+dbg() ->
+    io:format(
+      "dbg: ~p~n",
+      [[dbg:tracer(),
+        dbg:p(new, [c]),
+        %dbg:tpl(?MODULE, []),
+        dbg:tpl(ecapnp_capability, [])
+        %dbg:tp(ecapnp_rpc, []),
+        %dbg:tpl(ecapnp_vat, []),
+        %dbg:tp(ecapnp, [])
+       ]]).
 
 run() ->
     ecapnp_capability_sup:start_link(),
@@ -38,7 +52,7 @@ run() ->
     listen({localhost, 55000}, CapRestorer).
 
 listen({_Addr, Port}, CapRestorer) ->
-    {ok, Socket} = gen_tcp:listen(Port, [binary, {active, false}]),
+    {ok, Socket} = gen_tcp:listen(Port, [binary, {active, false}, {reuseaddr, true}]),
     accept(Socket, CapRestorer).
 
 accept(Socket, CapRestorer) ->
@@ -72,6 +86,13 @@ read_socket(Sock, Vat) ->
 
 %% Capability callbacks
 
+%% since I'm lazy, all calculator capabilities call back to this
+%% module, so it's kind of messy here..
+
+init({defFunction, Params}) ->
+    ParamCount = ecapnp:get(paramCount, Params),
+    Body = ecapnp:get(body, Params),
+    {def, ParamCount, Body};
 init(State) -> State.
 
 handle_call('Calculator', evaluate, Params, Results, State) ->
@@ -81,7 +102,7 @@ handle_call('Calculator', evaluate, Params, Results, State) ->
 handle_call('Calculator', getOperator, Params, Results, State) ->
     {ecapnp:set(func, cap('Function', {op, ecapnp:get(op, Params)}), Results), State};
 handle_call(['Calculator', 'Value'], read, _Params, Results, Value) ->
-    {ecapnp:set(value, Value, Results), Value};
+    {ecapnp:set(value, ecapnp:wait(Value), Results), Value};
 handle_call(['Calculator', 'Function'], call, Params, Results, {op, Operator}=State) ->
     [Op1, Op2] = ecapnp:get(params, Params),
     Value =
@@ -91,29 +112,40 @@ handle_call(['Calculator', 'Function'], call, Params, Results, {op, Operator}=St
             multiply -> Op1 * Op2;
             divide -> Op1 / Op2
         end,
-    {ecapnp:set(value, Value, Results), State}.
+    {ecapnp:set(value, Value, Results), State};
+handle_call(['Calculator', 'Function'], call, Params, Results, {def, ParamCount, Body}=State) ->
+    CallParams = ecapnp:get(params, Params),
+    if length(CallParams) == ParamCount ->
+            {ecapnp:set(value, ecapnp:wait(evaluate(Body, CallParams)), Results), State}
+    end;
+handle_call('Calculator', defFunction, Params, Results, State) ->
+    {ecapnp:set(func, cap('Function', {defFunction, Params}), Results), State}.
 
 
 %% Cap utils
 
 evaluate(Expr) -> evaluate(Expr, []).
 evaluate(Expr, EvalParams) ->
-    case ecapnp:get(Expr) of
-        {literal, Literal} -> Literal;
-        {previousResult, Value} ->
-            ReadReq = ecapnp:request(read, Value),
-            {ok, ReadPromise} = ecapnp:send(ReadReq),
-            ecapnp:get(value, ReadPromise);
-        {parameter, Idx} -> lists:nth(Idx + 1, EvalParams);
-        {call, Call} ->
-            Func = ecapnp:get(function, Call),
-            CallParams = [evaluate(E, EvalParams)
-                          || E <- ecapnp:get(params, Call)],
-            CallReq = ecapnp:request(call, Func),
-            ecapnp:set(params, CallParams, CallReq),
-            {ok, CallPromise} = ecapnp:send(CallReq),
-            ecapnp:get(value, CallPromise)
-    end.
+    ecapnp_rpc:promise(
+      fun () ->
+              case ecapnp:get(Expr) of
+                  {literal, Literal} -> Literal;
+                  {previousResult, Value} ->
+                      ReadReq = ecapnp:request(read, Value),
+                      {ok, ReadPromise} = ecapnp:send(ReadReq),
+                      ecapnp:get(value, ReadPromise);
+                  {parameter, Idx} ->
+                      lists:nth(Idx + 1, EvalParams);
+                  {call, Call} ->
+                      Func = ecapnp:get(function, Call),
+                      CallParams = [evaluate(E, EvalParams)
+                                    || E <- ecapnp:get(params, Call)],
+                      CallReq = ecapnp:request(call, Func),
+                      ecapnp:set(params, [ecapnp:wait(P) || P <- CallParams], CallReq),
+                      {ok, CallPromise} = ecapnp:send(CallReq),
+                      ecapnp:get(value, CallPromise)
+              end
+      end, float64).
 
 cap(Type, Init) ->
     {ok, Cap} = ecapnp_capability_sup:start_capability(

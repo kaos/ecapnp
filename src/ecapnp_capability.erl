@@ -186,10 +186,12 @@ dispatch(#schema_node{ name = InterfaceName }=Interface,
                 Content = ecapnp:init(content, ResultSchema, Payload),
                 {Ps, Content}
         end,
+
     {ok, CapState1} = apply(Mod, handle_call,
                             [InterfaceName, MethodName,
                              ecapnp_obj:to_struct(ParamSchema, Params),
                              Results, CapState0]),
+
     {reply, {ok, Results}, State#state{ cap_state = CapState1 }}.
 
 find_interface(IntfId, #state{ interfaces = Ns }) ->

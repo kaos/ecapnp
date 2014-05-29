@@ -476,9 +476,11 @@ handle_message_process(Message, Vat) ->
 handle_call(Call, Vat) ->
     Target = get_message_target(ecapnp:get(target, Call), Vat),
     Payload = ecapnp:get(params, Call),
+    Id = ecapnp:get(questionId, Call),
 
     Message = new_message(),
     Return = ecapnp:init(return, Message),
+    ok = ecapnp:set(answerId, Id, Return),
     RetPayload = ecapnp:init(results, Return),
 
     {ok, Promise} = ecapnp:send(
@@ -494,10 +496,6 @@ handle_call(Call, Vat) ->
     %% TODO: _Content may be in another object if Target doesn't point
     %% at a local capability..
     {ok, _Content} = ecapnp:wait(Promise),
-
-    Id = ecapnp:get(questionId, Call),
-    ok = ecapnp:set(answerId, Id, Return),
-
     send_message(Message, Vat).
 
 %% ===================================================================

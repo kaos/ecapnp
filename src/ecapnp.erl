@@ -261,8 +261,8 @@ wait(Promise, Timeout) ->
     case resolve_target(Promise, Timeout) of
         {ok, {Mod, #promise{ id = Id, transform = Ts }}} ->
             do_wait(Mod, Id, Ts, Timeout);
-        {no_interface, Obj} ->
-            {ok, Obj}
+        Other ->
+            Other
     end.
 
 
@@ -279,14 +279,18 @@ resolve_target(#object{ ref=#ref{ kind = Kind } }=Obj, Timeout) ->
                     {ok, {ecapnp_rpc, Cap}};
                 #promise{ id = {local, _}=Id, transform=Ts } ->
                     %% wait for local promises to become fulfilled before resolving
-                    {ok, Res} = do_wait(ecapnp_rpc, Id, Ts, Timeout),
-                    resolve_target(Res, Timeout);
+                    case do_wait(ecapnp_rpc, Id, Ts, Timeout) of
+                        {ok, Result} ->
+                            resolve_target(Result, Timeout);
+                        Result ->
+                            Result
+                    end;
                 _ ->
                     %% send everything else to ecapnp_vat
                     {ok, {ecapnp_vat, Cap}}
             end;
         _ ->
-            {no_interface, Obj}
+            {ok, Obj}
     end.
 
 
