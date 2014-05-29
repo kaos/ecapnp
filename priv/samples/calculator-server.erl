@@ -40,36 +40,38 @@ dbg() ->
        ]]).
 
 run() ->
-    ecapnp_capability_sup:start_link(),
-    CapRestorer = fun (ObjectId, Vat) ->
-                          case ecapnp_obj:to_text(ObjectId) of
-                              <<"calculator">> ->
-                                  ecapnp_capability_sup:start_capability(
-                                    ?MODULE, calculator_capnp:'Calculator'(),
-                                    [{monitor, Vat}])
-                          end
-                  end,
-    listen({localhost, 55000}, CapRestorer).
+    spawn(
+      fun () ->
+              ecapnp_capability_sup:start_link(),
+              CapRestorer = fun (ObjectId, Vat) ->
+                                    case ecapnp_obj:to_text(ObjectId) of
+                                        <<"calculator">> ->
+                                            ecapnp_capability_sup:start_capability(
+                                              ?MODULE, calculator_capnp:'Calculator'(),
+                                              [{monitor, Vat}])
+                                    end
+                            end,
+              listen({localhost, 55000}, CapRestorer)
+      end).
 
 listen({_Addr, Port}, CapRestorer) ->
     {ok, Socket} = gen_tcp:listen(Port, [binary, {active, false}, {reuseaddr, true}]),
     accept(Socket, CapRestorer).
 
 accept(Socket, CapRestorer) ->
-    spawn(
-      fun () ->
-              case gen_tcp:accept(Socket) of
-                  {ok, Client} ->
-                      accept(Socket, CapRestorer),
-                      {ok, Vat} = ecapnp_vat:start_link({gen_tcp, Client}, CapRestorer),
-                      read_socket(Client, Vat);
-                  {error, closed} ->
-                      io:format("~ntcp server socket closed~n");
-                  {error, Reason} ->
-                      io:format("~ntcp server socket error: ~p~n", [Reason]),
-                      halt(1)
-              end
-      end).
+    case gen_tcp:accept(Socket) of
+        {ok, Client} ->
+            spawn(fun () -> accept(Socket, CapRestorer) end),
+            {ok, Vat} = ecapnp_vat:start_link({gen_tcp, Client}, CapRestorer),
+            read_socket(Client, Vat),
+            accept(Socket, CapRestorer);
+        {error, closed} ->
+            io:format("~ntcp server socket closed~n"),
+            halt(0);
+        {error, Reason} ->
+            io:format("~ntcp server socket error: ~p~n", [Reason]),
+            halt(1)
+    end.
 
 read_socket(Sock, Vat) ->
     case gen_tcp:recv(Sock, 0) of
@@ -77,10 +79,9 @@ read_socket(Sock, Vat) ->
             Vat ! {receive_message, Data},
             read_socket(Sock, Vat);
         {error, closed} ->
-            io:format("~ntcp socket closed~n");
+            io:format("~ntcp client socket closed~n");
         {error, Reason} ->
-            io:format("~ntcp socket error: ~p~n", [Reason]),
-            halt(1)
+            io:format("~ntcp client socket error: ~p~n", [Reason])
     end.
 
 

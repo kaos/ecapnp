@@ -24,8 +24,9 @@ NOTICE: This is work-in-progress. Feedback appreciated.
 
 * RPC support
 
-  The RPC support is shaping up, aiming for a level 1 implementation
-  to be ready soon.
+  The RPC support is shaping up, aiming for a level 1 implementation to be
+  ready soon. The calculator sample from capnproto has been successfully
+  ported to erlang.
 
 * Tests
 
