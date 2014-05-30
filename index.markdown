@@ -29,6 +29,15 @@ Naturally, the [Cap'n Proto](http://capnproto.com) framework is needed
 in order to compile any `.capnp` schema files.
 
 
+Misc
+----
+
+If you are troubleshooting a Cap'n Proto RPC communication, it may pay
+to be able to dissect the protocol to see what is actually being
+said. For that purpose, there is a
+[Wireshark Cap'n Proto dissector](https://github.com/kaos/wireshark-plugins).
+
+
 Usage
 =====
 
