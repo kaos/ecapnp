@@ -104,12 +104,12 @@ dump_person(Person) ->
                                     ecapnp:get(number, P)])
      || P <- Phones],
     case ecapnp:get(employment, Person) of
-        unemployed -> io:format("  unemployed~n");
+        {unemployed, void} -> io:format("  unemployed~n");
         {employer, Employer} ->
             io:format("  employer: ~s~n", [Employer]);
         {school, School} ->
             io:format("  student at: ~s~n", [School]);
-        selfEmployed -> io:format("  self-employed~n")
+        {selfEmployed, void} -> io:format("  self-employed~n")
     end.
 
 read_stdin() ->

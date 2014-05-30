@@ -76,6 +76,7 @@ ref_data(Type, Obj, Default) ->
 %% internal functions
 %% ===================================================================
 
+read_field(#field{ kind = void }, _) -> void;
 read_field(#field{ id = Id, kind = Kind },
            #object{ ref = #ref{ kind = #interface_ref{
                                           cap = #promise{}=P
@@ -100,7 +101,6 @@ read_field(#data{ type=Type, align=Align, default=Default }=D, Object) ->
         {union, Fields} ->
             Tag = read_field(D#data{ type=uint16 }, Object),
             case lists:keyfind(Tag, #field.id, Fields) of
-                #field{ name=FieldName, kind=void } -> FieldName;
                 #field{ name=FieldName }=Field ->
                     {FieldName, read_field(Field, Object)}
             end;

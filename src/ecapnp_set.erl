@@ -76,6 +76,7 @@ union(Value, #object{
 %% internal functions
 %% ===================================================================
 
+set_field(#field{ kind=void }, _, _) -> ok;
 set_field(#field{ kind=Kind }, Value, Obj) ->
     set_field(Kind, Value, Obj);
 set_field(#data{ type=Type, align=Align, default=Default }=D,
@@ -235,18 +236,22 @@ write_obj(Type, #object{ ref=Value, schema=_Schema }, Ref, Obj) ->
     end.
 
 union_tag({FieldName, Value}, [#field{ id = Tag, name = FieldName }=FieldType|_]) ->
-    {Tag, {FieldType, Value}};
+    {Tag, union_field_value(FieldType, Value)};
 union_tag(FieldName, [#field{ id = Tag, name = FieldName }=FieldType|_]) ->
-    {Tag, default(FieldType)};
+    {Tag, union_field_value(FieldType)};
 union_tag({Tag, Value}, [#field{ id = Tag }=FieldType|_]) ->
-    {Tag, {FieldType, Value}};
+    {Tag, union_field_value(FieldType, Value)};
 union_tag(Tag, [#field{ id = Tag }=FieldType|_]) ->
-    {Tag, default(FieldType)};
+    {Tag, union_field_value(FieldType)};
 union_tag(Value, [_|Fields]) ->
     union_tag(Value, Fields).
 
-default(#field{ kind=void }) -> void;
-default(FieldType) -> {FieldType, {default}}.
+union_field_value(FieldType) ->
+    union_field_value(FieldType, {default}).
+
+union_field_value(_, void) -> void;
+union_field_value(#field{ kind=void }, _) -> void;
+union_field_value(FieldType, Value) -> {FieldType, Value}.
 
 list_element_size(text, _) -> pointer;
 list_element_size(data, _) -> pointer;
