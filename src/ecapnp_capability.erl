@@ -43,7 +43,7 @@
 %% @doc
 %% Starts server for a capability described by the schema interface node.
 %%
-%% @spec start(schema_node(), list()) -> {ok, Pid} | ignore | {error, Error}
+%% @spec start(list()) -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
 start(Args) ->

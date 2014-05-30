@@ -99,7 +99,7 @@ copy(#object{ ref=Ref }) ->
 
 -spec refresh(object()) -> object().
 %% @doc Reread object reference.
-%% @see ecapnp_ref:refresh
+%% @see ecapnp_ref:refresh/1
 refresh(#object{ ref=Ref }=Object) ->
     Object#object{ ref=ecapnp_ref:refresh(Ref) }.
 

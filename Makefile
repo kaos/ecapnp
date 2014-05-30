@@ -5,7 +5,7 @@ test%: TEST_ERLC_OPTS += -DEUNIT_NOAUTO
 
 CT_SUITES = proper
 PLT_APPS = crypto
-EDOC_OPTS = preprocess
+EDOC_OPTS = preprocess, {dir, "doc/html"}
 
 # call `make tests TEST_DEPS=` after the first run in order to skip
 # the `make all` for all test deps.. (which for meck using rebar is
