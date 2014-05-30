@@ -3,7 +3,7 @@ PROJECT = ecapnp
 
 test%: TEST_ERLC_OPTS += -DEUNIT_NOAUTO
 
-CT_SUITES = proper
+CT_SUITES = eunit proper
 PLT_APPS = crypto
 EDOC_OPTS = preprocess, {dir, "doc/html"}
 
