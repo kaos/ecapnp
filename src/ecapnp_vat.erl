@@ -109,25 +109,11 @@ init(State) ->
 handle_call({send_req, Req}, _From, State) ->
     send_req(Req, State);
 handle_call({send_message, Message}, _From, State) ->
-    {reply, ok, send_message(Message, process_message(Message, State))};
-handle_call({answer, Id, Content}, _From, State) ->
-    {reply, ok, set_promise_result(Id, Content, State)};
+    {reply, ok, send_message(Message, process_outgoing_message(Message, State))};
 handle_call({wait, Id}, From, State) ->
     wait(Id, From, State);
 handle_call({import, ObjectId, Schema}, {Pid, _Ref}=_From, State) ->
     import_req(Pid, ObjectId, Schema, State);
-handle_call({restore, ObjectId}, From, State) ->
-    %% todo: better error handling...
-    Vat = self(),
-    spawn_link(
-      fun () ->
-              gen_server:reply(From, (State#state.restorer)(ObjectId, Vat))
-      end),
-    {noreply, State};
-handle_call({finish, Id, ReleaseResultCaps}, _From, State) ->
-    {reply, ok, purge_answer(Id, ReleaseResultCaps, State)};
-handle_call({release, Id, Count}, _From, State) ->
-    {reply, ok, release_export(Id, Count, State)};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State}.
 
@@ -136,8 +122,8 @@ handle_cast({stop, Reason}, State) ->
 handle_cast(_Cast, State) ->
     {noreply, State}.
 
-handle_info({receive_message, Data}, State) ->
-    handle_message(Data, State);
+handle_info({receive_data, Data}, State) ->
+    handle_data(Data, State);
 handle_info({'DOWN', MonRef, process, _Pid, _Info}, State) ->
     purge_ref(MonRef, State);
 handle_info(_Info, State) ->
@@ -191,8 +177,8 @@ send_remote_req(#rpc_call{ owner = Pid, interface = I, method = M,
     ok = set_target(Cap, ecapnp:init(target, Call)),
     ok = ecapnp:set(interfaceId, I, Call),
     ok = ecapnp:set(methodId, M, Call),
-
-    {reply, {ok, Promise}, send_message(Msg, process_message(Msg, State1))}.
+    State2 = update_cap_table(ecapnp:get(params, Call), State1),
+    {reply, {ok, Promise}, send_message(Msg, State2)}.
 
 send_local_req(#rpc_call{ target = TargetPromise,
                           resultSchema = ResultSchema }=Req, State) ->
@@ -243,18 +229,14 @@ import_req(Pid, ObjectId, Schema, State) ->
     {reply, {ok, Promise}, send_message(Restore, State1)}.
 
 %% ===================================================================
-handle_message(<<>>, State) -> {noreply, State};
-handle_message(Data, #state{ cont_data = Cont }=State) ->
+handle_data(<<>>, State) -> {noreply, State};
+handle_data(Data, #state{ cont_data = Cont }=State) ->
     case ecapnp_message:read(Data, Cont) of
         {cont, Cont1} -> {noreply, State#state{ cont_data = Cont1 }};
         {ok, Message, Rest} ->
-            Vat = self(),
-            spawn_link(
-              fun () ->
-                      {ok, Root} = ecapnp_get:root(rpc_capnp:'Message'(), Message),
-                      ok = handle_message_process(Root, Vat)
-              end),
-            handle_message(Rest, State#state{ cont_data = <<>> })
+            {ok, Root} = ecapnp_get:root(rpc_capnp:'Message'(), Message),
+            handle_data(
+              Rest, handle_message(Root, State#state{ cont_data = <<>> }))
     end.
 
 %% ===================================================================
@@ -311,35 +293,18 @@ setup_state(Transport, Restorer) ->
     (setup_state(Transport))#state{ restorer = Restorer }.
 
 %% ===================================================================
+send_message(Msg, Vat) when is_pid(Vat) ->
+    gen_server:call(Vat, {send_message, Msg});
 send_message(Msg, #state{ transport = {Mod, Handle} }=State) ->
     case Mod:send(Handle, ecapnp_message:write(Msg)) of
         ok -> State;
         Err ->
             gen_server:cast(self(), {stop, Err}),
             State
-    end;
-
-%% called from message handler processes
-send_message(Msg, Vat) when is_pid(Vat) ->
-    gen_server:call(Vat, {send_message, Msg}, infinity).
+    end.
 
 %% ===================================================================
-new_question(Pid, Schema,
-             #state{ questions = #questions{
-                                    next_id = Id,
-                                    promises = Ps
-                                   }=Qs }=State) ->
-    {Id, new_promise(Id, Schema),
-      State#state{
-        questions = Qs#questions{
-                      next_id = Id + 1,
-                      promises = [{Id, monitor(process, Pid), {[], Schema}}
-                                  |Ps]
-                     }}
-    }.
-
-%% ===================================================================
-process_message(Message, State) ->
+process_outgoing_message(Message, State) ->
     case ecapnp:get(Message) of
         {call, Call} ->
             update_cap_table(ecapnp:get(params, Call), State);
@@ -355,6 +320,33 @@ process_message(Message, State) ->
         _ ->
             State
     end.
+
+%% ===================================================================
+new_question(Pid, Schema,
+             #state{ questions = #questions{
+                                    next_id = Id,
+                                    promises = Ps
+                                   }=Qs }=State) ->
+    {Id, new_promise(Id, Schema),
+      State#state{
+        questions = Qs#questions{
+                      next_id = Id + 1,
+                      promises = pending_result(Id, Pid, Schema, Ps)
+                     }}
+    }.
+
+%% ===================================================================
+new_answer(Id, Pid, State) -> new_answer(Id, Pid, undefined, State).
+
+new_answer(Id, Pid, Schema,
+           #state{ answers = #answers{
+                                results = Rs
+                               }=As }=State) ->
+    State#state{
+      answers = As#answers{
+                  results = pending_result(Id, Pid, Schema, Rs)
+                 }
+     }.
 
 %% ===================================================================
 update_cap_table(Payload, State) ->
@@ -452,94 +444,6 @@ wait_for_answer(Id, W, #state{ answers = #answers{ results = Rs }=As }=State) ->
     State#state{ answers = As#answers{ results = wait_for_result(Id, W, Rs) }}.
 
 %% ===================================================================
-
-%% ===================================================================
-%% process messages, these are run in their own processes
-%% ===================================================================
-
-%% ===================================================================
--spec handle_message_process(Message::ecapnp:object(), Vat::pid()) -> ok.
-handle_message_process(Message, Vat) ->
-    case ecapnp:get(Message) of
-        {call, Call} -> handle_call(Call, Vat);
-        {return, Return} -> handle_return(Return, Vat);
-        {restore, Restore} -> handle_restore(Restore, Vat);
-        {finish, Finish} -> handle_finish(Finish, Vat);
-        {release, Release} -> handle_release(Release, Vat);
-        _ ->
-            {ok, Reply} = ecapnp:set_root('Message', rpc_capnp),
-            ecapnp:set({unimplemented, Message}, Reply),
-            send_message(Reply, Vat)
-    end.
-
-%% ===================================================================
-handle_call(Call, Vat) ->
-    Target = get_message_target(ecapnp:get(target, Call), Vat),
-    Payload = ecapnp:get(params, Call),
-    Id = ecapnp:get(questionId, Call),
-
-    Message = new_message(),
-    Return = ecapnp:init(return, Message),
-    ok = ecapnp:set(answerId, Id, Return),
-    RetPayload = ecapnp:init(results, Return),
-
-    {ok, Promise} = ecapnp:send(
-                      #rpc_call{
-                         owner = self(),
-                         target = Target,
-                         interface = ecapnp:get(interfaceId, Call),
-                         method = ecapnp:get(methodId, Call),
-                         params = get_payload_content(Payload, Vat),
-                         results = RetPayload
-                        }),
-
-    %% TODO: _Content may be in another object if Target doesn't point
-    %% at a local capability..
-    {ok, _Content} = ecapnp:wait(Promise),
-    send_message(Message, Vat).
-
-%% ===================================================================
-handle_return(Return, Vat) ->
-    case ecapnp:get(Return) of
-        {results, Results} ->
-            Id = ecapnp:get(answerId, Return),
-            Content = get_payload_content(Results, Vat),
-            gen_server:call(Vat, {answer, Id, Content})
-    end.
-
-
-%% ===================================================================
-handle_restore(Restore, Vat) ->
-    {ok, Cap} = gen_server:call(
-                  Vat, {restore, ecapnp:get(objectId, Restore)},
-                  infinity),
-
-    Message = new_message(),
-    Return = ecapnp:init(return, Message),
-    ok = ecapnp:set(answerId, ecapnp:get(questionId, Restore), Return),
-    Payload = ecapnp:init(results, Return),
-    _Content = ecapnp:set(content, Cap, Payload),
-    send_message(Message, Vat).
-
-%% ===================================================================
-handle_finish(Finish, Vat) ->
-    Id = ecapnp:get(questionId, Finish),
-    Release = ecapnp:get(releaseResultCaps, Finish),
-    gen_server:call(Vat, {finish, Id, Release}).
-
-%% ===================================================================
-handle_release(Release, Vat) ->
-    Id = ecapnp:get(id, Release),
-    Count = ecapnp:get(referenceCount, Release),
-    gen_server:call(Vat, {release, Id, Count}).
-
-%% ===================================================================
-
-%% ===================================================================
-%% common utils
-%% ===================================================================
-
-%% ===================================================================
 new_promise(Id, Schema) ->
     Cap = #promise{ id = {remote, {Id, self()}} },
     Kind = #interface_ref{ cap = Cap },
@@ -593,20 +497,28 @@ set_result(Id, Result, List) ->
                     Entry = {Id, Mon, Res},
                     lists:keystore(Id, 1, List, Entry)
             end;
-        {Id, undefined, Res} when Result =:= finish ->
+        {Id, Mon, Res} when Result =:= finish ->
+            true = demonitor(Mon),
             ok = ecapnp_obj:discard_ref(self(), Res),
             lists:keydelete(Id, 1, List)
     end.
 
+%% ===================================================================
 wait_for_result(Id, W, List) ->
     Entry =
         case lists:keyfind(Id, 1, List) of
-            false ->
-                {Id, undefined, {[W], undefined}};
             {Id, Mon, {Ws0, Schema}} when is_list(Ws0) ->
                 {Id, Mon, {[W|Ws0], Schema}}
         end,
     lists:keystore(Id, 1, List, Entry).
+
+%% ===================================================================
+pending_result(Id, Owner, Schema, List) ->
+    %% ensure the Id is not already in use
+    case lists:keyfind(Id, 1, List) of
+        false ->
+            [{Id, monitor(process, Owner), {[], Schema}}|List]
+    end.
 
 %% ===================================================================
 get_message_target(MessageTarget, Vat) ->
@@ -679,5 +591,95 @@ get_payload_content(Payload, Vat) ->
                   || C <- ecapnp:get(capTable, Payload)],
                  Payload)
      ).
+
+%% ===================================================================
+
+%% ===================================================================
+%% Message processing
+%% ===================================================================
+
+%% ===================================================================
+-spec handle_message(Message::ecapnp:object(), #state{}) -> #state{}.
+handle_message(Message, State) ->
+    case ecapnp:get(Message) of
+        {call, Call} -> handle_call(Call, State);
+        {return, Return} -> handle_return(Return, State);
+        {restore, Restore} -> handle_restore(Restore, State);
+        {finish, Finish} -> handle_finish(Finish, State);
+        {release, Release} -> handle_release(Release, State);
+        _ ->
+            {ok, Reply} = ecapnp:set_root('Message', rpc_capnp),
+            ecapnp:set({unimplemented, Message}, Reply),
+            send_message(Reply, State)
+    end.
+
+%% ===================================================================
+handle_call(Call, State) ->
+    Vat = self(),
+    Target = get_message_target(ecapnp:get(target, Call), Vat),
+    Payload = ecapnp:get(params, Call),
+    Id = ecapnp:get(questionId, Call),
+
+    Message = new_message(),
+    Return = ecapnp:init(return, Message),
+    ok = ecapnp:set(answerId, Id, Return),
+    RetPayload = ecapnp:init(results, Return),
+
+    Pid = spawn_link(
+            fun () ->
+                    {ok, Promise} = ecapnp:send(
+                                      #rpc_call{
+                                         owner = Vat,
+                                         target = Target,
+                                         interface = ecapnp:get(interfaceId, Call),
+                                         method = ecapnp:get(methodId, Call),
+                                         params = get_payload_content(Payload, Vat),
+                                         results = RetPayload
+                                        }),
+
+                    %% TODO: _Content may be in another object if Target doesn't point
+                    %% at a local capability..
+                    {ok, _Content} = ecapnp:wait(Promise),
+                    send_message(Message, Vat)
+            end),
+    new_answer(Id, Pid, State).
+
+%% ===================================================================
+handle_return(Return, State) ->
+    case ecapnp:get(Return) of
+        {results, Results} ->
+            Id = ecapnp:get(answerId, Return),
+            Content = get_payload_content(Results, self()),
+            set_promise_result(Id, Content, State)
+    end.
+
+%% ===================================================================
+handle_restore(Restore, State) ->
+    Vat = self(),
+    Id = ecapnp:get(questionId, Restore),
+    Pid = spawn_link(
+            fun () ->
+                    {ok, Cap} = (State#state.restorer)
+                                  (ecapnp:get(objectId, Restore), Vat),
+                    Message = new_message(),
+                    Return = ecapnp:init(return, Message),
+                    ok = ecapnp:set(answerId, Id, Return),
+                    Payload = ecapnp:init(results, Return),
+                    _Content = ecapnp:set(content, Cap, Payload),
+                    send_message(Message, Vat)
+            end),
+    new_answer(Id, Pid, State).
+
+%% ===================================================================
+handle_finish(Finish, State) ->
+    Id = ecapnp:get(questionId, Finish),
+    Release = ecapnp:get(releaseResultCaps, Finish),
+    purge_answer(Id, Release, State).
+
+%% ===================================================================
+handle_release(Release, State) ->
+    Id = ecapnp:get(id, Release),
+    Count = ecapnp:get(referenceCount, Release),
+    release_export(Id, Count, State).
 
 %% ===================================================================

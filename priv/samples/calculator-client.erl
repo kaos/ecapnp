@@ -65,7 +65,7 @@ read_socket(Sock, Vat) ->
         {ok, Data} ->
             %% useful to check where/when ecapnp is waiting on response data
             %% erlang:send_after(2000, Vat, {receive_message, Data}),
-            Vat ! {receive_message, Data},
+            Vat ! {receive_data, Data},
             read_socket(Sock, Vat);
         {error, closed} ->
             io:format("~ntcp socket closed~n");

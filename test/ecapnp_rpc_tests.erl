@@ -95,10 +95,10 @@ rpc_remote_test_() ->
                                                       [ecapnp_vat:stop(Vat) || Vat <- [VatA, VatB]],
                                                       From ! self();
                                                   {VatA, Data} ->
-                                                      VatB ! {receive_message, Data},
+                                                      VatB ! {receive_data, Data},
                                                       F(F, VatA, VatB);
                                                   {VatB, Data} ->
-                                                      VatA ! {receive_message, Data},
+                                                      VatA ! {receive_data, Data},
                                                       F(F, VatA, VatB);
                                                   Other ->
                                                       %% doesn't expect anything here..

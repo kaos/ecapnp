@@ -2,7 +2,7 @@
 
 set -exuo pipefail
 
-erlc addressbook_capnp.erl calculator_capnp.erl \
+erlc +debug_info addressbook_capnp.erl calculator_capnp.erl \
     calculator-client.erl calculator-server.erl
 
 ./addressbook.sh write | ./addressbook.sh read

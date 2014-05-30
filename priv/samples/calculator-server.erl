@@ -76,7 +76,7 @@ accept(Socket, CapRestorer) ->
 read_socket(Sock, Vat) ->
     case gen_tcp:recv(Sock, 0) of
         {ok, Data} ->
-            Vat ! {receive_message, Data},
+            Vat ! {receive_data, Data},
             read_socket(Sock, Vat);
         {error, closed} ->
             io:format("~ntcp client socket closed~n");
