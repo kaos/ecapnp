@@ -13,44 +13,48 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Data server module.
 <p>Copyright © 2013, Andreas Stenius</p>
 
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2><p>Data server module</p>
  
-  <p>All objects data is held in a data process, implemented by this  
-module.</p>
- 
-  I have a wish to get away with the fact that each reference to
-  default data ends up with their own separate data process.
+  All objects data is held in a data process, implemented by this
+  module.
 <h2><a name="types">Data Types</a></h2>
-
-<h3 class="typedecl"><a name="type-node_type">node_type()</a></h3>
-<p><tt>node_type() = <a href="ecapnp.html#type-node_type">ecapnp:node_type()</a></tt></p>
-
-
-<h3 class="typedecl"><a name="type-schema">schema()</a></h3>
-<p><tt>schema() = <a href="ecapnp.html#type-schema">ecapnp:schema()</a></tt></p>
-
-
-<h3 class="typedecl"><a name="type-schema_type">schema_type()</a></h3>
-<p><tt>schema_type() = <a href="ecapnp.html#type-schema_type">ecapnp:schema_type()</a></tt></p>
-
 
 <h3 class="typedecl"><a name="type-segment_id">segment_id()</a></h3>
 <p><tt>segment_id() = <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data.</td></tr>
-<tr><td valign="top"><a href="#get_message-1">get_message/1</a></td><td>Get the data process message record.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_ref-2">add_ref/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data.</td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#discard_ref-2">discard_ref/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_cap-2">get_cap/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_cap_idx-2">get_cap_idx/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_cap_table-1">get_cap_table/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_segment-4">get_segment/4</a></td><td>Read data from segment.</td></tr>
 <tr><td valign="top"><a href="#get_segment_size-2">get_segment_size/2</a></td><td>Get size of segment, in words (8 bytes).</td></tr>
-<tr><td valign="top"><a href="#get_type-2">get_type/2</a></td><td>Lookup type in schema.</td></tr>
-<tr><td valign="top"><a href="#new-1">new/1</a></td><td>Start a new data process.</td></tr>
+<tr><td valign="top"><a href="#get_segments-1">get_segments/1</a></td><td>Get all allocated data from all segments.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#set_cap_table-2">set_cap_table/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start-1">start/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#update_segment-3">update_segment/3</a></td><td>Write data to segment.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_ref-2">add_ref/2</a></h3>
+<div class="spec">
+<p><tt>add_ref(Ref, Pid) -&gt; any()</tt></p>
+</div>
 
 <h3 class="function"><a name="alloc-3">alloc/3</a></h3>
 <div class="spec">
@@ -61,10 +65,30 @@ module.</p>
   fail, as new segments are added in case there is not enough free
   space left.</p>
 
-<h3 class="function"><a name="get_message-1">get_message/1</a></h3>
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
 <div class="spec">
-<p><tt>get_message(Pid::pid()) -&gt; #msg{schema = undefined | <a href="ecapnp.html#type-schema">ecapnp:schema()</a>, alloc = [integer()], data = <a href="ecapnp.html#type-message">ecapnp:message()</a>}</tt><br></p>
-</div><p>Get the data process message record.</p>
+<p><tt>code_change(OldVsn, State, Extra) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="discard_ref-2">discard_ref/2</a></h3>
+<div class="spec">
+<p><tt>discard_ref(Ref, Pid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get_cap-2">get_cap/2</a></h3>
+<div class="spec">
+<p><tt>get_cap(Idx, Pid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get_cap_idx-2">get_cap_idx/2</a></h3>
+<div class="spec">
+<p><tt>get_cap_idx(Cap, Pid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get_cap_table-1">get_cap_table/1</a></h3>
+<div class="spec">
+<p><tt>get_cap_table(Pid) -&gt; any()</tt></p>
+</div>
 
 <h3 class="function"><a name="get_segment-4">get_segment/4</a></h3>
 <div class="spec">
@@ -76,15 +100,55 @@ module.</p>
 <p><tt>get_segment_size(Id::<a href="#type-segment_id">segment_id()</a>, Pid::pid()) -&gt; integer()</tt><br></p>
 </div><p>Get size of segment, in words (8 bytes).</p>
 
-<h3 class="function"><a name="get_type-2">get_type/2</a></h3>
+<h3 class="function"><a name="get_segments-1">get_segments/1</a></h3>
 <div class="spec">
-<p><tt>get_type(Type::<a href="#type-schema_type">schema_type()</a>, Pid::pid()) -&gt; <a href="#type-node_type">node_type()</a> | false</tt><br></p>
-</div><p>Lookup type in schema.</p>
+<p><tt>get_segments(Pid::pid()) -&gt; [binary()]</tt><br></p>
+</div><p>Get all allocated data from all segments.</p>
 
-<h3 class="function"><a name="new-1">new/1</a></h3>
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
 <div class="spec">
-<p><tt>new(Init::#msg{schema = undefined | <a href="ecapnp.html#type-schema">ecapnp:schema()</a>, alloc = [integer()], data = <a href="ecapnp.html#type-message">ecapnp:message()</a>} | {<a href="#type-schema">schema()</a>, SegmentSize::integer()} | {pid(), Data::binary()}) -&gt; pid()</tt><br></p>
-</div><p>Start a new data process.</p>
+<p><tt>handle_call(X1, From, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(X1, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="set_cap_table-2">set_cap_table/2</a></h3>
+<div class="spec">
+<p><tt>set_cap_table(CapTable, Pid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start-1">start/1</a></h3>
+<div class="spec">
+<p><tt>start(Init) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<div class="spec">
+<p><tt>start_link(Init) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="stop-1">stop/1</a></h3>
+<div class="spec">
+<p><tt>stop(Pid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
 
 <h3 class="function"><a name="update_segment-3">update_segment/3</a></h3>
 <div class="spec">
@@ -93,6 +157,6 @@ module.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 15 2013, 14:21:01.</i></p>
+<p><i>Generated by EDoc, May 30 2014, 12:56:29.</i></p>
 </body>
 </html>

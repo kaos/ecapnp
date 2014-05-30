@@ -1,0 +1,307 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module schema_capnp</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module schema_capnp</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#10736806783679155584-0">'10736806783679155584'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#10919677598968879693-0">'10919677598968879693'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#10930602151629473554-0">'10930602151629473554'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#11145653318641710175-0">'11145653318641710175'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#11389172934837766057-0">'11389172934837766057'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#11430331134483579957-0">'11430331134483579957'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#12195682960037147353-0">'12195682960037147353'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#12410354185295152851-0">'12410354185295152851'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#12560611460656617445-0">'12560611460656617445'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#12793219851699983392-0">'12793219851699983392'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#13063450714778629528-0">'13063450714778629528'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#13515537513213004774-0">'13515537513213004774'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#13818529054586492878-0">'13818529054586492878'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#14133145859926553711-0">'14133145859926553711'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#14626792032033250577-0">'14626792032033250577'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#14853958794117909659-0">'14853958794117909659'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#14981803260258615394-0">'14981803260258615394'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15020482145304562784-0">'15020482145304562784'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15102134695616452902-0">'15102134695616452902'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#16050641862814319170-0">'16050641862814319170'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#16610026722781537303-0">'16610026722781537303'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#16728431493453586831-0">'16728431493453586831'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#17011813041836786320-0">'17011813041836786320'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#17116997365232503999-0">'17116997365232503999'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#17422339044421236034-0">'17422339044421236034'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#9792858745991129751-0">'9792858745991129751'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Annotation-0">'Annotation'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Annotation-1">'Annotation'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#CodeGeneratorRequest-0">'CodeGeneratorRequest'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#CodeGeneratorRequest-1">'CodeGeneratorRequest'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#ElementSize-0">'ElementSize'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#ElementSize-1">'ElementSize'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Enumerant-0">'Enumerant'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Enumerant-1">'Enumerant'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Field-0">'Field'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Field-1">'Field'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Method-0">'Method'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Method-1">'Method'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Node-0">'Node'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Node-1">'Node'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Type-0">'Type'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Type-1">'Type'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Value-0">'Value'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Value-1">'Value'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#root-0">root/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#root-1">root/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#schema-1">schema/1</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="10736806783679155584-0">'10736806783679155584'/0</a></h3>
+<div class="spec">
+<p><tt>10736806783679155584() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="10919677598968879693-0">'10919677598968879693'/0</a></h3>
+<div class="spec">
+<p><tt>10919677598968879693() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="10930602151629473554-0">'10930602151629473554'/0</a></h3>
+<div class="spec">
+<p><tt>10930602151629473554() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="11145653318641710175-0">'11145653318641710175'/0</a></h3>
+<div class="spec">
+<p><tt>11145653318641710175() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="11389172934837766057-0">'11389172934837766057'/0</a></h3>
+<div class="spec">
+<p><tt>11389172934837766057() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="11430331134483579957-0">'11430331134483579957'/0</a></h3>
+<div class="spec">
+<p><tt>11430331134483579957() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="12195682960037147353-0">'12195682960037147353'/0</a></h3>
+<div class="spec">
+<p><tt>12195682960037147353() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="12410354185295152851-0">'12410354185295152851'/0</a></h3>
+<div class="spec">
+<p><tt>12410354185295152851() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="12560611460656617445-0">'12560611460656617445'/0</a></h3>
+<div class="spec">
+<p><tt>12560611460656617445() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="12793219851699983392-0">'12793219851699983392'/0</a></h3>
+<div class="spec">
+<p><tt>12793219851699983392() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="13063450714778629528-0">'13063450714778629528'/0</a></h3>
+<div class="spec">
+<p><tt>13063450714778629528() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="13515537513213004774-0">'13515537513213004774'/0</a></h3>
+<div class="spec">
+<p><tt>13515537513213004774() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="13818529054586492878-0">'13818529054586492878'/0</a></h3>
+<div class="spec">
+<p><tt>13818529054586492878() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="14133145859926553711-0">'14133145859926553711'/0</a></h3>
+<div class="spec">
+<p><tt>14133145859926553711() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="14626792032033250577-0">'14626792032033250577'/0</a></h3>
+<div class="spec">
+<p><tt>14626792032033250577() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="14853958794117909659-0">'14853958794117909659'/0</a></h3>
+<div class="spec">
+<p><tt>14853958794117909659() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="14981803260258615394-0">'14981803260258615394'/0</a></h3>
+<div class="spec">
+<p><tt>14981803260258615394() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15020482145304562784-0">'15020482145304562784'/0</a></h3>
+<div class="spec">
+<p><tt>15020482145304562784() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15102134695616452902-0">'15102134695616452902'/0</a></h3>
+<div class="spec">
+<p><tt>15102134695616452902() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="16050641862814319170-0">'16050641862814319170'/0</a></h3>
+<div class="spec">
+<p><tt>16050641862814319170() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="16610026722781537303-0">'16610026722781537303'/0</a></h3>
+<div class="spec">
+<p><tt>16610026722781537303() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="16728431493453586831-0">'16728431493453586831'/0</a></h3>
+<div class="spec">
+<p><tt>16728431493453586831() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="17011813041836786320-0">'17011813041836786320'/0</a></h3>
+<div class="spec">
+<p><tt>17011813041836786320() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="17116997365232503999-0">'17116997365232503999'/0</a></h3>
+<div class="spec">
+<p><tt>17116997365232503999() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="17422339044421236034-0">'17422339044421236034'/0</a></h3>
+<div class="spec">
+<p><tt>17422339044421236034() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="9792858745991129751-0">'9792858745991129751'/0</a></h3>
+<div class="spec">
+<p><tt>9792858745991129751() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Annotation-0">'Annotation'/0</a></h3>
+<div class="spec">
+<p><tt>Annotation() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Annotation-1">'Annotation'/1</a></h3>
+<div class="spec">
+<p><tt>Annotation(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="CodeGeneratorRequest-0">'CodeGeneratorRequest'/0</a></h3>
+<div class="spec">
+<p><tt>CodeGeneratorRequest() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="CodeGeneratorRequest-1">'CodeGeneratorRequest'/1</a></h3>
+<div class="spec">
+<p><tt>CodeGeneratorRequest(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="ElementSize-0">'ElementSize'/0</a></h3>
+<div class="spec">
+<p><tt>ElementSize() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="ElementSize-1">'ElementSize'/1</a></h3>
+<div class="spec">
+<p><tt>ElementSize(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Enumerant-0">'Enumerant'/0</a></h3>
+<div class="spec">
+<p><tt>Enumerant() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Enumerant-1">'Enumerant'/1</a></h3>
+<div class="spec">
+<p><tt>Enumerant(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Field-0">'Field'/0</a></h3>
+<div class="spec">
+<p><tt>Field() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Field-1">'Field'/1</a></h3>
+<div class="spec">
+<p><tt>Field(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Method-0">'Method'/0</a></h3>
+<div class="spec">
+<p><tt>Method() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Method-1">'Method'/1</a></h3>
+<div class="spec">
+<p><tt>Method(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Node-0">'Node'/0</a></h3>
+<div class="spec">
+<p><tt>Node() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Node-1">'Node'/1</a></h3>
+<div class="spec">
+<p><tt>Node(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Type-0">'Type'/0</a></h3>
+<div class="spec">
+<p><tt>Type() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Type-1">'Type'/1</a></h3>
+<div class="spec">
+<p><tt>Type(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Value-0">'Value'/0</a></h3>
+<div class="spec">
+<p><tt>Value() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Value-1">'Value'/1</a></h3>
+<div class="spec">
+<p><tt>Value(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="root-0">root/0</a></h3>
+<div class="spec">
+<p><tt>root() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="root-1">root/1</a></h3>
+<div class="spec">
+<p><tt>root(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="schema-1">schema/1</a></h3>
+<div class="spec">
+<p><tt>schema(X1) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, May 30 2014, 12:56:29.</i></p>
+</body>
+</html>

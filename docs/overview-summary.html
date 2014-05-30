@@ -9,36 +9,48 @@
 <div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
 <h1>Overview of ecapnp: the Cap'n Proto library for Erlang</h1>
 <p>Copyright © 2013, Andreas Stenius &lt;kaos@astekk.se&gt;</p>
-<p><b>Version:</b> Oct 15 2013 14:21:02</p>
+<p><b>Version:</b> May 30 2014 12:56:29</p>
 <p><b>Authors:</b> Andreas Stenius (<a href="mailto:kaos@astekk.se"><tt>kaos@astekk.se</tt></a>) [<em>web site:</em> <tt><a href="http://blog.astekk.se" target="_top">http://blog.astekk.se</a></tt>].</p>
 
 
 <h3><a name="Description">Description</a></h3>
 
-<p>The <code>ecapnp</code> library implements the a Cap'n Proto compiler plugin for
-compiling schema files to Erlang header files.</p>
+<p>The <code>ecapnp</code> library supports both Cap'n Proto serialization and RPC. The RPC
+support is currently a level 1 implementation.</p>
 
-<p>The compiled schemas can then be included in any Erlang module to
-process Cap'n Proto messages.</p>
+<p>Cap'n Proto schemas are compiled with the capnpc-erl plugin, generating Erlang
+modules.</p>
 
-To invoke the <a href="ecapnpc.html">Cap'n Proto Erlang compiler plugin</a>, it
-is convenient to use the <code>capnpc-erl</code> script like this:
+To invoke the <a href="ecapnpc.html">Cap'n Proto Erlang compiler plugin</a>, it is
+convenient to use the <code>capnpc-erl</code> script like this:
 <pre>
   <code>capnpc -oerl my_schema.capnp</code>
 </pre>
 
-<p>This requires that <code>ecapnp/bin/ecapnpc-erl</code> is in your <code>$PATH</code>, and
-that <code>ecapnp</code> is in your Erlang <a href="http://www.erlang.org/doc/man/code.html#id102620">libs path</a>
+<p>This requires that <code>ecapnp/bin/ecapnpc-erl</code> is in your <code>$PATH</code>, and that
+<code>ecapnp</code> is in your
+Erlang <a href="http://www.erlang.org/doc/man/code.html#id102620">libs path</a>
 (hint: use the <code>ERL_LIBS</code> environment variable).</p>
 
 <p>//TODO: See <a href="#Installation">Installation</a> for more details.</p>
 
 
-<h3><a name="Schema">Schema</a></h3>
+<h3><a name="Schema_modules">Schema modules</a></h3>
 
-<p>The schema file, once compiled into an Erlang <code>.hrl</code>-file and included
-in a module, exports a set of functions matching the name of the
-schema for reading and writing Cap'n Proto messages.</p>
+<p>Once a <code>.capnp</code> schema file has been compiled to an Erlang module, all types
+defined in that schema is available to you from Erlang.</p>
+
+<p>There are several ways to get the schema for a given type, depending on what you
+use to find it. Each type is exported as a 0 arity function, both by its name
+and by its id, as well as a 1 arity function by its name taking a list nested
+type names.</p>
+
+<p>There's also a common <code>schema/1</code> function where you can look up the schema for
+any given type by name or id. Nested types are also supported by passing the
+type names in a list.</p>
+
+<p>See <a href="#Sample_compiled_schema">Sample compiled schema</a>.</p>
+
 
 <p>Typically, this is <code>schema(root, ...)</code> for getting a <a href="http://kentonv.github.io/capnproto/encoding.html#messages">root
 object</a>, <code>schema(get, Field, Object)</code> for reading and <code>schema(set,
@@ -49,7 +61,6 @@ schema file.</p>
 text/data) or other structs (useful when reading fields of type
 <code>object</code>).</p>
 
-<p>See <a href="ecapnpc.html"><code>ecapnpc</code></a> for details on the compiled schema.</p>
 
 <h4><a name="Example">Example</a></h4>
 
@@ -98,54 +109,51 @@ struct AddressBook {
 }</code>
 </pre>
 
-And when compiled with <code>capnpc -oerl addressbook.capnp</code>, resulting in
-a <code>addressbook.capnp.hrl</code>-file, these functions are defined (as <code>addressbook/N</code>):
-<dl>
-  <dt>Write value to object field.</dt>
-  <dd><code>fun((set, Field::atom(), Value::term(), <a href="#type-object">object()</a>) -&gt; ok)</code></dd>
+To give a feel for how the compiled schema works, here's an excerpt of what it
+compiles to (with added comments):
+<pre><code>%% The schema file id
+-vsn(11435534567900897652).
 
-  <dt>Get a reference to the root object in message.</dt>
-  <dd><code>fun((root, Type::atom() | integer(), Message::[binary()]) -&gt; {ok, Root::<a href="#type-object">object()</a>})</code></dd>
+%% functions for getting the schema for any given type
+-export([schema/1, 'Person'/0, 'Person'/1, '10988939875124296728'/0, '9317543775882349264'/0,
+	 '10511609358742521391'/0, '13477914502553102653'/0, 'AddressBook'/0, 'AddressBook'/1,
+	 '17957216978475721012'/0, root/0, root/1, '11435534567900897652'/0]).
 
-  <dt>Read object field value.</dt>
-  <dd><code>fun((get, Field::atom(), <a href="#type-object">object()</a>) -&gt; term())</code></dd>
+%% a list mapping all type names with their corresponding id
+-types([{10988939875124296728, 'Person'}, {9317543775882349264, ['Person', 'PhoneNumber']},
+	{10511609358742521391, ['Person', 'PhoneNumber', 'Type']},
+	{13477914502553102653, ['Person', employment]}, {17957216978475721012, 'AddressBook'},
+	{11435534567900897652, root}]).
 
-  <dt>Type cast object to another struct or list.</dt>
-  <dd><code>fun((to_struct, Type::atom() | integer(), <a href="#type-object">object()</a>) -&gt; <a href="#type-object">object()</a>)</code><br>
-      <code>fun((to_list, Type::atom() | integer(), <a href="#type-object">object()</a>) -&gt; list())</code></dd>
+%% any imported types can be seen in the source, but are not directly listed in
+%% the types above, but are accessible using the `schema/1' function
+-import('c++_capnp', ['13386661402618388268'/0]).</code>
+</pre>
 
-  <dt>Set root type for a new message.</dt>
-  <dd><code>fun((root, Type::atom() | integer()) -&gt; {ok, Root::<a href="#type-object">object()</a>})</code></dd>
+<p>The <code>root</code> type is the file level schema. It can be used to find all top-level
+types as well as any annotations that applies to the schema file.</p>
 
-  <dt>Read unnamed union value of object.</dt>
-  <dd><code>fun((get, <a href="#type-object">object()</a>) -&gt; Tag::atom() | {Tag::atom(), Value::term()})</code></dd>
-
-  <dt>Type cast object to text/data.</dt>
-  <dd><code>fun((to_text | to_data, <a href="#type-object">object()</a>) -&gt; binary())</code></dd>
-
-  <dt>Get the compiled schema.</dt>
-  <dd><code>fun((schema) -&gt; <a href="#type-schema">schema()</a>)</code></dd>
-</dl>
 
 <h5><a name="Writing_an_addressbook">Writing an addressbook</a></h5>
 
-<p>To write a addressbook message, we first need a <code>AddressBook</code> root object:</p>
+<p>To write an addressbook message, we first need an <code>AddressBook</code> root object:</p>
 
-<p><code>{ok, AddressBook} = addressbook(root, 'AddressBook').</code></p>
+<p><code>{ok, AddressBook} = ecapnp:set_root(addressbook_capnp:'AddressBook'().</code></p>
 
 <p>Now, we can fill in the details. Let's add two people, and call them
 <code>Alice</code> and <code>Bob</code>:</p>
 
-<p><code>[Alice, Bob] = addressbook(set, people, 2, AddressBook).</code></p>
+<p><code>[Alice, Bob] = ecapnp:set(people, 2, AddressBook).</code></p>
 
 <p>Now, <code>Alice</code> has one phone number, while <code>Bob</code> has two:</p>
 
-<p><code>[addressbook(set, phones, N, P) || {P, N} &lt;- [{Alice, 1}, {Bob, 2}]].</code></p>
+<p><code>[ecapnp:set(phones, N, P) || {P, N} &lt;- [{Alice, 1}, {Bob, 2}]].</code></p>
 
-<p>Ok, we're all set to fill in the blanks of the people and phone objects we have allocated:</p>
+<p>Ok, we're all set to fill in the blanks of the people and phone objects we have
+allocated. We're using a list comprehension to save on some typing:</p>
 
 <pre>
-<code>[addressbook(set, Field, Value, Obj)
+<code>[ecapnp:set(Field, Value, Obj)
  || {Obj, FieldValue} &lt;-
           [{Alice,
                 [{id, 123},
@@ -166,8 +174,7 @@ a <code>addressbook.capnp.hrl</code>-file, these functions are defined (as <code
     {Field, Value} &lt;- FieldValues].</code>
 </pre>
 
-<p>There's quite a number of <code>addressbook(set, ...)</code>-calls there. Also
-note that we could have saved a reference to the phone objects
+<p>Note that we could have saved a reference to the phone objects
 directly and used those instead of embedding them in the calls to
 Alice and Bob, when we allocated the phone objects, the same way we
 saved the result when allocating people.</p>
@@ -184,7 +191,52 @@ packed binary ready for dispatching:</p>
 
 <h5><a name="Reading_an_addressbook_message">Reading an addressbook message</a></h5>
 
-<p>To be written...</p>
+<p>Assuming you have the packed binary from the previous section in <code>Data</code>, here's
+how you can read some stuff out of it.</p>
+
+<p>First, we need to unpack it and parse the message header (segment table) before
+getting at the root struct node:</p>
+
+<pre>
+<code>Unpacked = ecapnp_serialize:unpack(Data),
+{ok, Message, &lt;&lt;&gt;&gt;} = ecapnp_message:read(Unpacked),
+{ok, AddressBook} = ecapnp:get_root(addressbook_capnp:'AddressBook'(), Message)</code>
+</pre>
+
+<p>Then we can start reading data out of it using <code>ecapnp:get</code>:</p>
+
+<pre>
+<code>%% this will of course fail if the people list is empty
+[Person|People] = ecapnp:get(people, AddressBook),
+Name = ecapnp:get(name, Person),
+
+[Phone|Phones] = ecapnp:get(phones, Person),
+Number = ecapnp:get(number, Phone),
+
+{Employment, Value} = ecapnp:get(employment, Person),
+
+%% `Value' can be the school name, employer or `void' depending on the value of
+%% Employment.</code>
+</pre>
+
+
+<h3><a name="RPC">RPC</a></h3>
+
+<p>The RPC support is at level 1 (almost). Still lacking is a bit of infrastructure
+for sockets, and the reference counting/releasing is still a bit of a moving
+target.</p>
+
+<p>The calculator sample application is the best source of examples, and I won't
+repeat everything here at this time, as things are still subject to change..</p>
+
+<p>In short, there is:</p>
+
+<p>- <code>ecapnp:request/2</code> to invoke a call on a capability.
+- <code>ecapnp:send/1</code> to dispatch a call request.
+- <code>ecapnp:wait/1</code> to wait for the results of a call.
+- <code>ecapnp_vat:import_capability/3</code> to restore capabilities.</p>
+
+<p>For now, refer to the client and server samples for the glue code needed.</p>
 
 
 <h3><a name="Project_info">Project info</a></h3>
@@ -213,6 +265,6 @@ limitations under the License.</pre>
 
 <hr>
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 15 2013, 14:21:02.</i></p>
+<p><i>Generated by EDoc, May 30 2014, 12:56:29.</i></p>
 </body>
 </html>

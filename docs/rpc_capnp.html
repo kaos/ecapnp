@@ -1,0 +1,433 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module rpc_capnp</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module rpc_capnp</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#10500036013887172658-0">'10500036013887172658'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#10789521159760378817-0">'10789521159760378817'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#11100916931204903995-0">'11100916931204903995'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#11270825879279873114-0">'11270825879279873114'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#11392333052105676602-0">'11392333052105676602'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#12473400923157197975-0">'12473400923157197975'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#12903543124727603792-0">'12903543124727603792'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#13523986587913222488-0">'13523986587913222488'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#13529541526594062446-0">'13529541526594062446'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#14883405629196290303-0">'14883405629196290303'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15235686326393111165-0">'15235686326393111165'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15239388059401719395-0">'15239388059401719395'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15332985841292492822-0">'15332985841292492822'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15376050949367520589-0">'15376050949367520589'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15430940935639230746-0">'15430940935639230746'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15564635848320162976-0">'15564635848320162976'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#15774052265921044377-0">'15774052265921044377'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#16433336749162137644-0">'16433336749162137644'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#17009130564474155176-0">'17009130564474155176'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#17516350820840804481-0">'17516350820840804481'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#17970548384007534353-0">'17970548384007534353'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#18149955118657700271-0">'18149955118657700271'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#9469473312751832276-0">'9469473312751832276'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#9593755465305995440-0">'9593755465305995440'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#9666541409743531671-0">'9666541409743531671'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Accept-0">'Accept'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Accept-1">'Accept'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Call-0">'Call'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Call-1">'Call'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#CapDescriptor-0">'CapDescriptor'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#CapDescriptor-1">'CapDescriptor'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Delete-0">'Delete'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Delete-1">'Delete'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Disembargo-0">'Disembargo'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Disembargo-1">'Disembargo'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Exception-0">'Exception'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Exception-1">'Exception'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Finish-0">'Finish'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Finish-1">'Finish'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Join-0">'Join'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Join-1">'Join'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Message-0">'Message'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Message-1">'Message'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#MessageTarget-0">'MessageTarget'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#MessageTarget-1">'MessageTarget'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Payload-0">'Payload'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Payload-1">'Payload'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#PromisedAnswer-0">'PromisedAnswer'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#PromisedAnswer-1">'PromisedAnswer'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Provide-0">'Provide'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Provide-1">'Provide'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Release-0">'Release'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Release-1">'Release'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Resolve-0">'Resolve'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Resolve-1">'Resolve'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Restore-0">'Restore'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Restore-1">'Restore'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Return-0">'Return'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Return-1">'Return'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Save-0">'Save'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#Save-1">'Save'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#SturdyRef-0">'SturdyRef'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#SturdyRef-1">'SturdyRef'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#ThirdPartyCapDescriptor-0">'ThirdPartyCapDescriptor'/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#ThirdPartyCapDescriptor-1">'ThirdPartyCapDescriptor'/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#root-0">root/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#root-1">root/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#schema-1">schema/1</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="10500036013887172658-0">'10500036013887172658'/0</a></h3>
+<div class="spec">
+<p><tt>10500036013887172658() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="10789521159760378817-0">'10789521159760378817'/0</a></h3>
+<div class="spec">
+<p><tt>10789521159760378817() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="11100916931204903995-0">'11100916931204903995'/0</a></h3>
+<div class="spec">
+<p><tt>11100916931204903995() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="11270825879279873114-0">'11270825879279873114'/0</a></h3>
+<div class="spec">
+<p><tt>11270825879279873114() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="11392333052105676602-0">'11392333052105676602'/0</a></h3>
+<div class="spec">
+<p><tt>11392333052105676602() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="12473400923157197975-0">'12473400923157197975'/0</a></h3>
+<div class="spec">
+<p><tt>12473400923157197975() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="12903543124727603792-0">'12903543124727603792'/0</a></h3>
+<div class="spec">
+<p><tt>12903543124727603792() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="13523986587913222488-0">'13523986587913222488'/0</a></h3>
+<div class="spec">
+<p><tt>13523986587913222488() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="13529541526594062446-0">'13529541526594062446'/0</a></h3>
+<div class="spec">
+<p><tt>13529541526594062446() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="14883405629196290303-0">'14883405629196290303'/0</a></h3>
+<div class="spec">
+<p><tt>14883405629196290303() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15235686326393111165-0">'15235686326393111165'/0</a></h3>
+<div class="spec">
+<p><tt>15235686326393111165() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15239388059401719395-0">'15239388059401719395'/0</a></h3>
+<div class="spec">
+<p><tt>15239388059401719395() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15332985841292492822-0">'15332985841292492822'/0</a></h3>
+<div class="spec">
+<p><tt>15332985841292492822() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15376050949367520589-0">'15376050949367520589'/0</a></h3>
+<div class="spec">
+<p><tt>15376050949367520589() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15430940935639230746-0">'15430940935639230746'/0</a></h3>
+<div class="spec">
+<p><tt>15430940935639230746() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15564635848320162976-0">'15564635848320162976'/0</a></h3>
+<div class="spec">
+<p><tt>15564635848320162976() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="15774052265921044377-0">'15774052265921044377'/0</a></h3>
+<div class="spec">
+<p><tt>15774052265921044377() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="16433336749162137644-0">'16433336749162137644'/0</a></h3>
+<div class="spec">
+<p><tt>16433336749162137644() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="17009130564474155176-0">'17009130564474155176'/0</a></h3>
+<div class="spec">
+<p><tt>17009130564474155176() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="17516350820840804481-0">'17516350820840804481'/0</a></h3>
+<div class="spec">
+<p><tt>17516350820840804481() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="17970548384007534353-0">'17970548384007534353'/0</a></h3>
+<div class="spec">
+<p><tt>17970548384007534353() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="18149955118657700271-0">'18149955118657700271'/0</a></h3>
+<div class="spec">
+<p><tt>18149955118657700271() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="9469473312751832276-0">'9469473312751832276'/0</a></h3>
+<div class="spec">
+<p><tt>9469473312751832276() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="9593755465305995440-0">'9593755465305995440'/0</a></h3>
+<div class="spec">
+<p><tt>9593755465305995440() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="9666541409743531671-0">'9666541409743531671'/0</a></h3>
+<div class="spec">
+<p><tt>9666541409743531671() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Accept-0">'Accept'/0</a></h3>
+<div class="spec">
+<p><tt>Accept() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Accept-1">'Accept'/1</a></h3>
+<div class="spec">
+<p><tt>Accept(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Call-0">'Call'/0</a></h3>
+<div class="spec">
+<p><tt>Call() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Call-1">'Call'/1</a></h3>
+<div class="spec">
+<p><tt>Call(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="CapDescriptor-0">'CapDescriptor'/0</a></h3>
+<div class="spec">
+<p><tt>CapDescriptor() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="CapDescriptor-1">'CapDescriptor'/1</a></h3>
+<div class="spec">
+<p><tt>CapDescriptor(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Delete-0">'Delete'/0</a></h3>
+<div class="spec">
+<p><tt>Delete() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Delete-1">'Delete'/1</a></h3>
+<div class="spec">
+<p><tt>Delete(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Disembargo-0">'Disembargo'/0</a></h3>
+<div class="spec">
+<p><tt>Disembargo() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Disembargo-1">'Disembargo'/1</a></h3>
+<div class="spec">
+<p><tt>Disembargo(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Exception-0">'Exception'/0</a></h3>
+<div class="spec">
+<p><tt>Exception() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Exception-1">'Exception'/1</a></h3>
+<div class="spec">
+<p><tt>Exception(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Finish-0">'Finish'/0</a></h3>
+<div class="spec">
+<p><tt>Finish() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Finish-1">'Finish'/1</a></h3>
+<div class="spec">
+<p><tt>Finish(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Join-0">'Join'/0</a></h3>
+<div class="spec">
+<p><tt>Join() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Join-1">'Join'/1</a></h3>
+<div class="spec">
+<p><tt>Join(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Message-0">'Message'/0</a></h3>
+<div class="spec">
+<p><tt>Message() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Message-1">'Message'/1</a></h3>
+<div class="spec">
+<p><tt>Message(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="MessageTarget-0">'MessageTarget'/0</a></h3>
+<div class="spec">
+<p><tt>MessageTarget() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="MessageTarget-1">'MessageTarget'/1</a></h3>
+<div class="spec">
+<p><tt>MessageTarget(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Payload-0">'Payload'/0</a></h3>
+<div class="spec">
+<p><tt>Payload() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Payload-1">'Payload'/1</a></h3>
+<div class="spec">
+<p><tt>Payload(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="PromisedAnswer-0">'PromisedAnswer'/0</a></h3>
+<div class="spec">
+<p><tt>PromisedAnswer() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="PromisedAnswer-1">'PromisedAnswer'/1</a></h3>
+<div class="spec">
+<p><tt>PromisedAnswer(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Provide-0">'Provide'/0</a></h3>
+<div class="spec">
+<p><tt>Provide() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Provide-1">'Provide'/1</a></h3>
+<div class="spec">
+<p><tt>Provide(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Release-0">'Release'/0</a></h3>
+<div class="spec">
+<p><tt>Release() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Release-1">'Release'/1</a></h3>
+<div class="spec">
+<p><tt>Release(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Resolve-0">'Resolve'/0</a></h3>
+<div class="spec">
+<p><tt>Resolve() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Resolve-1">'Resolve'/1</a></h3>
+<div class="spec">
+<p><tt>Resolve(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Restore-0">'Restore'/0</a></h3>
+<div class="spec">
+<p><tt>Restore() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Restore-1">'Restore'/1</a></h3>
+<div class="spec">
+<p><tt>Restore(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Return-0">'Return'/0</a></h3>
+<div class="spec">
+<p><tt>Return() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Return-1">'Return'/1</a></h3>
+<div class="spec">
+<p><tt>Return(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Save-0">'Save'/0</a></h3>
+<div class="spec">
+<p><tt>Save() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="Save-1">'Save'/1</a></h3>
+<div class="spec">
+<p><tt>Save(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="SturdyRef-0">'SturdyRef'/0</a></h3>
+<div class="spec">
+<p><tt>SturdyRef() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="SturdyRef-1">'SturdyRef'/1</a></h3>
+<div class="spec">
+<p><tt>SturdyRef(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="ThirdPartyCapDescriptor-0">'ThirdPartyCapDescriptor'/0</a></h3>
+<div class="spec">
+<p><tt>ThirdPartyCapDescriptor() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="ThirdPartyCapDescriptor-1">'ThirdPartyCapDescriptor'/1</a></h3>
+<div class="spec">
+<p><tt>ThirdPartyCapDescriptor(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="root-0">root/0</a></h3>
+<div class="spec">
+<p><tt>root() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="root-1">root/1</a></h3>
+<div class="spec">
+<p><tt>root(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="schema-1">schema/1</a></h3>
+<div class="spec">
+<p><tt>schema(X1) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, May 30 2014, 12:56:28.</i></p>
+</body>
+</html>

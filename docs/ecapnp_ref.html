@@ -33,27 +33,36 @@
 <p><tt>segment_id() = <a href="ecapnp.html#type-segment_id">ecapnp:segment_id()</a></tt></p>
 
 
+<h3 class="typedecl"><a name="type-word_count">word_count()</a></h3>
+<p><tt>word_count() = <a href="ecapnp.html#type-word_count">ecapnp:word_count()</a></tt></p>
+
+
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#alloc-3">alloc/3</a></td><td>Allocate data for a reference.</td></tr>
 <tr><td valign="top"><a href="#alloc-4">alloc/4</a></td><td>Allocate data for a reference of a specific kind.</td></tr>
 <tr><td valign="top"><a href="#alloc_data-1">alloc_data/1</a></td><td>Allocate data for reference.</td></tr>
+<tr><td valign="top"><a href="#alloc_data-2">alloc_data/2</a></td><td>Allocate data for reference.</td></tr>
 <tr><td valign="top"><a href="#alloc_list-3">alloc_list/3</a></td><td>Allocate data for list.</td></tr>
-<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td>Copy all data for a reference.</td></tr>
+<tr><td valign="top"><a href="#copy-1">copy/1</a></td><td>Make a deep copy of a reference.</td></tr>
+<tr><td valign="top"><a href="#create_ptr-2">create_ptr/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#follow_far-1">follow_far/1</a></td><td>Resolve a far pointer.</td></tr>
 <tr><td valign="top"><a href="#get-3">get/3</a></td><td>Get reference from segment data.</td></tr>
 <tr><td valign="top"><a href="#get-4">get/4</a></td><td>Get reference from segment data.</td></tr>
 <tr><td valign="top"><a href="#null_ref-1">null_ref/1</a></td><td>Get a null pointer.</td></tr>
+<tr><td valign="top"><a href="#paste-2">paste/2</a></td><td>Allocate space and write data for reference.</td></tr>
 <tr><td valign="top"><a href="#ptr-2">ptr/2</a></td><td>Get indexed reference (unintialized).</td></tr>
 <tr><td valign="top"><a href="#read_data-1">read_data/1</a></td><td>Read data.</td></tr>
 <tr><td valign="top"><a href="#read_data-2">read_data/2</a></td><td>Read data.</td></tr>
 <tr><td valign="top"><a href="#read_list-1">read_list/1</a></td><td>Read elements from a list ref.</td></tr>
 <tr><td valign="top"><a href="#read_list-2">read_list/2</a></td><td>Read elements from a list ref.</td></tr>
+<tr><td valign="top"><a href="#read_list_refs-3">read_list_refs/3</a></td><td>Read elements from a list ref, forcing the result into a list of refs.</td></tr>
 <tr><td valign="top"><a href="#read_struct_data-3">read_struct_data/3</a></td><td>Read from data section of a struct ref.</td></tr>
 <tr><td valign="top"><a href="#read_struct_data-4">read_struct_data/4</a></td><td>Read from data section of a struct ref.</td></tr>
 <tr><td valign="top"><a href="#read_struct_ptr-2">read_struct_ptr/2</a></td><td>Read a refeference from the pointer section of struct ref.</td></tr>
 <tr><td valign="top"><a href="#read_struct_ptr-3">read_struct_ptr/3</a></td><td>Read a refeference from the pointer section of struct ref.</td></tr>
 <tr><td valign="top"><a href="#read_text-1">read_text/1</a></td><td>Read text.</td></tr>
 <tr><td valign="top"><a href="#read_text-2">read_text/2</a></td><td>Read text.</td></tr>
+<tr><td valign="top"><a href="#refresh-1">refresh/1</a></td><td>Reread reference from message.</td></tr>
 <tr><td valign="top"><a href="#set-2">set/2</a></td><td>Set reference kind.</td></tr>
 <tr><td valign="top"><a href="#write_data-3">write_data/3</a></td><td>Write data.</td></tr>
 <tr><td valign="top"><a href="#write_list-4">write_list/4</a></td><td>Write list element.</td></tr>
@@ -66,14 +75,14 @@
 
 <h3 class="function"><a name="alloc-3">alloc/3</a></h3>
 <div class="spec">
-<p><tt>alloc(SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+<p><tt>alloc(SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Builder::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Allocate data for a reference.</p>
  
   The allocated data is left empty.</p>
 
 <h3 class="function"><a name="alloc-4">alloc/4</a></h3>
 <div class="spec">
-<p><tt>alloc(Kind::<a href="#type-ref_kind">ref_kind()</a>, SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Data::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+<p><tt>alloc(Kind::<a href="#type-ref_kind">ref_kind()</a>, SegmentId::<a href="#type-segment_id">segment_id()</a>, Size::integer(), Builder::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Allocate data for a reference of a specific kind.</p>
  
   The reference will be written to the first word of the allocated
@@ -91,6 +100,11 @@
   Returns an updated reference with the offset field updated to point
   at the newly allocated data.</p>
 
+<h3 class="function"><a name="alloc_data-2">alloc_data/2</a></h3>
+<div class="spec">
+<p><tt>alloc_data(Size::<a href="#type-word_count">word_count()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p>Allocate data for reference.</p>
+
 <h3 class="function"><a name="alloc_list-3">alloc_list/3</a></h3>
 <div class="spec">
 <p><tt>alloc_list(Idx::integer(), List_ref::<a href="#type-ref_kind">ref_kind()</a>, Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
@@ -107,11 +121,16 @@
 <h3 class="function"><a name="copy-1">copy/1</a></h3>
 <div class="spec">
 <p><tt>copy(Ref::<a href="#type-ref">ref()</a>) -&gt; binary()</tt><br></p>
-</div><p><p>Copy all data for a reference.</p>
+</div><p><p>Make a deep copy of a reference.</p>
  
   Recursively follows all pointers and copies them as well. So
   copying a root object will effectively defragment a fragmented
   message.</p>
+
+<h3 class="function"><a name="create_ptr-2">create_ptr/2</a></h3>
+<div class="spec">
+<p><tt>create_ptr(Offset, Ref) -&gt; any()</tt></p>
+</div>
 
 <h3 class="function"><a name="follow_far-1">follow_far/1</a></h3>
 <div class="spec">
@@ -122,7 +141,7 @@
 
 <h3 class="function"><a name="get-3">get/3</a></h3>
 <div class="spec">
-<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid() | binary()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Get reference from segment data.</p>
  
   <p>Read segment, and parse it for a reference pointer.</p>
@@ -133,7 +152,7 @@
 
 <h3 class="function"><a name="get-4">get/4</a></h3>
 <div class="spec">
-<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid(), FollowFar::boolean()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+<p><tt>get(SegmentId::<a href="#type-segment_id">segment_id()</a>, Pos::integer(), Data::pid() | binary(), FollowFar::boolean()) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
 </div><p><p>Get reference from segment data.</p>
  
   <p>Read segment, and parse it for a reference pointer.</p>
@@ -151,6 +170,18 @@
   <code>#ref{}</code> record on its own is that the null reference returned by
   this function knows about the schema and segment data of the
   message for which it was based.</p>
+
+<h3 class="function"><a name="paste-2">paste/2</a></h3>
+<div class="spec">
+<p><tt>paste(X1::binary(), Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p><p>Allocate space and write data for reference.</p>
+ 
+  <p>All data, both data section and pointers section, and any data that  
+those may refer to (good for saving off a deep copy of another  
+object).</p>
+ 
+  Note: <code>Data</code> should be whole words (8 bytes). Any fraction of a
+  word will be truncated.</p>
 
 <h3 class="function"><a name="ptr-2">ptr/2</a></h3>
 <div class="spec">
@@ -185,6 +216,11 @@ reference, regardless of what data currently is in the segment.</p>
 <p><tt>read_list(Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; [<a href="#type-ref">ref()</a>] | [binary()] | any()</tt><br></p>
 </div><p>Read elements from a list ref.</p>
 
+<h3 class="function"><a name="read_list_refs-3">read_list_refs/3</a></h3>
+<div class="spec">
+<p><tt>read_list_refs(Ref, ElementRefKind, Default) -&gt; any()</tt></p>
+</div><p>Read elements from a list ref, forcing the result into a list of refs.</p>
+
 <h3 class="function"><a name="read_struct_data-3">read_struct_data/3</a></h3>
 <div class="spec">
 <p><tt>read_struct_data(Align::integer(), Len::integer(), Ref::<a href="#type-ref">ref()</a>) -&gt; binary()</tt><br></p>
@@ -195,7 +231,7 @@ reference, regardless of what data currently is in the segment.</p>
 
 <h3 class="function"><a name="read_struct_data-4">read_struct_data/4</a></h3>
 <div class="spec">
-<p><tt>read_struct_data(Align::integer(), Len::integer(), Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; binary() | any()</tt><br></p>
+<p><tt>read_struct_data(FAlign::integer(), Len::integer(), Ref::<a href="#type-ref">ref()</a>, Default::any()) -&gt; binary() | any()</tt><br></p>
 </div><p><p>Read from data section of a struct ref.</p>
  
   <code>Align</code> is number of bits into the data section to read from, and
@@ -227,9 +263,14 @@ reference, regardless of what data currently is in the segment.</p>
   NOTICE: The required trailing <code>NULL</code> byte is silently dropped when
   reading the text.</p>
 
+<h3 class="function"><a name="refresh-1">refresh/1</a></h3>
+<div class="spec">
+<p><tt>refresh(Ref::<a href="#type-ref">ref()</a>) -&gt; <a href="#type-ref">ref()</a></tt><br></p>
+</div><p>Reread reference from message.</p>
+
 <h3 class="function"><a name="set-2">set/2</a></h3>
 <div class="spec">
-<p><tt>set(Kind, Ref0) -&gt; any()</tt></p>
+<p><tt>set(Kind, Ref) -&gt; any()</tt></p>
 </div><p><p>Set reference kind.</p>
  
   Updates the reference kind and writes it to the segment data at
@@ -252,7 +293,7 @@ reference, regardless of what data currently is in the segment.</p>
 
 <h3 class="function"><a name="write_struct_data-4">write_struct_data/4</a></h3>
 <div class="spec">
-<p><tt>write_struct_data(Align::integer(), Len::integer(), Value::binary(), Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
+<p><tt>write_struct_data(FAlign::integer(), Len::integer(), Value::binary(), Ref::<a href="#type-ref">ref()</a>) -&gt; ok</tt><br></p>
 </div><p>Write to struct data section.</p>
 
 <h3 class="function"><a name="write_struct_ptr-2">write_struct_ptr/2</a></h3>
@@ -276,6 +317,6 @@ to the newly allocated (and updated) data.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Oct 15 2013, 14:21:02.</i></p>
+<p><i>Generated by EDoc, May 30 2014, 12:56:29.</i></p>
 </body>
 </html>
