@@ -36,7 +36,7 @@ read([]) ->
     dump_message(read_stdin()).
 
 write([]) ->
-    {ok, Root} = ecapnp:set_root('AddressBook', addressbook_capnp),
+    {ok, Root} = ecapnp:set_root(addressbook_capnp:'AddressBook'()),
     [Alice, Bob, Steve] = ecapnp:set(people, 3, Root),
     [AlicePhone] = ecapnp:set(phones, 1, Alice),
     [BobPhone1, BobPhone2] = ecapnp:set(phones, 2, Bob),
@@ -91,7 +91,7 @@ dump_message(Data) ->
     {ok, Message, <<>>} = ecapnp_message:read(
                             ecapnp_serialize:unpack(Data)),
     {ok, Root} = ecapnp:get_root(
-                   'AddressBook', addressbook_capnp, Message),
+                   addressbook_capnp:'AddressBook'(), Message),
     People = ecapnp:get(people, Root),
     [dump_person(Person) || Person <- People].
 
@@ -103,8 +103,7 @@ dump_person(Person) ->
     [io:format("  ~s phone: ~s~n", [ecapnp:get(type, P),
                                     ecapnp:get(number, P)])
      || P <- Phones],
-    %% hmm... not the best looking api, this.. :/
-    case ecapnp:get(ecapnp:get(employment, Person)) of
+    case ecapnp:get(employment, Person) of
         unemployed -> io:format("  unemployed~n");
         {employer, Employer} ->
             io:format("  employer: ~s~n", [Employer]);

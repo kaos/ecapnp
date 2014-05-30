@@ -29,8 +29,9 @@
 %% Public API
 %% ===================================================================
 
--export([get_root/3, get/1, get/2, set_root/2, set/2, set/3, init/2,
-         init/3, const/2, request/2, send/1, wait/1, wait/2]).
+-export([get_root/2, get_root/3, get/1, get/2, set_root/1, set_root/2,
+         set/2, set/3, init/2, init/3, const/2, request/2, send/1,
+         wait/1, wait/2]).
 
 %% ===================================================================
 %% Public Types
@@ -190,6 +191,9 @@
 get_root(Type, Schema, Segments) ->
     ecapnp_get:root(Type, Schema, Segments).
 
+get_root(Schema, Segments) ->
+    ecapnp_get:root(Schema, Segments).
+
 -spec set_root(type_name(), schema()) -> {ok, Root::object()}.
 %% @doc Set the root object for a new message.
 %% This creates a new empty message, ready to be filled with data.
@@ -198,6 +202,9 @@ get_root(Type, Schema, Segments) ->
 %% @see ecapnp_set:root/2
 set_root(Type, Schema) ->
     ecapnp_set:root(Type, Schema).
+
+set_root(Schema) ->
+    ecapnp_set:root(Schema).
 
 -spec get(object()) -> {field_name(), field_value()} | field_name().
 %% @doc Read the unnamed union value of object.

@@ -138,7 +138,7 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
                                   {object, Value};
                              true ->
                                   throw({error, {invalid_object_value, Value}})
-                              end,
+                          end,
                     write_obj(ObjType, ObjValue, ecapnp_ref:ptr(Idx, StructRef), Obj)
             end;
         {struct, StructType} ->
@@ -200,7 +200,26 @@ set_field(#ptr{ idx=Idx, type=Type, default=Default }=Ptr,
 set_field(#group{ id=Type }, {default}, #object{ ref=StructRef }=Obj) ->
     ecapnp_obj:from_ref(StructRef, Type, Obj);
 set_field(#group{ id=Type }, Value, #object{ ref=StructRef }=Obj) ->
-    union(Value, ecapnp_obj:from_ref(StructRef, Type, Obj)).
+    case ecapnp_obj:from_ref(StructRef, Type, Obj) of
+        #object{
+           schema = #schema_node{
+                       kind = #struct{
+                                 union_field = Union,
+                                 fields = []
+                                }}}=Group
+          when Union =/= none ->
+            %% set named union (which are represented as an unnamed
+            %% union wrapped in a group)
+            set_field(Union, Value, Group);
+        Group ->
+            %% set group field (or group unnamed union)
+            case Value of
+                {FieldName, FieldValue} ->
+                    field(FieldName, FieldValue, Group);
+                _ ->
+                    field(Value, Group)
+            end
+    end.
 
 write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(

@@ -120,7 +120,21 @@ read_field(#ptr{ idx=Idx }=Ptr, #object{ ref = Ref }=Object) ->
             Object),
     read_ptr(Ptr, Obj);
 read_field(#group{ id=Type }, Object) ->
-    ecapnp_obj:to_struct(Type, Object).
+    case ecapnp_obj:to_struct(Type, Object) of
+        #object{
+          schema = #schema_node{
+                      kind = #struct{
+                                union_field = Union,
+                                fields = []
+                               }}}=Group
+          when Union =/= none ->
+            %% when we read a named union, we want to get the union
+            %% value directly, but a named union is represented as a
+            %% unnamed union wrapped in a group
+            read_field(Union, Group);
+        Group ->
+            Group
+    end.
 
 read_ptr(#ptr{ type=Type, default=Default }, #object{ ref = Ref }=Obj) ->
     case Type of

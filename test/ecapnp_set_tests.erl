@@ -315,10 +315,10 @@ group_field_test() ->
          "foo bar",0
        >>], Data).
 
-group_union_test() ->
+named_union_test() ->
+    %% please note that a named union is the same as a unnamed union wrapped in a group
     {ok, Root} = ecapnp:set_root('Test', test_capnp),
-    Grp = ecapnp:get(opts, Root),
-    ok = ecapnp:set({text, <<"testing">>}, Grp),
+    ok = ecapnp:set(opts, {text, <<"testing">>}, Root),
     Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
       [<<0:32/integer, 2,0, 6,0, %% Test struct, 16 bytes, 6 ptrs
