@@ -1,6 +1,6 @@
 -file("rpc.capnp", 1).
 
-%% This file was generated 2014-05-13 04:40:14 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-31 07:56:26 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(rpc_capnp).
 
@@ -38,7 +38,7 @@
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
--ecapnp_schema_version(3).
+-ecapnp_schema_version(4).
 
 -record(schema_node,
 	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
@@ -104,14 +104,16 @@
 
 -record(field, {id, name, kind, annotations = []}).
 
--record(ptr, {type, idx = 0, default = null}).
+-record(ptr, {type, idx = 0, default = <<0:64/integer-little>>}).
 
 -type({{record, ptr},
        [{typed_record_field, {record_field, 60, {atom, 60, type}},
 	 {type, 60, union, [{atom, 60, undefined}, {type, 60, term, []}]}},
 	{typed_record_field, {record_field, 61, {atom, 61, idx}, {integer, 61, 0}},
 	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, ptr_index}, []]}},
-	{typed_record_field, {record_field, 62, {atom, 62, default}, {atom, 62, null}},
+	{typed_record_field,
+	 {record_field, 62, {atom, 62, default},
+	  {bin, 62, [{bin_element, 62, {integer, 62, 0}, {integer, 62, 64}, [integer, little]}]}},
 	 {remote_type, 62, [{atom, 62, ecapnp}, {atom, 62, value}, []]}}],
        []}).
 

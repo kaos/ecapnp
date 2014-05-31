@@ -301,7 +301,7 @@ compile_annotation(Annotation) ->
     Value = ecapnp:get(value, Annotation),
     tuple([integer(Id), compile_value(any, ecapnp:get(Value))]).
 
-compile_node_type(file) ->
+compile_node_type({file, void}) ->
     record_field(atom(kind), atom(file));
 compile_node_type({struct, Struct}) ->
     {Fields, Union} = lists:partition(
@@ -521,6 +521,7 @@ compile_binary(Bin) ->
     binary(Fields).
 
 
+capnp_type_info({Type, void}) -> capnp_type_info(Type);
 capnp_type_info(void) -> {data_field, void};
 capnp_type_info(bool) -> {data_field, {bool, 1}};
 capnp_type_info(int8) -> {data_field, {int8, 8}};

@@ -1,6 +1,6 @@
 -file("c++.capnp", 1).
 
-%% This file was generated 2014-04-30 12:36:51 UTC by ecapnp 0.2.
+%% This file was generated 2014-05-31 07:56:28 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module('c++_capnp').
 
@@ -13,7 +13,7 @@
 
 -file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
 
--ecapnp_schema_version(2).
+-ecapnp_schema_version(4).
 
 -record(schema_node,
 	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
@@ -77,36 +77,38 @@
 	 {type, 47, list, [{type, 47, atom, []}]}}],
        []}).
 
--record(field, {name, kind, annotations = []}).
+-record(field, {id, name, kind, annotations = []}).
 
--record(ptr, {type, idx = 0, default = null}).
+-record(ptr, {type, idx = 0, default = <<0:64/integer-little>>}).
 
 -type({{record, ptr},
-       [{typed_record_field, {record_field, 59, {atom, 59, type}},
-	 {type, 59, union, [{atom, 59, undefined}, {type, 59, term, []}]}},
-	{typed_record_field, {record_field, 60, {atom, 60, idx}, {integer, 60, 0}},
-	 {remote_type, 60, [{atom, 60, ecapnp}, {atom, 60, ptr_index}, []]}},
-	{typed_record_field, {record_field, 61, {atom, 61, default}, {atom, 61, null}},
-	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, value}, []]}}],
+       [{typed_record_field, {record_field, 60, {atom, 60, type}},
+	 {type, 60, union, [{atom, 60, undefined}, {type, 60, term, []}]}},
+	{typed_record_field, {record_field, 61, {atom, 61, idx}, {integer, 61, 0}},
+	 {remote_type, 61, [{atom, 61, ecapnp}, {atom, 61, ptr_index}, []]}},
+	{typed_record_field,
+	 {record_field, 62, {atom, 62, default},
+	  {bin, 62, [{bin_element, 62, {integer, 62, 0}, {integer, 62, 64}, [integer, little]}]}},
+	 {remote_type, 62, [{atom, 62, ecapnp}, {atom, 62, value}, []]}}],
        []}).
 
 -record(data, {type, align = 0, default}).
 
 -type({{record, data},
-       [{typed_record_field, {record_field, 65, {atom, 65, type}},
-	 {type, 65, union, [{atom, 65, undefined}, {type, 65, term, []}]}},
-	{typed_record_field, {record_field, 66, {atom, 66, align}, {integer, 66, 0}},
-	 {remote_type, 66, [{atom, 66, ecapnp}, {atom, 66, bit_count}, []]}},
-	{typed_record_field, {record_field, 67, {atom, 67, default}},
-	 {type, 67, union,
-	  [{atom, 67, undefined}, {remote_type, 67, [{atom, 67, ecapnp}, {atom, 67, value}, []]}]}}],
+       [{typed_record_field, {record_field, 66, {atom, 66, type}},
+	 {type, 66, union, [{atom, 66, undefined}, {type, 66, term, []}]}},
+	{typed_record_field, {record_field, 67, {atom, 67, align}, {integer, 67, 0}},
+	 {remote_type, 67, [{atom, 67, ecapnp}, {atom, 67, bit_count}, []]}},
+	{typed_record_field, {record_field, 68, {atom, 68, default}},
+	 {type, 68, union,
+	  [{atom, 68, undefined}, {remote_type, 68, [{atom, 68, ecapnp}, {atom, 68, value}, []]}]}}],
        []}).
 
 -record(group, {id = 0}).
 
 -type({{record, group},
-       [{typed_record_field, {record_field, 71, {atom, 71, id}, {integer, 71, 0}},
-	 {remote_type, 71, [{atom, 71, ecapnp}, {atom, 71, type_id}, []]}}],
+       [{typed_record_field, {record_field, 72, {atom, 72, id}, {integer, 72, 0}},
+	 {remote_type, 72, [{atom, 72, ecapnp}, {atom, 72, type_id}, []]}}],
        []}).
 
 -record(method, {id, name, paramType, resultType}).
