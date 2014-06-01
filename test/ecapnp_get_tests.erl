@@ -159,13 +159,13 @@ get_cap_test() ->
              3,0,0,0, 2,0,0,0  %% cap ptr 22 (obj)
            >>],
     {ok, R} = ecapnp:get_root('CapTest', test_capnp, Msg),
-    Cap1 = #capability{ id = 1 },
-    Cap2 = #capability{ id = 2 },
+    Cap1 = #interface_ref{ id = 1 },
+    Cap2 = #interface_ref{ id = 2 },
     Root = ecapnp_obj:set_cap_table([dummy, Cap1, Cap2], R),
     Basic = ecapnp:get(basic, Root),
     Obj = ecapnp:get(obj, Root),
-    ?assertEqual(Cap1, Basic#object.ref#ref.kind#interface_ref.cap),
-    ?assertEqual(Cap2, Obj#object.ref#ref.kind#interface_ref.cap).
+    ?assertEqual(Cap1, Basic#object.ref#ref.kind),
+    ?assertEqual(Cap2, Obj#object.ref#ref.kind).
 
 
 -endif.

@@ -48,7 +48,7 @@
 -record(state, {
           refs=[] :: list({pid(), reference()}),
           segments = [] :: list(#seg{}),
-          caps = [] :: list({non_neg_integer(), #capability{}})
+          caps = [] :: list({non_neg_integer(), #interface_ref{}})
          }).
 
 

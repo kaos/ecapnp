@@ -511,9 +511,8 @@ read_ref(<<OffsetAndKind:32/integer-signed-little,
                               }};
         interface ->
             Ref#ref{ offset = Size, %% CapTable index
-                     kind = #interface_ref{
-                               cap = get_cap(Size, Ref#ref.data)
-                              }}
+                     kind = get_cap(Size, Ref#ref.data)
+                   }
     end.
 
 read_list_ref(inlineComposite, Size, Ref) ->
@@ -658,7 +657,7 @@ create_ptr(Idx, #interface_ref{}) ->
 
 
 %% only supported for builders, as readers should not need to lookup cap index
-get_cap_idx(#interface_ref{ cap = Cap }, #builder{ pid = Pid }) ->
+get_cap_idx(Cap, #builder{ pid = Pid }) ->
     ecapnp_data:get_cap_idx(Cap, Pid).
 
 get_cap(Idx, #builder{ pid = Pid }) ->

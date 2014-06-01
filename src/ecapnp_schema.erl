@@ -26,7 +26,7 @@
 
 -export([type_of/1, get/2, lookup/2, lookup/3, size_of/1, size_of/2,
          data_size/1, ptrs_size/1, get_ref_kind/1, get_ref_kind/2,
-         set_ref_to/2, find_method_by_name/2]).
+         set_ref_to/2, find_method_by_name/2, find_field/2]).
 
 -include("ecapnp.hrl").
 
@@ -141,6 +141,13 @@ find_method_by_name(MethodName, [S|Ss]) ->
             Result
     end;
 find_method_by_name(_MethodName, []) -> undefined.
+
+%% @doc Find struct field from schema definition by name or index.
+find_field(Field, #schema_node{ kind = #struct{ fields = Fields } }) ->
+    Idx = if is_atom(Field) -> #field.name;
+             is_number(Field) -> #field.id
+          end,
+    lists:keyfind(Field, Idx, Fields).
 
 
 %% ===================================================================

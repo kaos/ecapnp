@@ -24,7 +24,7 @@
 -author("Andreas Stenius <kaos@astekk.se>").
 -behaviour(gen_server).
 
--export([start/1, start_link/1, stop/1, dispatch_call/4, dispatch_call/5]).
+-export([start/1, start_link/1, stop/1, send/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -55,11 +55,12 @@ start_link(Args) ->
 stop(Cap) ->
     gen_server:call(Cap, stop).
 
-dispatch_call(Cap, ItfID, MethID, Params) ->
-    dispatch_call(Cap, ItfID, MethID, Params, undefined).
-
-dispatch_call(Cap, ItfID, MethID, Params, Results) ->
-    gen_server:call(Cap, {call, ItfID, MethID, {Params, Results}}, infinity).
+send(Cap, #rpc_call{
+             interface = IntfId, method = MethId,
+             params = Params, results = Results }) ->
+    {ok, Promise} = ecapnp_promise_sup:start_promise(),
+    ok = gen_server:cast(Cap, {call, Promise, IntfId, MethId, {Params, Results}}),
+    Promise.
 
 
 %%--------------------------------------------------------------------
@@ -98,16 +99,6 @@ init_opts([{monitor, Pid}|Opts], State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({call, Intf, Meth, Args}, _From, State) ->
-    case find_interface(Intf, State) of
-        false -> {reply, {error, {unsupported_interface, Intf}}, State};
-        Interface ->
-            case find_method(Meth, Interface) of
-                false -> {reply, {error, {unknown_method, Intf, Meth}}, State};
-                Method ->
-                    dispatch(Interface, Method, Args, State)
-            end
-    end;
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State}.
 
@@ -121,6 +112,10 @@ handle_call(stop, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({call, Promise, Intf, Meth, Args}, State) ->
+    {Result, State1} = dispatch_call(Intf, Meth, Args, State),
+    ok = ecapnp_promise:fullfill(Promise, Result),
+    {noreply, State1};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -168,11 +163,22 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-dispatch(#schema_node{ name = InterfaceName }=Interface,
-         #method{ name = MethodName,
-                  paramType = ParamType,
-                  resultType = ResultType },
-         Args, #state{ impl = Mod, cap_state = CapState0 }=State) ->
+dispatch_call(Intf, Meth, Args, State) ->
+    case find_interface(Intf, State) of
+        false -> {{error, {unsupported_interface, Intf}}, State};
+        Interface ->
+            case find_method(Meth, Interface) of
+                false -> {{error, {unknown_method, Intf, Meth}}, State};
+                Method ->
+                    do_dispatch(Interface, Method, Args, State)
+            end
+    end.
+
+do_dispatch(#schema_node{ name = InterfaceName }=Interface,
+            #method{ name = MethodName,
+                     paramType = ParamType,
+                     resultType = ResultType },
+            Args, #state{ impl = Mod, cap_state = CapState0 }=State) ->
 
     ParamSchema = ecapnp_schema:get(ParamType, Interface),
     ResultSchema = ecapnp_schema:get(ResultType, Interface),
@@ -192,7 +198,7 @@ dispatch(#schema_node{ name = InterfaceName }=Interface,
                              ecapnp_obj:to_struct(ParamSchema, Params),
                              Results, CapState0]),
 
-    {reply, {ok, Results}, State#state{ cap_state = CapState1 }}.
+    {Results, State#state{ cap_state = CapState1 }}.
 
 find_interface(IntfId, #state{ interfaces = Ns }) ->
     lists:keyfind(IntfId, #schema_node.id, Ns).

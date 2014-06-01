@@ -4,21 +4,19 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 12 May 2014 by Andreas Stenius <andreas.stenius@astekk.se>
+%%% Created : 31 May 2014 by Andreas Stenius <andreas.stenius@astekk.se>
 %%%-------------------------------------------------------------------
--module(ecapnp_capability_sup).
+-module(ecapnp_promise_sup).
 
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_capability/2, start_capability/3]).
+-export([start_link/0, start_promise/0, start_promise/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
 
 -define(SERVER, ?MODULE).
-
--include("ecapnp.hrl").
 
 %%%===================================================================
 %%% API functions
@@ -35,23 +33,11 @@ start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 %%--------------------------------------------------------------------
-start_capability(Module, Interfaces) ->
-    start_capability(Module, Interfaces, []).
+start_promise() ->
+    start_promise([]).
 
-%%--------------------------------------------------------------------
-start_capability(Module, Interfaces, Opts)
-  when is_list(Interfaces), is_list(Opts) ->
-    StartArgs = [Module, Interfaces | Opts],
-    case supervisor:start_child(?SERVER, [StartArgs]) of
-        {ok, Pid} ->
-            Cap = #interface_ref{ owner = {ecapnp_capability, Pid} },
-            {ok, #object{ ref = #ref{ kind = Cap },
-                          schema = Interfaces
-                        }};
-        Err -> Err
-    end;
-start_capability(Module, Interface, Opts) when is_list(Opts) ->
-    start_capability(Module, [Interface], Opts).
+start_promise(Opts) ->
+    supervisor:start_child(?SERVER, [Opts]).
 
 
 %%%===================================================================
@@ -82,8 +68,8 @@ init([]) ->
     Shutdown = 2000,
     Type = worker,
 
-    AChild = {capability, {ecapnp_capability, start_link, []},
-              Restart, Shutdown, Type, [ecapnp_capability]},
+    AChild = {promise, {ecapnp_promise, start_link, []},
+              Restart, Shutdown, Type, [ecapnp_promise]},
 
     {ok, {SupFlags, [AChild]}}.
 

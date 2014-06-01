@@ -206,15 +206,13 @@ set_cap_test() ->
     {ok, Root} = ecapnp:set_root('CapTest', test_capnp),
 
     Cap1 = #object{ ref=#ref{
-                           kind = #interface_ref{
-                                     cap=#capability{ id = 1 }
-                                    } },
+                           kind = #interface_ref{ id = foo }
+                          },
                     schema = test_capnp:'BasicCap'()
                   },
     Cap2 = #object{ ref=#ref{
-                           kind = #interface_ref{
-                                     cap=#capability{ id = 2 }
-                                    } },
+                           kind = #interface_ref{ id = bar }
+                          },
                     schema = test_capnp:'BasicCap'()
                   },
 

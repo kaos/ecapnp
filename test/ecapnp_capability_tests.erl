@@ -17,27 +17,34 @@
 -module(ecapnp_capability_tests).
 -ifdef(TEST).
 -export([basicCap_funs/0]).
--import(ecapnp_test_utils, [meck/3]).
+-import(ecapnp_test_utils, [meck/3, setup_meck/2, teardown_meck/1]).
 
 -include_lib("eunit/include/eunit.hrl").
 -include("include/ecapnp.hrl").
 
 
 basicCap_test_() ->
-    meck(basicCap, basicCap_funs(),
-         [fun () ->
-                  {ok, Pid} = ecapnp_capability:start([basicCap, [test_capnp:'BasicCap'()]]),
-                  ?assert(is_process_alive(Pid)),
-                  ok = ecapnp_capability:stop(Pid),
-                  receive after 100 -> ok end, %% ugly hack, I know..
-                  ?assert(not is_process_alive(Pid))
-          end,
-          fun () ->
-                  S = test_capnp:'BasicCap'(),
-                  {ok, Pid} = ecapnp_capability:start_link([basicCap, [S]]),
-                  test_basicCap_add(Pid, S, 123, 456)
-          end
-         ]).
+    {setup,
+     fun () ->
+             {ok, _} = ecapnp_promise_sup:start_link(),
+             setup_meck(basicCap, basicCap_funs())
+     end,
+     fun (Mod) ->
+             teardown_meck(Mod)
+     end,
+     [fun () ->
+              {ok, Pid} = ecapnp_capability:start([basicCap, [test_capnp:'BasicCap'()]]),
+              ?assert(is_process_alive(Pid)),
+              ok = ecapnp_capability:stop(Pid),
+              receive after 100 -> ok end, %% ugly hack, I know..
+              ?assert(not is_process_alive(Pid))
+      end,
+      fun () ->
+              S = test_capnp:'BasicCap'(),
+              {ok, Pid} = ecapnp_capability:start_link([basicCap, [S]]),
+              test_basicCap_add(Pid, S, 123, 456)
+      end
+     ]}.
 
 thirdCap_test_() ->
     meck(thirdCap, thirdCap_funs(),
@@ -71,7 +78,13 @@ test_basicCap_add(Pid, S, A, B) ->
     {ok, Params} = ecapnp:set_root(['BasicCap', [add, '$Params']], test_capnp),
     ok = ecapnp:set(a, A, Params),
     ok = ecapnp:set(b, B, Params),
-    {ok, Result} = ecapnp_capability:dispatch_call(Pid, S#schema_node.id, 0, Params),
+    Req = #rpc_call{
+             interface = S#schema_node.id,
+             method = 0,
+             params = Params
+            },
+    Promise = ecapnp_capability:send(Pid, Req),
+    {ok, Result} = ecapnp_promise:wait(Promise, 1000),
     ?assertEqual(A+B, ecapnp:get(result, Result)).
 
 otherCap_sqroot(Params, Results) ->
@@ -82,7 +95,11 @@ otherCap_sqroot(Params, Results) ->
 test_otherCap_sqroot(Pid, S, A) ->
     {ok, Params} = ecapnp:set_root(['OtherCap', [sqroot, '$Params']], test_capnp),
     ok = ecapnp:set(a, A, Params),
-    {ok, Result} = ecapnp_capability:dispatch_call(Pid, S#schema_node.id, 0, Params),
+    {ok, Result} = ecapnp_promise:wait(
+                     ecapnp_capability:send(
+                       Pid, #rpc_call{ interface = S#schema_node.id,
+                                       method = 0, params = Params }),
+                     1000),
     R1 = ecapnp:get(root1, Result),
     R2 = ecapnp:get(root2, Result),
     ?assertEqual(float(-A), R1*R2).
@@ -102,7 +119,11 @@ thirdCap_square(Params, Results) ->
 test_thirdCap_square(Pid, S, A) ->
     {ok, Params} = ecapnp:set_root(['ThirdCap', [square, '$Params']], test_capnp),
     ok = ecapnp:set(a, A, Params),
-    {ok, Result} = ecapnp_capability:dispatch_call(Pid, S#schema_node.id, 0, Params),
+    {ok, Result} = ecapnp_promise:wait(
+                     ecapnp_capability:send(
+                       Pid, #rpc_call{ interface = S#schema_node.id,
+                                       method = 0, params = Params }),
+                     1000),
     ?assertEqual(A*A, ecapnp:get(sq, Result)).
 
 -endif.

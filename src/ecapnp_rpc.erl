@@ -22,7 +22,11 @@
 -module(ecapnp_rpc).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([request/2, send/2, wait/2, promise/2]).
+%% API
+-export([import_capability/3, request/2, send/1, wait/2]).
+
+%% Internal helper functions
+-export([get_target/1, wait/3]).
 
 -include("ecapnp.hrl").
 
@@ -31,54 +35,50 @@
 %% API functions
 %% ===================================================================
 
+%% ===================================================================
+import_capability(Vat, ObjectId, Schema) ->
+    #promise{
+       owner = {ecapnp_vat, Vat},
+       pid = ecapnp_vat:import_capability(Vat, ObjectId),
+       schema = Schema
+      }.
+
+%% ===================================================================
 request(MethodName, Target) ->
-    do_request(MethodName, Target).
+    do_request(MethodName, get_target(Target)).
 
-send(#rpc_call{ interface = IntfId, method = MethId,
-                params = Params, results = Results,
-                resultSchema = ResultSchema
-              },
-     #capability{ id = {local, Cap} }) ->
-    %% there's a race here, in case the process calling send/1 exits before the promise has started,
-    %% then the add_ref/2 call may fail.
-    {ok, promise(
-           fun () ->
-                   ok = ecapnp_obj:add_ref(self(), Params),
-                   ecapnp_capability:dispatch_call(
-                     Cap, IntfId, MethId, Params, Results)
-           end,
-           ResultSchema)
-    }.
+%% ===================================================================
+send(#rpc_call{ target = Target } = Req) ->
+    {{Mod, Pid}=Owner, Id} = decode_target(Target),
+    #promise{
+       owner = Owner,
+       pid = Mod:send(Pid, Req#rpc_call{ target = Id }),
+       schema = Req#rpc_call.resultSchema
+      }.
 
-wait({local, Pid}, Timeout) ->
-    Pid ! {get_promise_result, self()},
-    receive
-        {Pid, promise_result, Result} ->
-            Result
-    after
-        Timeout ->
-            timeout
-    end.
+%% ===================================================================
+wait(#promise{ pid = Pid }=Promise, Time) ->
+    {ok, Res} = ecapnp_promise:wait(Pid, Time),
+    wait_result(Promise, transform(Promise, Res)).
 
-promise(Fun, Schema) ->
-    Parent = self(),
-    Promise = spawn_link(
-                fun () ->
-                        Ref = monitor(process, Parent),
-                        fulfilled(Ref, Fun())
-                end),
-    Kind = #interface_ref{
-              cap = #promise{ id = {local, Promise} }
-             },
-    #object{ ref = #ref{ kind = Kind },
-             schema = Schema }.
+%%--------------------------------------------------------------------
+wait(Pid, Ts, Time) ->
+    {ok, Res} = ecapnp_promise:wait(Pid, Time),
+    wait_result(Pid, transform(Ts, Res)).
+
+%% ===================================================================
+get_target(#object{ ref = #ref{ kind = Target }, schema = Schema })
+  when is_record(Target, interface_ref) ->
+    {Target, Schema};
+get_target(#promise{ schema = Schema } = Target) ->
+    {Target, Schema}.
 
 
 %% ===================================================================
-%% internal functions
+%% Internal functions
 %% ===================================================================
 
-do_request(MethodName, #object{ schema = Schema }=Target) ->
+do_request(MethodName, {Target, Schema}) ->
     {ok, Interface, Method} = ecapnp_schema:find_method_by_name(
                                 MethodName, Schema),
     {ok, Msg} = ecapnp_set:root('Message', rpc_capnp),
@@ -89,27 +89,32 @@ do_request(MethodName, #object{ schema = Schema }=Target) ->
                            Method#method.paramType, Interface),
                 Payload),
     ResultSchema = ecapnp_schema:get(Method#method.resultType, Interface),
+    #rpc_call{
+       target = Target,
+       interface = Interface#schema_node.id,
+       method = Method#method.id,
+       params = Content,
+       resultSchema = ResultSchema
+      }.
 
-    #rpc_call{ owner = self(),
-               target = Target,
-               interface = Interface#schema_node.id,
-               method = Method#method.id,
-               params = Content,
-               resultSchema = ResultSchema
-             }.
+decode_target(#interface_ref{ owner = promise, id = {Pid, Ts} }) ->
+    case wait(Pid, Ts, 5000) of
+        {ok, Res} ->
+            {Target, _Schema} = get_target(Res),
+            decode_target(Target);
+        timeout -> throw(timeout)
+    end;
+decode_target(#interface_ref{ owner = O, id = I }) -> {O, I};
+decode_target(#promise{ owner = O, pid = P, transform = Ts }) -> {O, {P, Ts}}.
 
-fulfilled(Ref, Result) ->
-    receive
-        {get_promise_result, From} ->
-            NewRef = monitor(process, From),
-            true = demonitor(Ref, [flush]),
-            case Result of
-                {ok, Res} ->
-                    ok = ecapnp_obj:add_ref(From, Res);
-                _ -> nop
-            end,
-            From ! {self(), promise_result, Result},
-            fulfilled(NewRef, Result);
-        {'DOWN', Ref, process, _Pid, _Info} ->
-            exit(normal)
-    end.
+transform(#promise{ transform = []}, Res) -> Res;
+transform(#promise{ transform = Ts}, Obj) -> transform(Ts, Obj);
+transform([], Obj) -> Obj;
+transform([{getPointerField, Idx}|Ts], Obj) ->
+    transform(Ts, ecapnp:get({ptr, Idx}, Obj)).
+
+wait_result(#promise{ schema = Schema }, Res) ->
+    wait_result(Schema, Res);
+wait_result(undefined, Res) -> Res;
+wait_result(Schema, Res) ->
+    {ok, ecapnp_obj:to_struct(Schema, Res)}.

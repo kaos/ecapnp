@@ -31,7 +31,7 @@
 
 -export([get_root/2, get_root/3, get/1, get/2, set_root/1, set_root/2,
          set/2, set/3, init/2, init/3, const/2, request/2, send/1,
-         wait/1, wait/2]).
+         wait/1, wait/2, import_capability/3]).
 
 %% ===================================================================
 %% Public Types
@@ -254,61 +254,23 @@ const(Name, Schema) ->
             end
     end.
 
-request(Name, ObjCap) ->
-    ecapnp_rpc:request(Name, ObjCap).
+import_capability(Vat, ObjectId, Schema) ->
+    ecapnp_rpc:import_capability(Vat, ObjectId, Schema).
 
-send(#rpc_call{ target = Target }=Req) ->
-    {ok, {Mod, Cap}} = resolve_target(Target, infinity),
-    Mod:send(Req, Cap).
+request(Name, Target) ->
+    ecapnp_rpc:request(Name, Target).
+
+send(Req) ->
+    ecapnp_rpc:send(Req).
 
 wait(Promise) ->
-    wait(Promise, infinity).
+    ecapnp_rpc:wait(Promise, infinity).
 
-wait(Promise, Timeout) ->
-    case resolve_target(Promise, Timeout) of
-        {ok, {Mod, #promise{ id = Id, transform = Ts }}} ->
-            do_wait(Mod, Id, Ts, Timeout);
-        Other ->
-            Other
-    end.
+wait(Promise, Time) ->
+    ecapnp_rpc:wait(Promise, Time).
 
 
 %% ===================================================================
-%% internal functions
+%% Internal functions
 %% ===================================================================
 
-resolve_target(#object{ ref=#ref{ kind = Kind } }=Obj, Timeout) ->
-    case Kind of
-        #interface_ref{ cap = Cap } ->
-            case Cap of
-                #capability{ id = {local, _} } ->
-                    %% resolve local capabilities using ecapnp_rpc
-                    {ok, {ecapnp_rpc, Cap}};
-                #promise{ id = {local, _}=Id, transform=Ts } ->
-                    %% wait for local promises to become fulfilled before resolving
-                    case do_wait(ecapnp_rpc, Id, Ts, Timeout) of
-                        {ok, Result} ->
-                            resolve_target(Result, Timeout);
-                        Result ->
-                            Result
-                    end;
-                _ ->
-                    %% send everything else to ecapnp_vat
-                    {ok, {ecapnp_vat, Cap}}
-            end;
-        _ ->
-            {ok, Obj}
-    end.
-
-
-do_wait(Mod, Id, Transform, Timeout) ->
-    case Mod:wait(Id, Timeout) of
-        {ok, Obj} ->
-            {ok, lists:foldr(
-                   fun ({getPointerField, Idx}, Ptr) ->
-                           ecapnp:get({ptr, Idx}, Ptr)
-                   end,
-                   Obj, Transform)};
-        Result ->
-            Result
-    end.

@@ -83,14 +83,8 @@ from_data(Data, Type) ->
 -spec field(field_name() | non_neg_integer() | {ptr, non_neg_integer()}, object()) -> field_type().
 field({ptr, Idx}, _) when is_number(Idx) ->
     #field{ kind = #ptr{ type = object, idx = Idx } };
-field(NameOrId, #object{ schema=#schema_node{
-                                   kind=#struct{ fields=Fields }
-                                  }}) ->
-    if is_atom(NameOrId) ->
-            find_field(NameOrId, #field.name, Fields);
-       is_number(NameOrId) ->
-            find_field(NameOrId, #field.id, Fields)
-    end.
+field(Field, #object{ schema = Schema }) ->
+    ecapnp_schema:find_field(Field, Schema).
 
 %% @doc Copy object recursively.
 -spec copy(object()) -> binary().
@@ -166,9 +160,6 @@ discard_ref(_, #object{ ref = #ref{ data = #reader{} }}) -> ok.
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-
-find_field(Key, Idx, List) ->
-    lists:keyfind(Key, Idx, List).
 
 init_schema(#schema_node{}=N) -> N;
 init_schema(#object{ schema = #schema_node{ module = Module } }) ->
