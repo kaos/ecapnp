@@ -125,6 +125,17 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% ===================================================================
 send_req(Promise, Req, State) ->
+    case Req#rpc_call.target of
+        {export, _} ->
+            send_local_req(Promise, Req, State);
+        {import, _} ->
+            send_remote_req(Promise, Req, State);
+        {CapPromise, _} when is_pid(CapPromise) ->
+            send_remote_req(Promise, Req, State)
+    end.
+
+%% -------------------------------------------------------------------
+send_remote_req(Promise, Req, State) ->
     {Id, State1} = new_request(Promise, State),
     Call = restore_call(Req#rpc_call.params),
 
@@ -135,6 +146,13 @@ send_req(Promise, Req, State) ->
     ok = set_target(Req#rpc_call.target, ecapnp:init(target, Call), State),
     State2 = update_cap_table(ecapnp:get(params, Call), State1),
     send_message(Call, State2).
+
+%% -------------------------------------------------------------------
+send_local_req(Promise, #rpc_call{ target = {export, Id} } = Req, State) ->
+    {Id, {_Refs, Cap}} = find_export(Id, 1, State),
+    #promise{ pid = InnerPromise } = ecapnp:send(Req#rpc_call{ target = Cap }),
+    ok = ecapnp_promise:chain(InnerPromise, Promise),
+    State.
 
 %% -------------------------------------------------------------------
 restore_call(#object{ ref = #ref{ data = Data } }) ->
@@ -430,7 +448,7 @@ handle_return(Return, State) ->
         {results, Results} ->
             Id = ecapnp:get(answerId, Return),
             Content = get_payload_content(Results, self()),
-            fullfill_request(Id, Content, State)
+            fullfill_request(Id, {ok, Content}, State)
     end.
 
 %% ===================================================================
@@ -447,7 +465,7 @@ handle_restore(Restore, State) ->
                                 ok = ecapnp:set(answerId, Id, Return),
                                 Payload = ecapnp:init(results, Return),
                                 _Content = ecapnp:set(content, Cap, Payload),
-                                Cap
+                                {ok, Cap}
                         end}
                       ]),
     ok = ecapnp_promise:notify(Promise, Vat, {answer, Message}),

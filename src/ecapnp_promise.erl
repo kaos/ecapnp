@@ -25,7 +25,7 @@
 -behaviour(gen_fsm).
 
 %% API
--export([start_link/1, stop/1, wait/2, notify/3, fullfill/2]).
+-export([start_link/1, stop/1, wait/2, notify/3, fullfill/2, chain/2]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3, handle_sync_event/4, handle_info/3,
@@ -73,6 +73,10 @@ notify(Promise, Pid, Tag) ->
 %%--------------------------------------------------------------------
 fullfill(Promise, Result) ->
     gen_fsm:send_event(Promise, {fullfill, Result}).
+
+%%--------------------------------------------------------------------
+chain(Promise, OuterPromise) ->
+    gen_fsm:send_event(Promise, {chain, OuterPromise}).
 
 
 %%%===================================================================
@@ -127,12 +131,17 @@ init_fullfiller(F, State) when is_function(F, 0) ->
 %%--------------------------------------------------------------------
 pending({notify, Pid, Tag}, State) ->
     {next_state, pending, enlist({message_to, Pid, Tag}, State)};
+pending({chain, Promise}, State) ->
+    {next_state, pending, enlist({chained_with, Promise}, State)};
 pending({fullfill, Result}, State) ->
-    {next_state, fullfilled, set_result({ok, Result}, State)}.
+    {next_state, fullfilled, set_result(Result, State)}.
 
 %%--------------------------------------------------------------------
 fullfilled({notify, Pid, Tag}, State) ->
     Pid ! {Tag, State#state.result},
+    {next_state, fullfilled, State};
+fullfilled({chain, Promise}, State) ->
+    fullfill(Promise, State#state.result),
     {next_state, fullfilled, State};
 fullfilled({fullfill, _}, State) ->
     {stop, already_fullfilled, State}.
@@ -264,6 +273,8 @@ set_result(Result, #state{ waiting = Ws }=State) ->
          {reply_to, From} ->
              gen_fsm:reply(From, Result);
          {message_to, Pid, Tag} ->
-             Pid ! {Tag, Result}
+             Pid ! {Tag, Result};
+         {chained_with, Promise} ->
+             fullfill(Promise, Result)
      end || W <- Ws],
     State#state{ waiting = [], result = Result }.

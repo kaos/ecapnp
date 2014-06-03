@@ -26,8 +26,9 @@
 -export([run/0, handle_call/5]).
 
 run() ->
+    ecapnp_promise_sup:start_link(),
     ecapnp_capability_sup:start_link(),
-    {ok, Calculator} = connect(),
+    Calculator = connect(),
     _ =
         [begin
              Ref = monitor(process, spawn(fun () -> exit(F(Calculator)) end)),
@@ -55,10 +56,9 @@ connect({Addr, Port}) ->
     {ok, Socket} = gen_tcp:connect(Addr, Port, [binary, {active, false}]),
     {ok, Vat} = ecapnp_vat:start_link({gen_tcp, Socket}),
     spawn_link(fun () -> read_socket(Socket, Vat) end),
-    ecapnp_vat:import_capability(
-      {text, <<"calculator">>},
-      calculator_capnp:'Calculator'(),
-      Vat).
+    ecapnp:import_capability(
+      Vat, {text, <<"calculator">>},
+      calculator_capnp:'Calculator'()).
 
 read_socket(Sock, Vat) ->
     case gen_tcp:recv(Sock, 0) of
@@ -79,9 +79,9 @@ eval_literal(C) ->
     Req = ecapnp:request(evaluate, C),
     Expression = ecapnp:init(expression, Req),
     ok = ecapnp:set({literal, 123}, Expression),
-    {ok, EvalPromise} = ecapnp:send(Req),
+    EvalPromise = ecapnp:send(Req),
     Read = ecapnp:request(read, ecapnp:get(value, EvalPromise)),
-    {ok, ReadPromise} = ecapnp:send(Read),
+    ReadPromise = ecapnp:send(Read),
     {ok, Response} = ecapnp:wait(ReadPromise),
     case ecapnp:get(value, Response) of
         123.0 ->
@@ -114,9 +114,9 @@ add_and_subtract(C0) ->
     ok = ecapnp:set({literal, 123}, Add1),
     ok = ecapnp:set({literal, 45}, Add2),
 
-    {ok, Promise} = ecapnp:send(Req),
+    Promise = ecapnp:send(Req),
     Read = ecapnp:request(read, ecapnp:get(value, Promise)),
-    {ok, ReadPromise} = ecapnp:send(Read),
+    ReadPromise = ecapnp:send(Read),
     {ok, Response} = ecapnp:wait(ReadPromise),
     case ecapnp:get(value, Response) of
         101.0 ->
@@ -138,7 +138,7 @@ pipelining(C) ->
     ok = ecapnp:set({literal, 4}, Mul1),
     ok = ecapnp:set({literal, 6}, Mul2),
 
-    {ok, MulPromise} = ecapnp:send(Req),
+    MulPromise = ecapnp:send(Req),
     MulValue = ecapnp:get(value, MulPromise),
 
     Add3Req = ecapnp:request(evaluate, C),
@@ -147,10 +147,10 @@ pipelining(C) ->
                                    expression, Add3Req)),
     ok = ecapnp:set({previousResult, MulValue}, Add3P1),
     ok = ecapnp:set({literal, 3}, Add3P2),
-    {ok, Add3Promise} = ecapnp:send(Add3Req),
-    {ok, Add3Value} = ecapnp:send(
-                        ecapnp:request(
-                          read, ecapnp:get(value, Add3Promise))),
+    Add3Promise = ecapnp:send(Add3Req),
+    Add3Value = ecapnp:send(
+                  ecapnp:request(
+                    read, ecapnp:get(value, Add3Promise))),
 
     Add5Req = ecapnp:request(evaluate, C),
     [Add5P1, Add5P2] = call_expression(
@@ -158,10 +158,10 @@ pipelining(C) ->
                                    expression, Add5Req)),
     ok = ecapnp:set({previousResult, MulValue}, Add5P1),
     ok = ecapnp:set({literal, 5}, Add5P2),
-    {ok, Add5Promise} = ecapnp:send(Add5Req),
-    {ok, Add5Value} = ecapnp:send(
-                        ecapnp:request(
-                          read, ecapnp:get(value, Add5Promise))),
+    Add5Promise = ecapnp:send(Add5Req),
+    Add5Value = ecapnp:send(
+                  ecapnp:request(
+                    read, ecapnp:get(value, Add5Promise))),
 
     case ecapnp:get(value, Add3Value) of
         27.0 ->
@@ -210,7 +210,7 @@ def_functions(C0) ->
                  ok = ecapnp:set({parameter, 0}, Mul1), %% x
                  ok = ecapnp:set({literal, 100}, Mul2), %% * 100
                  ok = ecapnp:set({parameter, 1}, Add2), %% + y
-                 {ok, Promise} = ecapnp:send(Req),
+                 Promise = ecapnp:send(Req),
                  ecapnp:get(func, Promise)
          end)(),
     %% define g
@@ -225,7 +225,7 @@ def_functions(C0) ->
                  ok = ecapnp:set({parameter, 0}, Add1), %% x
                  ok = ecapnp:set({literal, 1}, Add2), %% + 1
                  ok = ecapnp:set({literal, 2}, Mul2), %% * 2
-                 {ok, Promise} = ecapnp:send(Req),
+                 Promise = ecapnp:send(Req),
                  ecapnp:get(func, Promise)
          end)(),
     %% f(12, 34)
@@ -290,8 +290,7 @@ callback(C) ->
 get_operator(Op, C) ->
     Req = ecapnp:request(getOperator, C),
     ok = ecapnp:set(op, Op, Req),
-    {ok, Promise} = ecapnp:send(Req),
-    ecapnp:get(func, Promise).
+    ecapnp:get(func, ecapnp:send(Req)).
 
 call_expression(Fun, ParamCount, Expr) ->
     Call = ecapnp:set(call, Expr),
@@ -299,12 +298,10 @@ call_expression(Fun, ParamCount, Expr) ->
     ecapnp:set(params, ParamCount, Call).
 
 req_value(Req) ->
-    {ok, Promise} = ecapnp:send(Req),
-    {ok, Value} = ecapnp:send(
-                    ecapnp:request(
-                      read, ecapnp:get(value, Promise)
-                     )),
-    Value.
+    ecapnp:send(
+      ecapnp:request(
+        read, ecapnp:get(value, ecapnp:send(Req))
+       )).
 
 %% implement pow() function
 handle_call(['Calculator', 'Function'], 'call', Params, Results, State) ->

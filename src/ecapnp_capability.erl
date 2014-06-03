@@ -198,7 +198,7 @@ do_dispatch(#schema_node{ name = InterfaceName }=Interface,
                              ecapnp_obj:to_struct(ParamSchema, Params),
                              Results, CapState0]),
 
-    {Results, State#state{ cap_state = CapState1 }}.
+    {{ok, Results}, State#state{ cap_state = CapState1 }}.
 
 find_interface(IntfId, #state{ interfaces = Ns }) ->
     lists:keyfind(IntfId, #schema_node.id, Ns).

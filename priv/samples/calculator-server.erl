@@ -40,8 +40,9 @@ dbg() ->
        ]]).
 
 run() ->
-    spawn(
+    spawn_link(
       fun () ->
+              ecapnp_promise_sup:start_link(),
               ecapnp_capability_sup:start_link(),
               CapRestorer = fun (ObjectId, Vat) ->
                                     case ecapnp_obj:to_text(ObjectId) of
@@ -61,16 +62,17 @@ listen({_Addr, Port}, CapRestorer) ->
 accept(Socket, CapRestorer) ->
     case gen_tcp:accept(Socket) of
         {ok, Client} ->
-            spawn(fun () -> accept(Socket, CapRestorer) end),
+            spawn_link(fun () -> accept(Socket, CapRestorer) end),
             {ok, Vat} = ecapnp_vat:start_link({gen_tcp, Client}, CapRestorer),
+            %%sys:trace(Vat, true),
             read_socket(Client, Vat),
             accept(Socket, CapRestorer);
         {error, closed} ->
-            io:format("~ntcp server socket closed~n"),
-            halt(0);
+            io:format("~ntcp server socket closed~n");
+            %%halt(0);
         {error, Reason} ->
-            io:format("~ntcp server socket error: ~p~n", [Reason]),
-            halt(1)
+            io:format("~ntcp server socket error: ~p~n", [Reason])
+            %%halt(1)
     end.
 
 read_socket(Sock, Vat) ->
@@ -127,26 +129,30 @@ handle_call('Calculator', defFunction, Params, Results, State) ->
 
 evaluate(Expr) -> evaluate(Expr, []).
 evaluate(Expr, EvalParams) ->
-    ecapnp_rpc:promise(
-      fun () ->
-              case ecapnp:get(Expr) of
-                  {literal, Literal} -> Literal;
-                  {previousResult, Value} ->
-                      ReadReq = ecapnp:request(read, Value),
-                      {ok, ReadPromise} = ecapnp:send(ReadReq),
-                      ecapnp:get(value, ReadPromise);
-                  {parameter, Idx} ->
-                      lists:nth(Idx + 1, EvalParams);
-                  {call, Call} ->
-                      Func = ecapnp:get(function, Call),
-                      CallParams = [evaluate(E, EvalParams)
-                                    || E <- ecapnp:get(params, Call)],
-                      CallReq = ecapnp:request(call, Func),
-                      ecapnp:set(params, [ecapnp:wait(P) || P <- CallParams], CallReq),
-                      {ok, CallPromise} = ecapnp:send(CallReq),
-                      ecapnp:get(value, CallPromise)
-              end
-      end, float64).
+    {ok, Promise} =
+        ecapnp_promise_sup:start_promise(
+          [{fullfiller,
+            fun () ->
+                    Result =
+                        case ecapnp:get(Expr) of
+                            {literal, Literal} -> Literal;
+                            {previousResult, Value} ->
+                                ReadReq = ecapnp:request(read, Value),
+                                ecapnp:get(value, ecapnp:send(ReadReq));
+                            {parameter, Idx} ->
+                                lists:nth(Idx + 1, EvalParams);
+                            {call, Call} ->
+                                Func = ecapnp:get(function, Call),
+                                CallParams = [evaluate(E, EvalParams)
+                                              || E <- ecapnp:get(params, Call)],
+                                CallReq = ecapnp:request(call, Func),
+                                ecapnp:set(params, [ecapnp:wait(P) || P <- CallParams], CallReq),
+                                ecapnp:get(value, ecapnp:send(CallReq))
+                        end,
+                    {ok, Result}
+            end}
+          ]),
+    #promise{ pid = Promise }.
 
 cap(Type, Init) ->
     {ok, Cap} = ecapnp_capability_sup:start_capability(
