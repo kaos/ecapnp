@@ -47,4 +47,20 @@
 -type value_type() :: ecapnp:value_type().
 -type word_count() :: ecapnp:word_count().
 
+-ifndef(ECAPNP_DEBUG).
+-define(ECAPNP_DEBUG,[]). %% may be used as opts when starting new gen behaviour
+-define(DBG(F,A),).
+-define(DBG_OBJ(O),).
+
+-else.
+-define(ECAPNP_DEBUG_ENABLED,1).
+-define(DBG(F,A),
+        _ = io:format(%%standard_error,
+                      "*DBG* ~p ~s:~p~n\t~s~n",
+                      [self(), ?MODULE, ?LINE, io_lib:format(F, A)])
+       ).
+-define(DBG_OBJ(O), ecapnp_obj:dump(O)).
+
+-endif.
+
 -endif.

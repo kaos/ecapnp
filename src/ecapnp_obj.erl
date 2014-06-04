@@ -26,7 +26,7 @@
 -export([init/1, init/2, alloc/3, from_ref/3, from_data/2,
          from_data/3, field/2, copy/1, refresh/1, to_struct/2,
          to_list/2, to_text/1, to_data/1, set_cap_table/2,
-         get_cap_table/1, add_ref/2, discard_ref/2]).
+         get_cap_table/1, add_ref/2, discard_ref/2, dump/1]).
 
 -include("ecapnp.hrl").
 
@@ -156,6 +156,10 @@ discard_ref(Ref, #object{ ref = #ref{ data = #builder{ pid = Pid } }})
   when is_pid(Ref) -> ecapnp_data:discard_ref(Ref, Pid);
 discard_ref(_, #object{ ref = #ref{ data = #reader{} }}) -> ok.
 
+dump({What, Object}) -> dump(What, Object);
+dump(Object) when is_record(Object, object) -> dump(kind, Object);
+dump(Other) -> io_lib:format("~p", [Other]).
+
 
 %% ===================================================================
 %% internal functions
@@ -168,3 +172,17 @@ init_schema(#object{ schema = Schema }) ->
     Schema;
 init_schema(Module) when is_atom(Module) ->
     Module.
+
+dump(#struct{ fields = Fields }, Object) ->
+    ["(", dump_fields(Fields, Object), ")"];
+dump(kind, #object{ schema = #schema_node{ kind = Kind } } = Object) ->
+    dump(Kind, Object);
+dump(_, _) -> "<dump not implemented>".
+
+
+dump_fields(_, #object{ ref = #ref{ kind = null }}) -> [];
+dump_fields(Fields, Object) ->
+    string:join([dump_field(F, Object) || F <- Fields], ", ").
+
+dump_field(#field{ name = Name }, Object) ->
+    io_lib:format("~p = ~s", [Name, dump(ecapnp:get(Name, Object))]).
