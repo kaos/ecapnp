@@ -256,6 +256,35 @@ init_union_test() ->
           0:6/integer-unit:64
         >>], Data).
 
+init_union2_test() ->
+    {ok, Root} = ecapnp:set_root('UnionTest', test_capnp),
+    Empty = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+      [<<0:32/integer-little, 1:16/integer-little, 1:16/integer-little,
+         0:2/integer-unit:64>>], Empty),
+
+    [ok] = ecapnp:set({test, [{intField, 66}]}, Root),
+    {test, Test} = ecapnp:get(Root),
+    ?assertEqual('Test', Test#object.schema#schema_node.name),
+    ?assertEqual(#struct_ref{ dsize = 2, psize = 6 }, Test#object.ref#ref.kind),
+
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    ?assertEqual(
+       [<<0:32/integer-little, 1:16/integer-little, 1:16/integer-little,
+          0:16/integer-little, 1:16/integer-little, 0:32/integer-little, %% data
+          0:32/integer-little, 2:16/integer-little, 6:16/integer-little, %% ptr
+          %% data
+          (33 bxor 66): 8/integer-little, %% intField
+
+          0:24/integer-little,
+          0:32/integer-little,
+
+          0:64/integer-little,
+
+          %% pointers
+          0:6/integer-unit:64
+        >>], Data).
+
 init_union_any_test() ->
     {ok, Root} = ecapnp:set_root('UnionTest', test_capnp),
 

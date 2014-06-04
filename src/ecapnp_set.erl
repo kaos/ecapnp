@@ -226,6 +226,11 @@ write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
     ecapnp_obj:from_ref(
       ecapnp_ref:paste(Value, Ref),
       Type, Obj);
+write_obj(Type, {FieldName, FieldValue}, Ref, Obj) ->
+    field(FieldName, FieldValue,
+          ecapnp_obj:init(ecapnp_obj:from_ref(Ref, Type, Obj)));
+write_obj(Type, Values, Ref, Obj) when is_list(Values) ->
+    [write_obj(Type, Value, Ref, Obj) || Value <- Values];
 write_obj(Type, #object{ ref=Value, schema=_Schema }, Ref, Obj) ->
     %% todo: check that Schema is compatible with Type
     case Value of
