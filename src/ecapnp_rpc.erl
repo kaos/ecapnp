@@ -26,7 +26,7 @@
 -export([import_capability/3, request/2, send/1, wait/2]).
 
 %% Internal helper functions
--export([get_target/1, wait/3]).
+-export([get_target/1, wait/3, dump/1]).
 
 -include("ecapnp.hrl").
 
@@ -73,6 +73,13 @@ get_target(#object{ ref = #ref{ kind = Target }, schema = Schema })
 get_target(#promise{ schema = Schema } = Target) ->
     {Target, Schema}.
 
+
+%% ===================================================================
+dump(#rpc_call{ target = T, interface = I, method = M, params = P,
+                results = R, resultSchema = S }) ->
+    io_lib:format("#rpc_call{ target = ~p, interface = ~p, method = ~p, "
+                  "params = ~s, results = ~s, resultSchema = ~p }",
+                  [T, I, M, ecapnp_obj:dump(P), ecapnp_obj:dump(R), S]).
 
 %% ===================================================================
 %% Internal functions
