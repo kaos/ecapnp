@@ -59,7 +59,10 @@ field(FieldName, #promise{ schema = Schema }=Promise) ->
     end;
 field(FieldName, Object)
   when is_record(Object, object) ->
-    read_field(ecapnp_obj:field(FieldName, Object), Object).
+    case ecapnp_obj:field(FieldName, Object) of
+        false -> throw({unknown_field, FieldName, Object});
+        Field -> read_field(Field, Object)
+    end.
 
 %% @doc Read the unnamed union value of object.
 %% @see ecapnp:get/1
