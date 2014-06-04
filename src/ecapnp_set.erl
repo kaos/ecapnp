@@ -61,7 +61,10 @@ field(FieldName, Object) ->
     end.
 
 fields(FieldValues, Object) ->
-    [field(F, V, Object) || {F, V} <- FieldValues].
+    [case Value of
+         {F, V} -> field(F, V, Object);
+         {V} -> union(V, Object)
+     end || Value <- FieldValues].
 
 -spec union({field_name(), field_value()} | field_name(), object()) -> ok.
 %% @doc Write unnamed union value in object.
