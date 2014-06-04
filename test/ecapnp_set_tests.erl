@@ -202,6 +202,32 @@ set_struct_test() ->
           SimpleData/binary
         >>], Data).
 
+
+set_struct_by_props_test() ->
+    {ok, Root} = ecapnp_set:root('Test', test_capnp),
+    {Obj, [ok]} = ecapnp:set(structField, [{simpleMessage, <<"object text">>}], Root),
+    ?assertEqual(#struct_ref{ dsize=1, psize=2 }, Obj#object.ref#ref.kind),
+    ?assertEqual('Simple', Obj#object.schema#schema_node.name),
+    Data = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
+    SimpleData =
+        <<0:64/integer-little, %% data
+          0:64/integer-little, %% message
+          1,0,0,0, 98,0,0,0, %% ref to 12 bytes of text
+          "object text", 0,
+          0:32/integer-little %% padding
+        >>,
+    ?assertEqual(
+       [<<0,0,0,0, 2,0,6,0, %% struct ref off 0, 0 data, 4 ptrs
+          0:2/integer-little-unit:64, %% data
+          %% pointers
+          0:4/integer-little-unit:64, %% 0 .. 3: null
+          4,0,0,0, 1,0,2,0, %% 4: structField: Simple
+          0:64/integer-little, %% 5: null
+
+          %% Simple struct (listAny)
+          SimpleData/binary
+        >>], Data).
+
 set_cap_test() ->
     {ok, Root} = ecapnp:set_root('CapTest', test_capnp),
 
@@ -256,15 +282,15 @@ init_union_test() ->
           0:6/integer-unit:64
         >>], Data).
 
-init_union2_test() ->
+init_union_by_props_test() ->
     {ok, Root} = ecapnp:set_root('UnionTest', test_capnp),
     Empty = ecapnp_data:get_segments((Root#object.ref)#ref.data#builder.pid),
     ?assertEqual(
       [<<0:32/integer-little, 1:16/integer-little, 1:16/integer-little,
          0:2/integer-unit:64>>], Empty),
 
-    [ok] = ecapnp:set({test, [{intField, 66}]}, Root),
-    {test, Test} = ecapnp:get(Root),
+    {Test, [ok]} = ecapnp:set({test, [{intField, 66}]}, Root),
+    ?assertEqual({test, Test}, ecapnp:get(Root)),
     ?assertEqual('Test', Test#object.schema#schema_node.name),
     ?assertEqual(#struct_ref{ dsize = 2, psize = 6 }, Test#object.ref#ref.kind),
 

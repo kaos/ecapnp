@@ -23,7 +23,7 @@
 -module(ecapnp_set).
 -author("Andreas Stenius <kaos@astekk.se>").
 
--export([root/1, root/2, field/2, field/3, union/2]).
+-export([root/1, root/2, field/2, field/3, fields/2, union/2]).
 
 -include("ecapnp.hrl").
 
@@ -59,6 +59,9 @@ field(FieldName, Object) ->
         false -> union(FieldName, Object);
         Field -> set_field(Field, {default}, Object)
     end.
+
+fields(FieldValues, Object) ->
+    [field(F, V, Object) || {F, V} <- FieldValues].
 
 -spec union({field_name(), field_value()} | field_name(), object()) -> ok.
 %% @doc Write unnamed union value in object.
@@ -227,10 +230,11 @@ write_obj(Type, Value, Ref, Obj) when is_binary(Value) ->
       ecapnp_ref:paste(Value, Ref),
       Type, Obj);
 write_obj(Type, {FieldName, FieldValue}, Ref, Obj) ->
-    field(FieldName, FieldValue,
-          ecapnp_obj:init(ecapnp_obj:from_ref(Ref, Type, Obj)));
+    Self = ecapnp_obj:init(ecapnp_obj:from_ref(Ref, Type, Obj)),
+    {Self, field(FieldName, FieldValue, Self)};
 write_obj(Type, Values, Ref, Obj) when is_list(Values) ->
-    [write_obj(Type, Value, Ref, Obj) || Value <- Values];
+    Self = ecapnp_obj:init(ecapnp_obj:from_ref(Ref, Type, Obj)),
+    {Self, fields(Values, Self)};
 write_obj(Type, #object{ ref=Value, schema=_Schema }, Ref, Obj) ->
     %% todo: check that Schema is compatible with Type
     case Value of

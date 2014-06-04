@@ -224,6 +224,8 @@ get(Field, Object) ->
 -spec set({field_name(), field_value()}|field_name(), object()) -> ok.
 %% @doc Write union value to the unnamed union of object.
 %% @see ecapnp_set:union/2
+set(Values, Object) when is_list(Values) ->
+    ecapnp_set:fields(Values, Object);
 set(Value, Object) ->
     ecapnp_set:union(Value, Object).
 
