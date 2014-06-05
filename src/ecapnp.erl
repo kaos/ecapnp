@@ -273,6 +273,8 @@ wait(Promise, Time) ->
 
 dump(Object) when is_record(Object, object) -> ecapnp_obj:dump(Object);
 dump(Request) when is_record(Request, rpc_call) -> ecapnp_rpc:dump(Request);
+dump(Schema) when is_record(Schema, schema_node) -> ecapnp_schema:dump(Schema);
+dump(Cap) when is_record(Cap, interface_ref) -> dump_cap(Cap);
 dump(Tuple) when is_tuple(Tuple) -> ["{", dump_list(tuple_to_list(Tuple)), "}"];
 dump(Other) -> io_lib:format("~W", [Other, 5]).
 
@@ -282,3 +284,6 @@ dump(Other) -> io_lib:format("~W", [Other, 5]).
 
 dump_list(Xs) ->
     string:join([dump(X) || X <- Xs], ", ").
+
+dump_cap(#interface_ref{ owner = Owner, id = Id }) ->
+    io_lib:format("cap(~W, ~W)", [Owner, 5, Id, 5]).

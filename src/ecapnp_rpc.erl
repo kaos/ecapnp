@@ -53,7 +53,7 @@ request(MethodName, Target) ->
 %% ===================================================================
 send(#rpc_call{ target = Target } = Req) ->
     {{Mod, Pid}=Owner, Id} = decode_target(Target),
-    ?DBG("== CALL~s", [?DUMP(Req)]),
+    ?DBG("== CALL~n~s", [?DUMP(Req)]),
     #promise{
        owner = Owner,
        pid = Mod:send(Pid, Req#rpc_call{ target = Id }),
@@ -81,9 +81,16 @@ get_target(#promise{ schema = Schema } = Target) ->
 %% ===================================================================
 dump(#rpc_call{ target = T, interface = I, method = M, params = P,
                 results = R, resultSchema = S }) ->
-    io_lib:format("#rpc_call{ target = ~p, interface = ~p, method = ~p, "
-                  "params = ~s, results = ~s, resultSchema = ~p }",
-                  [T, I, M, ecapnp:dump(P), ecapnp:dump(R), S]).
+    io_lib:format("#rpc_call{\n"
+                  "\ttarget = ~s,\n"
+                  "\tinterface = ~p,\n"
+                  "\tmethod = ~p,\n"
+                  "\tparams = ~s,\n"
+                  "\tresults = ~s,\n"
+                  "\tresultSchema = ~s\n"
+                  "}",
+                  [ecapnp:dump(T), I, M, ecapnp:dump(P),
+                   ecapnp:dump(R), ecapnp:dump(S)]).
 
 %% ===================================================================
 %% Internal functions
@@ -126,6 +133,10 @@ transform([{getPointerField, Idx}|Ts], Obj) ->
 
 wait_result(#promise{ schema = Schema }, Res) ->
     wait_result(Schema, Res);
-wait_result(undefined, Res) -> Res;
+wait_result(undefined, Res) ->
+    ?DBG(".. RESULT ~s", [?DUMP(Res)]),
+    Res;
 wait_result(Schema, Res) ->
-    {ok, ecapnp_obj:to_struct(Schema, Res)}.
+    Obj = ecapnp_obj:to_struct(Schema, Res),
+    ?DBG(".. RESULT {ok, ~s}", [?DUMP(Obj)]),
+    {ok, Obj}.

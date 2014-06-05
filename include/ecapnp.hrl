@@ -56,7 +56,7 @@
 -define(ECAPNP_DEBUG_ENABLED,1).
 -define(DBG(F,A),
         _ = io:format(%%standard_error,
-                      "~p ~s:~p\t~s~n",
+                      "~-10w ~20s:~-4w\t~s~n",
                       [self(), ?MODULE, ?LINE, io_lib:format(F, A)])
        ).
 -define(DUMP(D), ecapnp:dump(D)).

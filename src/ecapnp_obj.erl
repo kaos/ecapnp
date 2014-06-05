@@ -175,6 +175,8 @@ dump(#struct{ fields = Fields }, Object) ->
     ["(", dump_fields(Fields, Object), ")"];
 dump(kind, #object{ schema = #schema_node{ kind = Kind } } = Object) ->
     dump(Kind, Object);
+dump(kind, #object{ ref = #ref{ kind = Kind } }) ->
+    io_lib:format("(~W)", [Kind, 5]);
 dump(Kind, Value) ->
     io_lib:format("((~W, ~W))", [Kind, 5, Value, 5]).
 

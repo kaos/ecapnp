@@ -26,7 +26,7 @@
 
 -export([type_of/1, get/2, lookup/2, lookup/3, size_of/1, size_of/2,
          data_size/1, ptrs_size/1, get_ref_kind/1, get_ref_kind/2,
-         set_ref_to/2, find_method_by_name/2, find_field/2]).
+         set_ref_to/2, find_method_by_name/2, find_field/2, dump/1]).
 
 -include("ecapnp.hrl").
 
@@ -149,14 +149,10 @@ find_field(Field, #schema_node{ kind = #struct{ fields = Fields } }) ->
           end,
     lists:keyfind(Field, Idx, Fields).
 
+dump(#schema_node{ src = Source, id = Id }) ->
+    io_lib:format("~s(~p)", [Source, Id]).
+
 
 %% ===================================================================
 %% internal functions
 %% ===================================================================
-
-%% struct_value(Struct, Idx) when is_record(Struct, struct) ->
-%%     element(Idx, Struct);
-%% struct_value(#schema_node{ kind=Kind }, Idx) ->
-%%     struct_value(Kind, Idx);
-%% struct_value(#interface{ struct=Struct }, Idx) ->
-%%     struct_value(Struct, Idx).
