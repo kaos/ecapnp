@@ -37,6 +37,11 @@
          fullfilled/2, fullfilled/3
         ]).
 
+-define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
+%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+
+-include("ecapnp.hrl").
+
 -record(state, {
           waiting = [],
           result
@@ -56,7 +61,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(Args) ->
-    gen_fsm:start_link(?MODULE, Args, []).
+    gen_fsm:start_link(?MODULE, Args, ?ECAPNP_DEBUG).
 
 %%--------------------------------------------------------------------
 stop(Promise) ->
@@ -138,6 +143,7 @@ pending({fullfill, Result}, State) ->
 
 %%--------------------------------------------------------------------
 fullfilled({notify, Pid, Tag}, State) ->
+    ?DBG(".. NOTIFY ~p: tag: ~s, result: ~s", [Pid, ?DUMP(Tag), ?DUMP(State#state.result)]),
     Pid ! {Tag, State#state.result},
     {next_state, fullfilled, State};
 fullfilled({chain, Promise}, State) ->
@@ -170,6 +176,7 @@ pending(wait, From, State) ->
 
 %%--------------------------------------------------------------------
 fullfilled(wait, _From, State) ->
+    ?DBG(".. WAIT ~p, result: ~s", [_From, ?DUMP(State#state.result)]),
     {reply, State#state.result, fullfilled, State}.
 
 
@@ -206,7 +213,7 @@ handle_event(_Event, StateName, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_sync_event(stop, _From, pending, State) ->
-    {stop, canceled, ok, State};
+    {stop, canceled, ok, set_result(canceled, State)};
 handle_sync_event(stop, _From, fullfilled, State) ->
     {stop, normal, ok, State}.
 
@@ -265,10 +272,12 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 
 %%--------------------------------------------------------------------
 enlist(Tag, #state{ waiting = Ws }=State) ->
+    ?DBG(".. WAIT ~s", [?DUMP(Tag)]),
     State#state{ waiting = [Tag|Ws] }.
 
 %%--------------------------------------------------------------------
 set_result(Result, #state{ waiting = Ws }=State) ->
+    ?DBG(".. FULLFILLED ~s", [?DUMP(Result)]),
     [case W of
          {reply_to, From} ->
              gen_fsm:reply(From, Result);

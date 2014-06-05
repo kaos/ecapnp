@@ -28,6 +28,9 @@
 %% Internal helper functions
 -export([get_target/1, wait/3, dump/1]).
 
+-define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
+%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+
 -include("ecapnp.hrl").
 
  
@@ -50,6 +53,7 @@ request(MethodName, Target) ->
 %% ===================================================================
 send(#rpc_call{ target = Target } = Req) ->
     {{Mod, Pid}=Owner, Id} = decode_target(Target),
+    ?DBG("== CALL~s", [?DUMP(Req)]),
     #promise{
        owner = Owner,
        pid = Mod:send(Pid, Req#rpc_call{ target = Id }),
@@ -79,7 +83,7 @@ dump(#rpc_call{ target = T, interface = I, method = M, params = P,
                 results = R, resultSchema = S }) ->
     io_lib:format("#rpc_call{ target = ~p, interface = ~p, method = ~p, "
                   "params = ~s, results = ~s, resultSchema = ~p }",
-                  [T, I, M, ecapnp_obj:dump(P), ecapnp_obj:dump(R), S]).
+                  [T, I, M, ecapnp:dump(P), ecapnp:dump(R), S]).
 
 %% ===================================================================
 %% Internal functions

@@ -31,7 +31,7 @@
 
 -export([get_root/2, get_root/3, get/1, get/2, set_root/1, set_root/2,
          set/2, set/3, init/2, init/3, const/2, request/2, send/1,
-         wait/1, wait/2, import_capability/3]).
+         wait/1, wait/2, import_capability/3, dump/1]).
 
 %% ===================================================================
 %% Public Types
@@ -271,8 +271,14 @@ wait(Promise) ->
 wait(Promise, Time) ->
     ecapnp_rpc:wait(Promise, Time).
 
+dump(Object) when is_record(Object, object) -> ecapnp_obj:dump(Object);
+dump(Request) when is_record(Request, rpc_call) -> ecapnp_rpc:dump(Request);
+dump(Tuple) when is_tuple(Tuple) -> ["{", dump_list(tuple_to_list(Tuple)), "}"];
+dump(Other) -> io_lib:format("~W", [Other, 5]).
 
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
 
+dump_list(Xs) ->
+    string:join([dump(X) || X <- Xs], ", ").

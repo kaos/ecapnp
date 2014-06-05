@@ -156,9 +156,7 @@ discard_ref(Ref, #object{ ref = #ref{ data = #builder{ pid = Pid } }})
   when is_pid(Ref) -> ecapnp_data:discard_ref(Ref, Pid);
 discard_ref(_, #object{ ref = #ref{ data = #reader{} }}) -> ok.
 
-dump({What, Object}) -> dump(What, Object);
-dump(Object) when is_record(Object, object) -> dump(kind, Object);
-dump(Other) -> io_lib:format("~p", [Other]).
+dump(Object) when is_record(Object, object) -> dump(kind, Object).
 
 
 %% ===================================================================
@@ -177,12 +175,19 @@ dump(#struct{ fields = Fields }, Object) ->
     ["(", dump_fields(Fields, Object), ")"];
 dump(kind, #object{ schema = #schema_node{ kind = Kind } } = Object) ->
     dump(Kind, Object);
-dump(_, _) -> "<dump not implemented>".
-
+dump(Kind, Value) ->
+    io_lib:format("((~W, ~W))", [Kind, 5, Value, 5]).
 
 dump_fields(_, #object{ ref = #ref{ kind = null }}) -> [];
 dump_fields(Fields, Object) ->
-    string:join([dump_field(F, Object) || F <- Fields], ", ").
+    string:join([dump_field(F, Object) || F <- Fields]
+                ++ dump_field(union, Object), ", ").
 
 dump_field(#field{ name = Name }, Object) ->
-    io_lib:format("~p = ~s", [Name, dump(ecapnp:get(Name, Object))]).
+    io_lib:format("~p = ~s", [Name, ecapnp:dump(ecapnp:get(Name, Object))]);
+dump_field(union, #object{ schema = #schema_node{
+                                       kind = #struct{ union_field = none }
+                                      } }) -> [];
+dump_field(union, Object) ->
+    {Tag, Value} = ecapnp:get(Object),
+    [io_lib:format("~p = ~s", [Tag, ecapnp:dump(Value)])].

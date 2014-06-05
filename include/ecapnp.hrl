@@ -50,18 +50,16 @@
 -ifndef(ECAPNP_DEBUG).
 -define(ECAPNP_DEBUG,[]). %% may be used as opts when starting new gen behaviour
 -define(DBG(F,A),).
--define(DBG_OBJ(O),).
--define(DBG_REQ(R),).
+-define(DUMP(D),).
 
 -else.
 -define(ECAPNP_DEBUG_ENABLED,1).
 -define(DBG(F,A),
         _ = io:format(%%standard_error,
-                      "~p ~s:~p~n\t~s~n",
+                      "~p ~s:~p\t~s~n",
                       [self(), ?MODULE, ?LINE, io_lib:format(F, A)])
        ).
--define(DBG_OBJ(O), ecapnp_obj:dump(O)).
--define(DBG_REQ(R), ecapnp_rpc:dump(R)).
+-define(DUMP(D), ecapnp:dump(D)).
 
 -endif.
 

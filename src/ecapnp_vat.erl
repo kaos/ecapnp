@@ -32,6 +32,9 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
+%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+
 -include("ecapnp.hrl").
 
 -record(id_queue, {
@@ -56,16 +59,16 @@
 %% ===================================================================
 
 start() ->
-    gen_server:start(?MODULE, setup_state(), []).
+    gen_server:start(?MODULE, setup_state(), ?ECAPNP_DEBUG).
 
 start_link() ->
-    gen_server:start_link(?MODULE, setup_state(), []).
+    gen_server:start_link(?MODULE, setup_state(), ?ECAPNP_DEBUG).
 
 start_link(Transport) ->
-    gen_server:start_link(?MODULE, setup_state(Transport), []).
+    gen_server:start_link(?MODULE, setup_state(Transport), ?ECAPNP_DEBUG).
 
 start_link(Transport, Restorer) ->
-    gen_server:start_link(?MODULE, setup_state(Transport, Restorer), []).
+    gen_server:start_link(?MODULE, setup_state(Transport, Restorer), ?ECAPNP_DEBUG).
 
 stop(Vat) when is_pid(Vat) ->
     gen_server:call(Vat, stop).
@@ -138,12 +141,15 @@ send_req(Promise, Req, State) ->
 send_remote_req(Promise, Req, State) ->
     {Id, State1} = new_request(Promise, State),
     Call = restore_call(Req#rpc_call.params),
+    Target = target_props(Req#rpc_call.target, State),
 
-    ok = ecapnp:set(questionId, Id, Call),
-    ok = ecapnp:set(interfaceId, Req#rpc_call.interface, Call),
-    ok = ecapnp:set(methodId, Req#rpc_call.method, Call),
+    ecapnp:set(
+      [{questionId, Id},
+       {interfaceId, Req#rpc_call.interface},
+       {methodId, Req#rpc_call.method},
+       {target, Target}
+      ], Call),
 
-    ok = set_target(Req#rpc_call.target, ecapnp:init(target, Call), State),
     State2 = update_cap_table(ecapnp:get(params, Call), State1),
     send_message(Call, State2).
 
@@ -162,6 +168,12 @@ restore_call(#object{ ref = #ref{ data = Data } }) ->
             'Message', rpc_capnp),
     {call, Call} = ecapnp:get(Msg),
     Call.
+
+%% -------------------------------------------------------------------
+target_props({import, Id}, _State) -> [{{importedCap, Id}}];
+target_props({Promise, Ts}, State) when is_pid(Promise) ->
+    {Id, Promise} = find_request(Promise, 2, State),
+    [{{promisedAnswer, [{questionId, Id}, {transform, lists:reverse(Ts)}] }}].
 
 %% ===================================================================
 import_req(Promise, ObjectId, State) ->
@@ -213,6 +225,7 @@ new_request(Promise, State) ->
 
 %%--------------------------------------------------------------------
 new_export(Cap, State) ->
+    ?DBG("<= EXPORT ~p", [Cap]),
     pop_id({1, Cap}, #state.exports, State).
 
 %%--------------------------------------------------------------------
@@ -234,6 +247,7 @@ find_answer(Id, #state{ answers = As }) ->
 %% ===================================================================
 ref_export(Id, Count, State) ->
     {Id, {Ref, Cap}} = find_export(Id, 1, State),
+    %% ?DBG("++ EXPORT(~p) ~p/~p: ~p", [Id, Count, Ref, Cap]),
     case {Ref, Count} of
         {_, release} ->
             push_id(Id, #state.exports, State);
@@ -242,6 +256,16 @@ ref_export(Id, Count, State) ->
         {A, B} ->
             update_id(Id, {A + B, Cap}, #state.exports, State)
     end.
+
+%% ===================================================================
+purge_answer(Id, ReleaseResults, State) ->
+    {Id, Promise} = find_answer(Id, State),
+    if ReleaseResults -> todo;
+       true -> nop
+    end,
+    %% ?DBG(" -- ANSWER(~p) ~p", [Id, Promise]),
+    ok = ecapnp_promise:stop(Promise),
+    State#state{ answers = lists:keydelete(Id, 1, State#state.answers) }.
 
 %% ===================================================================
 pop_id(Value, Idx, State) ->
@@ -256,6 +280,7 @@ do_pop_id(Value, #id_queue{ next_id = Q0, values = Vs } = Ids) ->
             {{value, V}, Q1} -> {V, Q1};
             {empty, Q0} -> {length(Vs), Q0}
         end,
+
     {Id, Ids#id_queue{ next_id = Q, values = [{Id, Value}|Vs] }}.
 
 %% ===================================================================
@@ -280,6 +305,7 @@ update_id(Id, Value, Idx, State) ->
 
 %% ===================================================================
 send_message(Msg, #state{ transport = {Mod, Handle} }=State) ->
+    ?DBG("<< MESSAGE~s", [?DUMP(Msg)]),
     case Mod:send(Handle, ecapnp_message:write(Msg)) of
         ok -> State;
         Err ->
@@ -297,8 +323,7 @@ process_outgoing_message(Message, State) ->
                 {results, Payload} ->
                     update_cap_table(Payload, State)
             end;
-        _ ->
-            State
+        _ -> State
     end.
 
 %% ===================================================================
@@ -329,23 +354,6 @@ set_cap_descriptor({Cap, CapDesc}, State) ->
         %%     set_promised_answer(Id, Ts, PromisedAnswer),
             State
     end.
-
-
-%% ===================================================================
-set_target({import, Id}, MsgTarget, _State) ->
-    ecapnp:set({importedCap, Id}, MsgTarget);
-set_target({Promise, Ts}, MsgTarget, State) when is_pid(Promise) ->
-    PromisedAnswer = ecapnp:init(promisedAnswer, MsgTarget),
-    set_promised_answer(Promise, Ts, PromisedAnswer, State).
-
-%% ===================================================================
-set_promised_answer(Promise, Ts, PromisedAnswer, State) ->
-    {Id, Promise} = find_request(Promise, 2, State),
-    ok = ecapnp:set(questionId, Id, PromisedAnswer),
-    TObjs = ecapnp:set(transform, length(Ts), PromisedAnswer),
-    [ecapnp:set(T, Obj)
-     || {Obj, T} <- lists:zip(TObjs, lists:reverse(Ts))],
-    ok.
 
 %% ===================================================================
 get_message_target(MessageTarget, State) ->
@@ -406,13 +414,15 @@ fullfill_request(Id, Result, State) ->
 %% ===================================================================
 -spec handle_message(Message::ecapnp:object(), #state{}) -> #state{}.
 handle_message(Message, State) ->
-    case ecapnp:get(Message) of
-        {call, Call} -> handle_call(Call, State);
-        {return, Return} -> handle_return(Return, State);
-        {restore, Restore} -> handle_restore(Restore, State);
-        {finish, Finish} -> handle_finish(Finish, State);
-        {release, Release} -> handle_release(Release, State);
-        {unimplemented, Msg} -> throw({blarg, unimplemented, Msg}); %% TODO
+    ?DBG(">> MESSAGE~s", [?DUMP(Message)]),
+    {MsgKind, MsgValue} = ecapnp:get(Message),
+    case MsgKind of
+        call -> handle_call(MsgValue, State);
+        return -> handle_return(MsgValue, State);
+        restore -> handle_restore(MsgValue, State);
+        finish -> handle_finish(MsgValue, State);
+        release -> handle_release(MsgValue, State);
+        unimplemented -> throw({blarg, unimplemented, MsgValue}); %% TODO
         _ ->
             Reply = new_message(),
             ecapnp:set({unimplemented, Message}, Reply),
@@ -429,6 +439,7 @@ handle_call(Call, State) ->
     Return = ecapnp:init(return, Message),
     ok = ecapnp:set(answerId, Id, Return),
     RetPayload = ecapnp:init(results, Return),
+
     Req = #rpc_call{
              target = Target,
              interface = ecapnp:get(interfaceId, Call),
@@ -472,11 +483,10 @@ handle_restore(Restore, State) ->
     new_answer(Id, Promise, State).
 
 %% ===================================================================
-handle_finish(_Finish, State) ->
-    State.
-    %% Id = ecapnp:get(questionId, Finish),
-    %% Release = ecapnp:get(releaseResultCaps, Finish),
-    %% purge_answer(Id, Release, State).
+handle_finish(Finish, State) ->
+    Id = ecapnp:get(questionId, Finish),
+    Release = ecapnp:get(releaseResultCaps, Finish),
+    purge_answer(Id, Release, State).
 
 %% ===================================================================
 handle_release(Release, State) ->
