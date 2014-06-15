@@ -30,8 +30,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
-%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+%%-define(ECAPNP_DEBUG,1). %% un-comment to enable debug messages, or
+%%-define(ECAPNP_TRACE,1). %% un-comment to enable debug messages and trace the gen_server
 
 -include("ecapnp.hrl").
 
@@ -50,10 +50,10 @@
 %% @end
 %%--------------------------------------------------------------------
 start(Args) ->
-    gen_server:start(?MODULE, Args, ?ECAPNP_DEBUG).
+    gen_server:start(?MODULE, Args, ?ECAPNP_GEN_OPTS).
 
 start_link(Args) ->
-    gen_server:start_link(?MODULE, Args, ?ECAPNP_DEBUG).
+    gen_server:start_link(?MODULE, Args, ?ECAPNP_GEN_OPTS).
 
 stop(Cap) ->
     gen_server:call(Cap, stop).
@@ -78,8 +78,10 @@ send(Cap, #rpc_call{
 %% @end
 %%--------------------------------------------------------------------
 init([Mod, Interfaces|Opts]) ->
-    State =  #state{ impl = Mod, interfaces = list_interfaces(Interfaces) },
-    {ok, init_opts(Opts, State)}.
+    State0 = #state{ impl = Mod, interfaces = list_interfaces(Interfaces) },
+    State = init_opts(Opts, State0),
+    ?DBG("++ New capability: ~p, opts: ~p", [State, Opts]),
+    {ok, State}.
 
 init_opts([], State) -> State;
 init_opts([{init, CapArgs}|Opts], #state{ impl = Mod }=State) ->
@@ -196,15 +198,18 @@ do_dispatch(#schema_node{ name = InterfaceName }=Interface,
                 {Ps, Content}
         end,
 
-    ?DBG("!! DISPATCH ~p:handle_call(~p, ~p, ~s, ~s) with state ~p",
-         [Mod, InterfaceName, MethodName, ?DUMP(Params), ?DUMP(Results), CapState0]),
+    ?DBG("!! DISPATCH ~p:handle_call\n"
+         "\t~p::~p(~s, ~s)\n"
+         "\twith state ~s",
+         [Mod, InterfaceName, MethodName,
+          ?DUMP(Params), ?DUMP(Results), ?DUMP(CapState0)]),
 
     {ok, CapState1} = apply(Mod, handle_call,
                             [InterfaceName, MethodName,
                              ecapnp_obj:to_struct(ParamSchema, Params),
                              Results, CapState0]),
 
-    ?DBG("== results: ~s, new state: ~p", [?DUMP(Results), CapState1]),
+    ?DBG("!! Dispath Results: ~s, new state: ~s", [?DUMP(Results), ?DUMP(CapState1)]),
     {{ok, Results}, State#state{ cap_state = CapState1 }}.
 
 find_interface(IntfId, #state{ interfaces = Ns }) ->

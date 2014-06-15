@@ -276,6 +276,7 @@ dump(Request) when is_record(Request, rpc_call) -> ecapnp_rpc:dump(Request);
 dump(Schema) when is_record(Schema, schema_node) -> ecapnp_schema:dump(Schema);
 dump(Cap) when is_record(Cap, interface_ref) -> dump_cap(Cap);
 dump(Tuple) when is_tuple(Tuple) -> ["{", dump_list(tuple_to_list(Tuple)), "}"];
+dump(List) when is_list(List) -> ["[", dump_list(List), "]"];
 dump(Other) -> io_lib:format("~W", [Other, 5]).
 
 %% ===================================================================

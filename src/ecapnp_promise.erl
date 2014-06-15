@@ -37,8 +37,8 @@
          fullfilled/2, fullfilled/3
         ]).
 
--define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
-%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+%%-define(ECAPNP_DEBUG,1). %% un-comment to enable debug messages, or
+%%-define(ECAPNP_TRACE,1). %% un-comment to enable debug messages and trace the gen_server
 
 -include("ecapnp.hrl").
 
@@ -61,7 +61,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(Args) ->
-    gen_fsm:start_link(?MODULE, Args, ?ECAPNP_DEBUG).
+    gen_fsm:start_link(?MODULE, Args, ?ECAPNP_GEN_OPTS).
 
 %%--------------------------------------------------------------------
 stop(Promise) ->
@@ -103,6 +103,7 @@ chain(Promise, OuterPromise) ->
 %%--------------------------------------------------------------------
 init(Opts) ->
     State = init_state(Opts, #state{}),
+    ?DBG("++ New promise: ~p, opts: ~p", [State, Opts]),
     {ok, pending, State}.
 
 init_state([], State) -> State;
@@ -135,18 +136,21 @@ init_fullfiller(F, State) when is_function(F, 0) ->
 %% @end
 %%--------------------------------------------------------------------
 pending({notify, Pid, Tag}, State) ->
+    ?DBG(".. NOTIFY ~p, ~s", [Pid, ?DUMP(Tag)]),
     {next_state, pending, enlist({message_to, Pid, Tag}, State)};
 pending({chain, Promise}, State) ->
+    ?DBG(".. CHAIN ~s", [?DUMP(Promise)]),
     {next_state, pending, enlist({chained_with, Promise}, State)};
 pending({fullfill, Result}, State) ->
     {next_state, fullfilled, set_result(Result, State)}.
 
 %%--------------------------------------------------------------------
 fullfilled({notify, Pid, Tag}, State) ->
-    ?DBG(".. NOTIFY ~p: tag: ~s, result: ~s", [Pid, ?DUMP(Tag), ?DUMP(State#state.result)]),
+    ?DBG(".. NOTIFY NOW ~p, ~s: ~s", [Pid, ?DUMP(Tag), ?DUMP(State#state.result)]),
     Pid ! {Tag, State#state.result},
     {next_state, fullfilled, State};
 fullfilled({chain, Promise}, State) ->
+    ?DBG(".. CHAIN NOW ~s", [?DUMP(Promise)]),
     fullfill(Promise, State#state.result),
     {next_state, fullfilled, State};
 fullfilled({fullfill, _}, State) ->
@@ -172,6 +176,7 @@ fullfilled({fullfill, _}, State) ->
 %% @end
 %%--------------------------------------------------------------------
 pending(wait, From, State) ->
+    ?DBG(".. WAIT ~p", [From]),
     {next_state, pending, enlist({reply_to, From}, State)}.
 
 %%--------------------------------------------------------------------
@@ -272,7 +277,6 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 
 %%--------------------------------------------------------------------
 enlist(Tag, #state{ waiting = Ws }=State) ->
-    ?DBG(".. WAIT ~s", [?DUMP(Tag)]),
     State#state{ waiting = [Tag|Ws] }.
 
 %%--------------------------------------------------------------------

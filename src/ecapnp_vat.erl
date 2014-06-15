@@ -32,8 +32,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
-%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+%%-define(ECAPNP_DEBUG,1). %% un-comment to enable debug messages, or
+%%-define(ECAPNP_TRACE,1). %% un-comment to enable debug messages and trace the gen_server
 
 -include("ecapnp.hrl").
 
@@ -59,16 +59,16 @@
 %% ===================================================================
 
 start() ->
-    gen_server:start(?MODULE, setup_state(), ?ECAPNP_DEBUG).
+    gen_server:start(?MODULE, setup_state(), ?ECAPNP_GEN_OPTS).
 
 start_link() ->
-    gen_server:start_link(?MODULE, setup_state(), ?ECAPNP_DEBUG).
+    gen_server:start_link(?MODULE, setup_state(), ?ECAPNP_GEN_OPTS).
 
 start_link(Transport) ->
-    gen_server:start_link(?MODULE, setup_state(Transport), ?ECAPNP_DEBUG).
+    gen_server:start_link(?MODULE, setup_state(Transport), ?ECAPNP_GEN_OPTS).
 
 start_link(Transport, Restorer) ->
-    gen_server:start_link(?MODULE, setup_state(Transport, Restorer), ?ECAPNP_DEBUG).
+    gen_server:start_link(?MODULE, setup_state(Transport, Restorer), ?ECAPNP_GEN_OPTS).
 
 stop(Vat) when is_pid(Vat) ->
     gen_server:call(Vat, stop).
@@ -259,12 +259,12 @@ ref_export(Id, Count, State) ->
 
 %% ===================================================================
 purge_answer(Id, ReleaseResults, State) ->
-    {Id, Promise} = find_answer(Id, State),
+    {Id, _Promise} = find_answer(Id, State),
     if ReleaseResults -> todo;
        true -> nop
     end,
     %% ?DBG(" -- ANSWER(~p) ~p", [Id, Promise]),
-    ok = ecapnp_promise:stop(Promise),
+    %% ok = ecapnp_promise:stop(Promise),
     State#state{ answers = lists:keydelete(Id, 1, State#state.answers) }.
 
 %% ===================================================================
@@ -422,6 +422,7 @@ handle_message(Message, State) ->
         restore -> handle_restore(MsgValue, State);
         finish -> handle_finish(MsgValue, State);
         release -> handle_release(MsgValue, State);
+        abort -> handle_abort(MsgValue, State);
         unimplemented -> throw({blarg, unimplemented, MsgValue}); %% TODO
         _ ->
             Reply = new_message(),
@@ -493,5 +494,12 @@ handle_release(Release, State) ->
     Id = ecapnp:get(id, Release),
     Count = ecapnp:get(referenceCount, Release),
     ref_export(Id, -Count, State).
+
+%% ===================================================================
+handle_abort(Exception, State) ->
+    error_logger:error_msg(
+      "vat(~p) received abort message from peer:~n~s~n",
+      [self(), ecapnp:dump(Exception)]),
+    State.
 
 %% ===================================================================

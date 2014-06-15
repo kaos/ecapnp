@@ -176,17 +176,22 @@ dump(#struct{ fields = Fields }, Object) ->
 dump(kind, #object{ schema = #schema_node{ kind = Kind } } = Object) ->
     dump(Kind, Object);
 dump(kind, #object{ ref = #ref{ kind = Kind } }) ->
-    io_lib:format("(~W)", [Kind, 5]);
+    ecapnp:dump(Kind);
 dump(Kind, Value) ->
     io_lib:format("((~W, ~W))", [Kind, 5, Value, 5]).
 
-dump_fields(_, #object{ ref = #ref{ kind = null }}) -> [];
+dump_fields(_, #object{ ref = #ref{ kind = null }}) -> "null";
 dump_fields(Fields, Object) ->
     string:join([dump_field(F, Object) || F <- Fields]
                 ++ dump_field(union, Object), ", ").
 
-dump_field(#field{ name = Name }, Object) ->
-    io_lib:format("~p = ~s", [Name, ecapnp:dump(ecapnp:get(Name, Object))]);
+dump_field(#field{ name = Name, kind = Kind }, Object) ->
+    Raw = ecapnp:get(Name, Object),
+    Value = case Kind of
+                #ptr{ type = text } when is_binary(Raw) -> Raw;
+                _ -> ecapnp:dump(Raw)
+            end,
+    io_lib:format("~p = ~s", [Name, Value]);
 dump_field(union, #object{ schema = #schema_node{
                                        kind = #struct{ union_field = none }
                                       } }) -> [];

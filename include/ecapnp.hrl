@@ -47,13 +47,28 @@
 -type value_type() :: ecapnp:value_type().
 -type word_count() :: ecapnp:word_count().
 
+
+-ifdef(ECAPNP_TRACE).
+
+-ifndef(ECAPNP_GEN_OPTS).
+-define(ECAPNP_GEN_OPTS,[{debug, [trace]}]).
+-endif.
+
+-define(ECAPNP_DEBUG,1).
+
+-else.
+
+-ifndef(ECAPNP_GEN_OPTS).
+-define(ECAPNP_GEN_OPTS,[]).
+-endif.
+
+-endif.
+
 -ifndef(ECAPNP_DEBUG).
--define(ECAPNP_DEBUG,[]). %% may be used as opts when starting new gen behaviour
--define(DBG(F,A),).
+-define(DBG(F,A),ok).
 -define(DUMP(D),).
 
 -else.
--define(ECAPNP_DEBUG_ENABLED,1).
 -define(DBG(F,A),
         _ = io:format(%%standard_error,
                       "~-10w ~20s:~-4w\t~s~n",

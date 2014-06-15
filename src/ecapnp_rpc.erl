@@ -28,8 +28,8 @@
 %% Internal helper functions
 -export([get_target/1, wait/3, dump/1]).
 
--define(ECAPNP_DEBUG,[]). %% un-comment to enable debug messages, or
-%% -define(ECAPNP_DEBUG,[trace]). %% un-comment to enable debug messages and trace the gen_server
+%%-define(ECAPNP_DEBUG,1). %% un-comment to enable debug messages, or
+%%-define(ECAPNP_TRACE,1). %% un-comment to enable debug messages and trace the gen_server
 
 -include("ecapnp.hrl").
 
@@ -51,14 +51,13 @@ request(MethodName, Target) ->
     do_request(MethodName, get_target(Target)).
 
 %% ===================================================================
-send(#rpc_call{ target = Target } = Req) ->
-    {{Mod, Pid}=Owner, Id} = decode_target(Target),
-    ?DBG("== CALL~n~s", [?DUMP(Req)]),
-    #promise{
-       owner = Owner,
-       pid = Mod:send(Pid, Req#rpc_call{ target = Id }),
-       schema = Req#rpc_call.resultSchema
-      }.
+send(Req0) when is_record(Req0, rpc_call) ->
+    case decode_target(Req0) of
+        {#promise{ owner = {Mod, Pid} } = Promise, Req} ->
+            ?DBG("== CALL~n~s", [?DUMP(Req)]),
+            Promise#promise{ pid = Mod:send(Pid, Req) };
+        Promise when is_record(Promise, promise) -> Promise
+    end.
 
 %% ===================================================================
 wait(#promise{ pid = Pid }=Promise, Time) ->
@@ -115,15 +114,27 @@ do_request(MethodName, {Target, Schema}) ->
        resultSchema = ResultSchema
       }.
 
-decode_target(#interface_ref{ owner = promise, id = {Pid, Ts} }) ->
-    case wait(Pid, Ts, 5000) of
-        {ok, Res} ->
-            {Target, _Schema} = get_target(Res),
-            decode_target(Target);
-        timeout -> throw(timeout)
-    end;
-decode_target(#interface_ref{ owner = O, id = I }) -> {O, I};
-decode_target(#promise{ owner = O, pid = P, transform = Ts }) -> {O, {P, Ts}}.
+decode_target(#rpc_call{ target = Target, resultSchema = Schema } = Req) ->
+    case Target of
+        #interface_ref{ owner = promise, id = {Pid, Ts} } ->
+            %% we need the target to resolve before dispatching the call, but we're not supposed to block
+            %% the sender, but give a promise for the calls' result back, so we have to create this promise
+            %% here, now.
+            {ok, Promise} = ecapnp_promise_sup:start_promise(
+                              [{fullfiller,
+                                fun () ->
+                                        {ok, Obj} = wait(Pid, Ts, infinity),
+                                        {T, _S} = get_target(Obj),
+                                        wait(send(Req#rpc_call{ target = T }), infinity)
+                                end}]),
+            #promise{ pid = Promise, schema = Schema };
+        #interface_ref{ owner = O, id = I } ->
+            {#promise{ owner = O, schema = Schema },
+             Req#rpc_call{ target = I }};
+        #promise{ owner = O, pid = P, transform = Ts } ->
+            {#promise{ owner = O, schema = Schema },
+             Req#rpc_call{ target = {P, Ts} }}
+    end.
 
 transform(#promise{ transform = []}, Res) -> Res;
 transform(#promise{ transform = Ts}, Obj) -> transform(Ts, Obj);
