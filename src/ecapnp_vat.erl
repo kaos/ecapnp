@@ -439,6 +439,8 @@ handle_call(Call, State) ->
     Message = new_message(),
     Return = ecapnp:init(return, Message),
     ok = ecapnp:set(answerId, Id, Return),
+    %% need to set releaseParamsCaps = false here!!
+    %% (but will not do until the ref counting issue has been resolved)
     RetPayload = ecapnp:init(results, Return),
 
     Req = #rpc_call{
