@@ -1,30 +1,32 @@
 # Options for erlang.mk
 PROJECT = ecapnp
 
-test%: TEST_ERLC_OPTS += -DEUNIT_NOAUTO
+#test%: TEST_ERLC_OPTS += -DEUNIT_NOAUTO
 
-CT_SUITES = eunit proper
+CT_SUITES = proper #eunit
 PLT_APPS = crypto
 EDOC_OPTS = preprocess, {dir, "doc/html"}
+
+EUNIT_OPTS = no_tty, {report, {eunit_progress, [colored]}}
+EUNIT_DIR = test
 
 # call `make tests TEST_DEPS=` after the first run in order to skip
 # the `make all` for all test deps.. (which for meck using rebar is
 # sloooow... :/ )
-TEST_DEPS ?= meck proper
+TEST_DEPS ?= meck proper eunit_formatters
 
 dep_meck = https://github.com/eproxus/meck.git master
 dep_proper = pkg://proper master
-
-PKG_FILE_URL ?= https://raw.github.com/kaos/erlang.mk/master/packages.v1.tsv
+dep_eunit_formatters = git git://github.com/seancribbs/eunit_formatters master
 
 include erlang.mk
 
 # erlang.mk bootstrapping
-erlang.mk: erlang_mk_url ?= \
-	http://raw.github.com/extend/erlang.mk/master/erlang.mk
+# erlang.mk: erlang_mk_url ?= \
+# 	http://raw.github.com/extend/erlang.mk/master/erlang.mk
 
-erlang.mk:
-	@echo " GET   " $@; wget -O $@ $(erlang_mk_url)
+# erlang.mk:
+# 	@echo " GET   " $@; wget -O $@ $(erlang_mk_url)
 
 # build rules for .capnp files
 %.capnp.hrl: %.capnp
