@@ -50,8 +50,8 @@ bin/test.capnp.hrl: $(DEPS_DIR)/capnp_test/test.capnp
 	capnpc -oerl:$(dir $@) --src-prefix=$(dir $<) $<
 
 .PHONY: check
-check: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
-check: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
+check:: export CAPNP_TEST_APP = $(CURDIR)/bin/ecapnp_test
+check:: $(DEPS_DIR)/capnp_test bin/test.capnp.hrl
 	$(MAKE) -C $<
 
 
