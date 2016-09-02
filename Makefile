@@ -19,6 +19,9 @@ dep_meck = https://github.com/eproxus/meck.git master
 dep_proper = pkg://proper master
 dep_eunit_formatters = git git://github.com/seancribbs/eunit_formatters master
 
+# add our bin folder to the path, for the capnpc-erl compiler plugin
+export PATH:=$(CURDIR)/bin:$(PATH)
+
 include erlang.mk
 
 # erlang.mk bootstrapping
@@ -29,18 +32,16 @@ include erlang.mk
 # 	@echo " GET   " $@; wget -O $@ $(erlang_mk_url)
 
 # build rules for .capnp files
-%.capnp.hrl: %.capnp
-	$(gen_verbose) capnpc -oerl $<
+define capnp_target
+src/$(notdir $1)_capnp.erl:: $1.capnp | ebin
+	$$(gen_verbose) ECAPNP_TO_ERL=../$$(dir $$@) capnpc\
+		-oerl:ebin --src-prefix=$$(dir $$<) -I./include $$<
+endef
 
-%_capnp.erl: %.capnp | ebin
-	$(gen_verbose) ECAPNP_TO_ERL=../$(dir $@) capnpc\
-		-oerl:ebin --src-prefix=$(dir $<) $<
+$(foreach capnp,$(wildcard include/capnp/*.capnp),$(eval $(call capnp_target,$(basename $(capnp)))))
 
 ebin:
 	@mkdir -p ebin
-
-# make sure we rebuild on any header file change
-%.erl: include/*.hrl include/*/*.hrl ; @touch $@
 
 # capnp_test integration
 dep_capnp_test = git://github.com/kaos/capnp_test.git

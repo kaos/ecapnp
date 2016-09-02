@@ -1,15 +1,16 @@
 -file("c++.capnp", 1).
 
-%% This file was generated 2016-08-18 19:40:29 UTC by ecapnp 0.2.
+%% This file was generated 2016-09-02 18:56:12 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module('c++_capnp').
 
 -vsn(13688829037717245569).
 
--export([schema/1, namespace/0, namespace/1, '13386661402618388268'/0, root/0, root/1,
-	 '13688829037717245569'/0]).
+-export([schema/1, namespace/0, namespace/1, '13386661402618388268'/0, name/0, name/1,
+	 '17466269397259751886'/0, root/0, root/1, '13688829037717245569'/0]).
 
--types([{13386661402618388268, namespace}, {13688829037717245569, root}]).
+-types([{13386661402618388268, namespace}, {17466269397259751886, name},
+	{13688829037717245569, root}]).
 
 -file("/Users/aadt/lib/erl/global/ecapnp/include/ecapnp_schema.hrl", 1).
 
@@ -50,6 +51,9 @@
 schema(13386661402618388268) -> '13386661402618388268'();
 schema(namespace) -> '13386661402618388268'();
 schema([namespace]) -> '13386661402618388268'();
+schema(17466269397259751886) -> '17466269397259751886'();
+schema(name) -> '17466269397259751886'();
+schema([name]) -> '17466269397259751886'();
 schema(13688829037717245569) -> '13688829037717245569'();
 schema(root) -> '13688829037717245569'();
 schema([root]) -> '13688829037717245569'();
@@ -64,7 +68,21 @@ root([]) -> '13688829037717245569'().
 		 src = <<"c++.capnp">>, annotations = [{13386661402618388268, <<"capnp::annotations">>}],
 		 kind = file,
 		 nodes =
-		     [13386661402618388268]}.  %% namespace
+		     [13386661402618388268,  %% namespace
+		      17466269397259751886]}.  %% name
+
+name() -> '17466269397259751886'().
+
+name([]) -> '17466269397259751886'().
+
+'17466269397259751886'() ->
+    #schema_node{module = 'c++_capnp', name = name, id = 17466269397259751886,
+		 scope = 13688829037717245569, src = <<"c++.capnp:name">>,
+		 kind =
+		     #annotation{type = #ptr{type = text, idx = 0, default = <<>>},
+				 targets =
+				     [targetsEnum, targetsEnumerant, targetsStruct, targetsField, targetsUnion, targetsGroup,
+				      targetsInterface, targetsMethod, targetsParam]}}.
 
 namespace() -> '13386661402618388268'().
 

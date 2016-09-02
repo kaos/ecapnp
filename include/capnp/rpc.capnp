@@ -1,25 +1,23 @@
-# Copyright (c) 2013, Kenton Varda <temporal@gmail.com>
-# All rights reserved.
+# Copyright (c) 2013-2014 Sandstorm Development Group, Inc. and contributors
+# Licensed under the MIT License:
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 @0xb312981b2552a250;
 # Recall that Cap'n Proto RPC allows messages to contain references to remote objects that
@@ -50,15 +48,15 @@
 # Either end of any connection can potentially hold capabilities pointing to the other end, and
 # can call methods on those capabilities.  In the doc comments below, we use the words "sender"
 # and "receiver".  These refer to the sender and receiver of an instance of the struct or field
-# being documented.  Sometimes we refer to a "third-party" which is neither the sender nor the
+# being documented.  Sometimes we refer to a "third-party" that is neither the sender nor the
 # receiver.  Documentation is generally written from the point of view of the sender.
 #
 # It is generally up to the vat network implementation to securely verify that connections are made
 # to the intended vat as well as to encrypt transmitted data for privacy and integrity.  See the
 # `VatNetwork` example interface near the end of this file.
 #
-# Once a connection is formed, nothing interesting can happen until one side sends a Restore
-# message to convert a persistent capability reference into a live one.
+# When a new connection is formed, the only interesting things that can be done are to send a
+# `Bootstrap` (level 0) or `Accept` (level 3) message.
 #
 # Unless otherwise specified, messages must be delivered to the receiving application in the same
 # order in which they were initiated by the sending application.  The goal is to support "E-Order",
@@ -66,18 +64,17 @@
 # were made:
 #     http://erights.org/elib/concurrency/partial-order.html
 #
-# Since the full protocol is complicated, we define multiple levels of support which an
+# Since the full protocol is complicated, we define multiple levels of support that an
 # implementation may target.  For many applications, level 1 support will be sufficient.
 # Comments in this file indicate which level requires the corresponding feature to be
 # implemented.
 #
-# * **Level 0:** The implementation does not support object references.  `Restore` is supported
-#   only for looking up singleton objects which exist for the lifetime of the server, and only
-#   these singleton objects can receive calls.  At this level, the implementation does not support
-#   object-oriented protocols and is similar in complexity to JSON-RPC or Protobuf services.  This
-#   level should be considered only a temporary stepping-stone toward level 1 as the lack of object
-#   references drastically changes how protocols are designed.  Applications _should not_ attempt
-#   to design their protocols around the limitations of level 0 implementations.
+# * **Level 0:** The implementation does not support object references. Only the bootstrap interface
+#   can be called. At this level, the implementation does not support object-oriented protocols and
+#   is similar in complexity to JSON-RPC or Protobuf services. This level should be considered only
+#   a temporary stepping-stone toward level 1 as the lack of object references drastically changes
+#   how protocols are designed. Applications _should not_ attempt to design their protocols around
+#   the limitations of level 0 implementations.
 #
 # * **Level 1:** The implementation supports simple bilateral interaction with object references
 #   and promise pipelining, but interactions between three or more parties are supported only via
@@ -86,11 +83,12 @@
 #   reference to that; Bob cannot form a direct connection to Carol.  Level 1 implementations do
 #   not support checking if two capabilities received from different vats actually point to the
 #   same object ("join"), although they should be able to do this check on capabilities received
-#   from the same vat.  `Restore` is supported only for looking up singleton objects as in level 0.
+#   from the same vat.
 #
-# * **Level 2:** The implementation supports saving, restoring, and deleting persistent
-#   capabilities -- i.e. capabilities that remain valid even after disconnect, and can be restored
-#   on a future connection.
+# * **Level 2:** The implementation supports saving persistent capabilities -- i.e. capabilities
+#   that remain valid even after disconnect, and can be restored on a future connection. When a
+#   capability is saved, the requester receives a `SturdyRef`, which is a token that can be used
+#   to restore the capability later.
 #
 # * **Level 3:** The implementation supports three-way interactions.  That is, if Alice (in Vat A)
 #   sends Bob (in Vat B) a capability pointing to Carol (in Vat C), then Vat B will automatically
@@ -111,7 +109,7 @@
 # bother implementing any other vat network protocol -- just use the correct container type and get
 # it for free.
 
-using Cxx = import "c++.capnp";
+using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("capnp::rpc");
 
 # ========================================================================================
@@ -180,7 +178,7 @@ using ExportId = UInt32;
 # wire.  If the capability is already in the table, the exporter should reuse the same ID.  If the
 # ID is a promise (as opposed to a settled capability), this must be indicated at the time the ID
 # is introduced (e.g. by using `senderPromise` instead of `senderHosted` in `CapDescriptor`); in
-# this case, the importer shall expect a later `Resolve` message which replaces the promise.
+# this case, the importer shall expect a later `Resolve` message that replaces the promise.
 #
 # ExportId/ImportIds are subject to reference counting.  Whenever an `ExportId` is sent over the
 # wire (from the exporter to the importer), the export's reference count is incremented (unless
@@ -206,7 +204,7 @@ using ImportId = ExportId;
 # the sender's point of view.
 #
 # An `ImportId` remains valid in importer -> exporter messages until the importer has sent
-# `Release` messages which (it believes) have reduced the reference count to zero.
+# `Release` messages that (it believes) have reduced the reference count to zero.
 
 # ========================================================================================
 # Messages
@@ -243,9 +241,10 @@ struct Message {
 
     # Level 0 features -----------------------------------------------
 
-    call @2 :Call;         # Begin a method call.
-    return @3 :Return;     # Complete a method call.
-    finish @4 :Finish;     # Release a returned answer / cancel a call.
+    bootstrap @8 :Bootstrap;  # Request the peer's bootstrap interface.
+    call @2 :Call;            # Begin a method call.
+    return @3 :Return;        # Complete a method call.
+    finish @4 :Finish;        # Release a returned answer / cancel a call.
 
     # Level 1 features -----------------------------------------------
 
@@ -255,9 +254,13 @@ struct Message {
 
     # Level 2 features -----------------------------------------------
 
-    save @7 :Save;         # Save a capability persistently.
-    restore @8 :Restore;   # Restore a persistent capability from a previous connection.
-    delete @9 :Delete;     # Delete a persistent capability.
+    obsoleteSave @7 :AnyPointer;
+    # Obsolete request to save a capability, resulting in a SturdyRef. This has been replaced
+    # by the `Persistent` interface defined in `persistent.capnp`. This operation was never
+    # implemented.
+
+    obsoleteDelete @9 :AnyPointer;
+    # Obsolete way to delete a SturdyRef. This operation was never implemented.
 
     # Level 3 features -----------------------------------------------
 
@@ -272,13 +275,124 @@ struct Message {
 
 # Level 0 message types ----------------------------------------------
 
+struct Bootstrap {
+  # **(level 0)**
+  #
+  # Get the "bootstrap" interface exported by the remote vat.
+  #
+  # For level 0, 1, and 2 implementations, the "bootstrap" interface is simply the main interface
+  # exported by a vat. If the vat acts as a server fielding connections from clients, then the
+  # bootstrap interface defines the basic functionality available to a client when it connects.
+  # The exact interface definition obviously depends on the application.
+  #
+  # We call this a "bootstrap" because in an ideal Cap'n Proto world, bootstrap interfaces would
+  # never be used. In such a world, any time you connect to a new vat, you do so because you
+  # received an introduction from some other vat (see `ThirdPartyCapId`). Thus, the first message
+  # you send is `Accept`, and further communications derive from there. `Bootstrap` is not used.
+  #
+  # In such an ideal world, DNS itself would support Cap'n Proto -- performing a DNS lookup would
+  # actually return a new Cap'n Proto capability, thus introducing you to the target system via
+  # level 3 RPC. Applications would receive the capability to talk to DNS in the first place as
+  # an initial endowment or part of a Powerbox interaction. Therefore, an app can form arbitrary
+  # connections without ever using `Bootstrap`.
+  #
+  # Of course, in the real world, DNS is not Cap'n-Proto-based, and we don't want Cap'n Proto to
+  # require a whole new internet infrastructure to be useful. Therefore, we offer bootstrap
+  # interfaces as a way to get up and running without a level 3 introduction. Thus, bootstrap
+  # interfaces are used to "bootstrap" from other, non-Cap'n-Proto-based means of service discovery,
+  # such as legacy DNS.
+  #
+  # Note that a vat need not provide a bootstrap interface, and in fact many vats (especially those
+  # acting as clients) do not. In this case, the vat should either reply to `Bootstrap` with a
+  # `Return` indicating an exception, or should return a dummy capability with no methods.
+
+  questionId @0 :QuestionId;
+  # A new question ID identifying this request, which will eventually receive a Return message
+  # containing the restored capability.
+
+  deprecatedObjectId @1 :AnyPointer;
+  # ** DEPRECATED **
+  #
+  # A Vat may export multiple bootstrap interfaces. In this case, `deprecatedObjectId` specifies
+  # which one to return. If this pointer is null, then the default bootstrap interface is returned.
+  #
+  # As of verison 0.5, use of this field is deprecated. If a service wants to export multiple
+  # bootstrap interfaces, it should instead define a single bootstarp interface that has methods
+  # that return each of the other interfaces.
+  #
+  # **History**
+  #
+  # In the first version of Cap'n Proto RPC (0.4.x) the `Bootstrap` message was called `Restore`.
+  # At the time, it was thought that this would eventually serve as the way to restore SturdyRefs
+  # (level 2). Meanwhile, an application could offer its "main" interface on a well-known
+  # (non-secret) SturdyRef.
+  #
+  # Since level 2 RPC was not implemented at the time, the `Restore` message was in practice only
+  # used to obtain the main interface. Since most applications had only one main interface that
+  # they wanted to restore, they tended to designate this with a null `objectId`.
+  #
+  # Unfortunately, the earliest version of the EZ RPC interfaces set a precedent of exporting
+  # multiple main interfaces by allowing them to be exported under string names. In this case,
+  # `objectId` was a Text value specifying the name.
+  #
+  # All of this proved problematic for several reasons:
+  #
+  # - The arrangement assumed that a client wishing to restore a SturdyRef would know exactly what
+  #   machine to connect to and would be able to immediately restore a SturdyRef on connection.
+  #   However, in practice, the ability to restore SturdyRefs is itself a capability that may
+  #   require going through an authentication process to obtain. Thus, it makes more sense to
+  #   define a "restorer service" as a full Cap'n Proto interface. If this restorer interface is
+  #   offered as the vat's bootstrap interface, then this is equivalent to the old arrangement.
+  #
+  # - Overloading "Restore" for the purpose of obtaining well-known capabilities encouraged the
+  #   practice of exporting singleton services with string names. If singleton services are desired,
+  #   it is better to have one main interface that has methods that can be used to obtain each
+  #   service, in order to get all the usual benefits of schemas and type checking.
+  #
+  # - Overloading "Restore" also had a security problem: Often, "main" or "well-known"
+  #   capabilities exported by a vat are in fact not public: they are intended to be accessed only
+  #   by clients who are capable of forming a connection to the vat. This can lead to trouble if
+  #   the client itself has other clients and wishes to foward some `Restore` requests from those
+  #   external clients -- it has to be very careful not to allow through `Restore` requests
+  #   addressing the default capability.
+  #
+  #   For example, consider the case of a sandboxed Sandstorm application and its supervisor. The
+  #   application exports a default capability to its supervisor that provides access to
+  #   functionality that only the supervisor is supposed to access. Meanwhile, though, applications
+  #   may publish other capabilities that may be persistent, in which case the application needs
+  #   to field `Restore` requests that could come from anywhere. These requests of course have to
+  #   pass through the supervisor, as all communications with the outside world must. But, the
+  #   supervisor has to be careful not to honor an external request addressing the application's
+  #   default capability, since this capability is privileged. Unfortunately, the default
+  #   capability cannot be given an unguessable name, because then the supervisor itself would not
+  #   be able to address it!
+  #
+  # As of Cap'n Proto 0.5, `Restore` has been renamed to `Bootstrap` and is no longer planned for
+  # use in restoring SturdyRefs.
+  #
+  # Note that 0.4 also defined a message type called `Delete` that, like `Restore`, addressed a
+  # SturdyRef, but indicated that the client would not restore the ref again in the future. This
+  # operation was never implemented, so it was removed entirely. If a "delete" operation is desired,
+  # it should exist as a method on the same interface that handles restoring SturdyRefs. However,
+  # the utility of such an operation is questionable. You wouldn't be able to rely on it for
+  # garbage collection since a client could always disappear permanently without remembering to
+  # delete all its SturdyRefs, thus leaving them dangling forever. Therefore, it is advisable to
+  # design systems such that SturdyRefs never represent "owned" pointers.
+  #
+  # For example, say a SturdyRef points to an image file hosted on some server. That image file
+  # should also live inside a collection (a gallery, perhaps) hosted on the same server, owned by
+  # a user who can delete the image at any time. If the user deletes the image, the SturdyRef
+  # stops working. On the other hand, if the SturdyRef is discarded, this has no effect on the
+  # existence of the image in its collection.
+}
+
 struct Call {
   # **(level 0)**
   #
   # Message type initiating a method call on a capability.
 
   questionId @0 :QuestionId;
-  # A number, chosen by the caller, which identifies this call in future messages.  This number
+  # A number, chosen by the caller, that identifies this call in future messages.  This number
   # must be different from all other calls originating from the same end of the connection (but
   # may overlap with question IDs originating from the opposite end).  A fine strategy is to use
   # sequential question IDs, but the recipient should not assume this.
@@ -376,8 +490,8 @@ struct Return {
   releaseParamCaps @1 :Bool = true;
   # If true, all capabilities that were in the params should be considered released.  The sender
   # must not send separate `Release` messages for them.  Level 0 implementations in particular
-  # should always set this true.  This defaults true because if level 0 implementations forgot to
-  # set it they'd never notice (just silently leak caps), but if level >=1 implementations forget
+  # should always set this true.  This defaults true because if level 0 implementations forget to
+  # set it they'll never notice (just silently leak caps), but if level >=1 implementations forget
   # set it false they'll quickly get errors.
 
   union {
@@ -398,7 +512,7 @@ struct Return {
     # before the call had completed.
 
     resultsSentElsewhere @5 :Void;
-    # This is set when returning from a `Call` which had `sendResultsTo` set to something other
+    # This is set when returning from a `Call` that had `sendResultsTo` set to something other
     # than `caller`.
 
     takeFromOtherQuestion @6 :QuestionId;
@@ -411,6 +525,7 @@ struct Return {
     #
     # The caller should contact a third-party vat to pick up the results.  An `Accept` message
     # sent to the vat will return the result.  This pairs with `Call.sendResultsTo.thirdParty`.
+    # It should only be used if the corresponding `Call` had `allowThirdPartyTailCall` set.
   }
 }
 
@@ -420,21 +535,19 @@ struct Finish {
   # Message type sent from the caller to the callee to indicate:
   # 1) The questionId will no longer be used in any messages sent by the callee (no further
   #    pipelined requests).
-  # 2) Any capabilities in the results other than the ones listed below should be implicitly
-  #    released.
-  # 3) If the call has not returned yet, the caller no longer cares about the result.  If nothing
-  #    else cares about the result either (e.g. there are to other outstanding calls pipelined on
+  # 2) If the call has not returned yet, the caller no longer cares about the result.  If nothing
+  #    else cares about the result either (e.g. there are no other outstanding calls pipelined on
   #    the result of this one) then the callee may wish to immediately cancel the operation and
   #    send back a Return message with "canceled" set.  However, implementations are not required
   #    to support premature cancellation -- instead, the implementation may wait until the call
   #    actually completes and send a normal `Return` message.
   #
-  # TODO(someday):  Should we separate (1) and (2)?  It would be possible and useful to notify the
-  #   server that it doesn't need to keep around the response to service pipeline requests even
-  #   though the caller still wants to receive it / hasn't yet finished processing it.  It could
-  #   also be useful to notify the server that it need not marshal the results because the caller
-  #   doesn't want them anyway, even if the caller is still sending pipelined calls, although this
-  #   seems less useful (just saving some bytes on the wire).
+  # TODO(someday): Should we separate (1) and implicitly releasing result capabilities?  It would be
+  #   possible and useful to notify the server that it doesn't need to keep around the response to
+  #   service pipeline requests even though the caller still wants to receive it / hasn't yet
+  #   finished processing it.  It could also be useful to notify the server that it need not marshal
+  #   the results because the caller doesn't want them anyway, even if the caller is still sending
+  #   pipelined calls, although this seems less useful (just saving some bytes on the wire).
 
   questionId @0 :QuestionId;
   # ID of the call whose result is to be released.
@@ -442,8 +555,8 @@ struct Finish {
   releaseResultCaps @1 :Bool = true;
   # If true, all capabilities that were in the results should be considered released.  The sender
   # must not send separate `Release` messages for them.  Level 0 implementations in particular
-  # should always set this true.  This defaults true because if level 0 implementations forgot to
-  # set it they'd never notice (just silently leak caps), but if level >=1 implementations forget
+  # should always set this true.  This defaults true because if level 0 implementations forget to
+  # set it they'll never notice (just silently leak caps), but if level >=1 implementations forget
   # set it false they'll quickly get errors.
 }
 
@@ -459,9 +572,13 @@ struct Resolve {
   # doesn't implement it.  For example, a method call or return might contain a capability in the
   # payload.  Normally this is fine even if the receiver is level 0, because they will implicitly
   # release all such capabilities on return / finish.  But if the cap happens to be a promise, then
-  # a follow-up `Resolve` will be sent regardless of this release.  The level 0 receiver will reply
-  # with an `unimplemented` message.  The sender (of the `Resolve`) can respond to this as if the
+  # a follow-up `Resolve` may be sent regardless of this release.  The level 0 receiver will reply
+  # with an `unimplemented` message, and the sender (of the `Resolve`) can respond to this as if the
   # receiver had immediately released any capability to which the promise resolved.
+  #
+  # When implementing promise resolution, it's important to understand how embargos work and the
+  # tricky case of the Tribble 4-way race condition. See the comments for the Disembargo message,
+  # below.
 
   promiseId @0 :ExportId;
   # The ID of the promise to be resolved.
@@ -532,7 +649,7 @@ struct Disembargo {
   # `Disembargo` arrives, `bar()` can then be delivered.
   #
   # There are two particular cases where embargos are important.  Consider object Alice, in Vat A,
-  # who holds a promise P, pointing towards Vat B, which eventually resolves to Carol.  The two
+  # who holds a promise P, pointing towards Vat B, that eventually resolves to Carol.  The two
   # cases are:
   # - Carol lives in Vat A, i.e. next to Alice.  In this case, Vat A needs to send a `Disembargo`
   #   message that echos through Vat B and back, to ensure that all pipelined calls on the promise
@@ -548,6 +665,9 @@ struct Disembargo {
   # already pointed at), no embargo is needed, because the pipelined calls are delivered over the
   # same path as the later direct calls.
   #
+  # Keep in mind that promise resolution happens both in the form of Resolve messages as well as
+  # Return messages (which resolve PromisedAnswers). Embargos apply in both cases.
+  #
   # An alternative strategy for enforcing E-order over promise resolution could be for Vat A to
   # implement the embargo internally.  When Vat A is notified of promise resolution, it could
   # send a dummy no-op call to promise P and wait for it to complete.  Until that call completes,
@@ -556,6 +676,31 @@ struct Disembargo {
   # being delivered directly to from Vat A to Vat C.  The `Disembargo` message allows latency to be
   # reduced.  (In the two-party loopback case, the `Disembargo` message is just a more explicit way
   # of accomplishing the same thing as a no-op call, but isn't any faster.)
+  #
+  # *The Tribble 4-way Race Condition*
+  #
+  # Any implementation of promise resolution and embargos must be aware of what we call the
+  # "Tribble 4-way race condition", after Dean Tribble, who explained the problem in a lively
+  # Friam meeting.
+  #
+  # Embargos are designed to work in the case where a two-hop path is being shortened to one hop.
+  # But sometimes there are more hops. Imagine that Alice has a reference to a remote promise P1
+  # that eventually resolves to _another_ remote promise P2 (in a third vat), which _at the same
+  # time_ happens to resolve to Bob (in a fourth vat). In this case, we're shortening from a 3-hop
+  # path (with four parties) to a 1-hop path (Alice -> Bob).
+  #
+  # Extending the embargo/disembargo protocol to be able to shorted multiple hops at once seems
+  # difficult. Instead, we make a rule that prevents this case from coming up:
+  #
+  # One a promise P has been resolved to a remove object reference R, then all further messages
+  # received addressed to P will be forwarded strictly to R. Even if it turns out later that R is
+  # itself a promise, and has resolved to some other object Q, messages sent to P will still be
+  # forwarded to R, not directly to Q (R will of course further forward the messages to Q).
+  #
+  # This rule does not cause a significant performance burden because once P has resolved to R, it
+  # is expected that people sending messages to P will shortly start sending them to R instead and
+  # drop P. P is at end-of-life anyway, so it doesn't matter if it ignores chances to further
+  # optimize its path.
 
   target @0 :MessageTarget;
   # What is to be disembargoed.
@@ -565,8 +710,8 @@ struct Disembargo {
 
   context :union {
     senderLoopback @1 :EmbargoId;
-    # The sender is requesting a disembargo on a promise which is known to resolve back to a
-    # capability hoste by the sender.  As soon as the receiver has echoed back all pipelined calls
+    # The sender is requesting a disembargo on a promise that is known to resolve back to a
+    # capability hosted by the sender.  As soon as the receiver has echoed back all pipelined calls
     # on this promise, it will deliver the Disembargo back to the sender with `receiverLoopback`
     # set to the same value as `senderLoopback`.  This value is chosen by the sender, and since
     # it is also consumed be the sender, the sender can use whatever strategy it wants to make sure
@@ -582,8 +727,8 @@ struct Disembargo {
     accept @3 :Void;
     # **(level 3)**
     #
-    # The sender is requesting a disembargo on a promise which is known to resolve to a third-party
-    # capability which the sender is currently in the process of accepting (using `Accept`).
+    # The sender is requesting a disembargo on a promise that is known to resolve to a third-party
+    # capability that the sender is currently in the process of accepting (using `Accept`).
     # The receiver of this `Disembargo` has an outstanding `Provide` on said capability.  The
     # receiver should now send a `Disembargo` with `provide` set to the question ID of that
     # `Provide` message.
@@ -603,71 +748,7 @@ struct Disembargo {
 
 # Level 2 message types ----------------------------------------------
 
-struct Save {
-  # **(level 2)**
-  #
-  # Message type sent to save a capability persistently so that it can be restored by a future
-  # connection.  Not all capabilities can be saved -- application interfaces should define which
-  # capabilities support this and which do not.
-
-  questionId @0 :QuestionId;
-  # A new question ID identifying this request, which will eventually receive a Return
-  # message whose `results` is a SturdyRef.
-
-  target @1 :MessageTarget;
-  # What is to be saved.
-}
-
-struct Restore {
-  # **(mostly level 2)**
-  #
-  # Message type sent to restore a persistent capability obtained during a previous connection, or
-  # through other means.
-  #
-  # Level 0/1 implementations need to implement a limited version of `Restore` only for the purpose
-  # of bootstrapping a new connection (otherwise, there would be no objects to which to address
-  # methods).  These levels may simply implement public singleton services that exist for the
-  # lifetime of the host process and probably have non-secret names.  A level 0 receiver of
-  # `Restore` should never actually send a `Return` message, but should simply expect `Call`
-  # messages addressed to the `PromisedAnswer` corresponding to the `Restore`.  A level 0 sender
-  # of `Restore` can ignore the corresponding `Return` and just keep addressing the
-  # `PromisedAnswer`.
-
-  questionId @0 :QuestionId;
-  # A new question ID identifying this request, which will eventually receive a Return message
-  # containing the restored capability.
-
-  objectId @1 :SturdyRefObjectId;
-  # Designates the capability to restore.
-}
-
-struct Delete {
-  # **(level 2)**
-  #
-  # Message type sent to delete a previously-saved persistent capability.  In other words, this
-  # means "this ref will no longer be used in the future", so that the host can potentially
-  # garbage collect resources associated with it.  Note that if any ExportId still refers to a
-  # capability restored from this ref, that export should still remain valid until released -- thus
-  # `Delete` behaves like POSIX's `unlink()` when called on a file that is currently open.
-  #
-  # Different applications may define different policies regarding saved capability lifetimes that
-  # may or may not rely on `Delete`.  For the purpose of implementation freedom, a receiver is
-  # allowed to silently ignore a delete request for a reference it doesn't recognize.  This way,
-  # a persistent capability could be given an expiration time, after which the capability is
-  # automatically deleted, and any future `Delete` message is ignored.
-  #
-  # A client must send no more than one `Delete` message for any given `Save`, so that a host
-  # can potentially implement reference counting.  However, hosts should be wary of reference
-  # counting across multiple clients, as a malicious client could of course send multiple
-  # `Delete`s.
-
-  questionId @0 :QuestionId;
-  # A new question ID identifying this request, which will eventually receive a Return message
-  # with an empty (null) result.
-
-  objectId @1 :SturdyRefObjectId;
-  # Designates the capability to delete.
-}
+# See persistent.capnp.
 
 # Level 3 message types ----------------------------------------------
 
@@ -682,16 +763,16 @@ struct Provide {
   # every vat.  In Cap'n Proto, we bake this into the core protocol.)
 
   questionId @0 :QuestionId;
-  # Question ID to be held open until the recipient has received the capability.  A result will
-  # be returned once the third party has successfully received the capability.  The sender must
-  # at some point send a `Finish` message as with any other call, and such a message can be
-  # used to cancel the whole operation.
+  # Question ID to be held open until the recipient has received the capability.  A result will be
+  # returned once the third party has successfully received the capability.  The sender must at some
+  # point send a `Finish` message as with any other call, and that message can be used to cancel the
+  # whole operation.
 
   target @1 :MessageTarget;
   # What is to be provided to the third party.
 
   recipient @2 :RecipientId;
-  # Identity of the third party which is expected to pick up the capability.
+  # Identity of the third party that is expected to pick up the capability.
 }
 
 struct Accept {
@@ -739,9 +820,9 @@ struct Accept {
   # - At some point, Vat B forwards the foo() call from the beginning of this example on to Vat C.
   # - Vat B forwards the `Disembargo` from Vat A on to vat C.  It sets `context.provide` to the
   #   question ID of the `Provide` message it had sent previously.
-  # - Vat C receives foo() before `ReleaseEmbargo`, thus allowing it to correctly deliver foo()
+  # - Vat C receives foo() before `Disembargo`, thus allowing it to correctly deliver foo()
   #   before delivering bar().
-  # - Vat C receives `ReleaseEmbargo` from Vat B.  It can now send a `Return` for the `Accept` from
+  # - Vat C receives `Disembargo` from Vat B.  It can now send a `Return` for the `Accept` from
   #   Vat A, as well as deliver bar().
 }
 
@@ -750,9 +831,9 @@ struct Accept {
 struct Join {
   # **(level 4)**
   #
-  # Message type sent to implement E.join(), which, given a number of capabilities which are
+  # Message type sent to implement E.join(), which, given a number of capabilities that are
   # expected to be equivalent, finds the underlying object upon which they all agree and forms a
-  # direct connection to it, skipping any proxies which may have been constructed by other vats
+  # direct connection to it, skipping any proxies that may have been constructed by other vats
   # while transmitting the capability.  See:
   #     http://erights.org/elib/equality/index.html
   #
@@ -776,7 +857,7 @@ struct Join {
   #   also responds with another JoinResult.
   # - Bob receives the responses from Alice and Carol.  He uses the returned JoinResults to
   #   determine how to connect to Dana and attempts to form the connection.  Since Bob and Dana now
-  #   agree on a secret key which neither Alice nor Carol ever saw, this connection can be made
+  #   agree on a secret key that neither Alice nor Carol ever saw, this connection can be made
   #   securely even if Alice or Carol is conspiring against the other.  (If Alice and Carol are
   #   conspiring _together_, they can obviously reproduce the key, but this doesn't matter because
   #   the whole point of the join is to verify that Alice and Carol agree on what capability they
@@ -807,7 +888,7 @@ struct Join {
   # The capability to join.
 
   keyPart @2 :JoinKeyPart;
-  # A part of the join key.  These combine to form the complete join key which is used to establish
+  # A part of the join key.  These combine to form the complete join key, which is used to establish
   # a direct connection.
 
   # TODO(before implementing):  Change this so that multiple parts can be sent in a single Join
@@ -832,8 +913,8 @@ struct MessageTarget {
     # This message is to a capability that is expected to be returned by another call that has not
     # yet been completed.
     #
-    # At level 0, this is supported only for addressing the result of a previous `Restore`, so that
-    # initial startup doesn't require a round trip.
+    # At level 0, this is supported only for addressing the result of a previous `Bootstrap`, so
+    # that initial startup doesn't require a round trip.
   }
 }
 
@@ -874,7 +955,7 @@ struct CapDescriptor {
     # sender's export table (receiver's import table).
 
     senderPromise @2 :ExportId;
-    # A promise which the sender will resolve later.  The sender will send exactly one Resolve
+    # A promise that the sender will resolve later.  The sender will send exactly one Resolve
     # message at a future point in time to replace this promise.  Note that even if the same
     # `senderPromise` is received multiple times, only one `Resolve` is sent to cover all of
     # them.  If `senderPromise` is released before the `Resolve` is sent, the sender (of this
@@ -907,7 +988,7 @@ struct PromisedAnswer {
   # input to some other method call.
   #
   # Level 0 implementations must support `PromisedAnswer` only for the case where the answer is
-  # to a `Restore` message.  In this case, `path` is always empty since `Restore` always returns
+  # to a `Bootstrap` message.  In this case, `path` is always empty since `Bootstrap` always returns
   # a raw capability.
 
   questionId @0 :QuestionId;
@@ -943,24 +1024,10 @@ struct PromisedAnswer {
   }
 }
 
-struct SturdyRef {
-  # **(level 2)**
-  #
-  # A combination of a SturdyRefObjectId and SturdyRefHostId.  This is what a client of the ref
-  # would typically save in its own storage.  This type is also the result of a `Save` message.
-
-  hostId @0 :SturdyRefHostId;
-  # Describes how to connect to and authenticate a vat that hosts this SturdyRef (and can therefore
-  # accept a `Restore` message for it).
-
-  objectId @1 :SturdyRefObjectId;
-  # The opaque ref in the scope of the host vat, to be sent in the `Restore` message.
-}
-
 struct ThirdPartyCapDescriptor {
   # **(level 3)**
   #
-  # Identifies a capability in a third-party vat which the sender wants the receiver to pick up.
+  # Identifies a capability in a third-party vat that the sender wants the receiver to pick up.
 
   id @0 :ThirdPartyCapId;
   # Identifies the third-party host and the specific capability to accept from it.
@@ -986,29 +1053,86 @@ struct Exception {
   # **(level 0)**
   #
   # Describes an arbitrary error that prevented an operation (e.g. a call) from completing.
+  #
+  # Cap'n Proto exceptions always indicate that something went wrong. In other words, in a fantasy
+  # world where everything always works as expected, no exceptions would ever be thrown. Clients
+  # should only ever catch exceptions as a means to implement fault-tolerance, where "fault" can
+  # mean:
+  # - Bugs.
+  # - Invalid input.
+  # - Configuration errors.
+  # - Network problems.
+  # - Insufficient resources.
+  # - Version skew (unimplemented functionality).
+  # - Other logistical problems.
+  #
+  # Exceptions should NOT be used to flag application-specific conditions that a client is expected
+  # to handle in an application-specific way. Put another way, in the Cap'n Proto world,
+  # "checked exceptions" (where an interface explicitly defines the exceptions it throws and
+  # clients are forced by the type system to handle those exceptions) do NOT make sense.
 
   reason @0 :Text;
   # Human-readable failure description.
 
-  isCallersFault @1 :Bool;
-  # In the best estimate of the error source, is it the caller's fault that this error occurred
-  # (like HTTP 400), or is it the callee's fault (like HTTP 500)?  Or, put another way, if an
-  # automated bug report were to be generated for this error, should it be initially filed on the
-  # caller's code or the callee's?  This is a guess.  Generally guesses should err towards blaming
-  # the callee -- at the very least, the callee should be on the hook for improving their error
-  # handling to be more confident in assigning blame.
+  type @3 :Type;
+  # The type of the error. The purpose of this enum is not to describe the error itself, but
+  # rather to describe how the client might want to respond to the error.
 
-  durability @2 :Durability;
-  # In the best estimate of the error source, is this error likely to repeat if the same call is
-  # executed again?  Callers might use this to decide when to retry a request.
+  enum Type {
+    failed @0;
+    # A generic problem occurred, and it is believed that if the operation were repeated without
+    # any change in the state of the world, the problem would occur again.
+    #
+    # A client might respond to this error by logging it for investigation by the developer and/or
+    # displaying it to the user.
 
-  enum Durability {
-    permanent @0;     # Retrying the exact same operation will fail in the same way.
-    temporary @1;     # Retrying the exact same operation might succeed.
-    overloaded @2;    # The error may be due to the system being overloaded.  Retrying may work
-                      # later on, but for now the caller should not retry right away as this will
-                      # likely exacerbate the problem.
+    overloaded @1;
+    # The request was rejected due to a temporary lack of resources.
+    #
+    # Examples include:
+    # - There's not enough CPU time to keep up with incoming requests, so some are rejected.
+    # - The server ran out of RAM or disk space during the request.
+    # - The operation timed out (took significantly longer than it should have).
+    #
+    # A client might respond to this error by scheduling to retry the operation much later. The
+    # client should NOT retry again immediately since this would likely exacerbate the problem.
+
+    disconnected @2;
+    # The method failed because a connection to some necessary capability was lost.
+    #
+    # Examples include:
+    # - The client introduced the server to a third-party capability, the connection to that third
+    #   party was subsequently lost, and then the client requested that the server use the dead
+    #   capability for something.
+    # - The client previously requested that the server obtain a capability from some third party.
+    #   The server returned a capability to an object wrapping the third-party capability. Later,
+    #   the server's connection to the third party was lost.
+    # - The capability has been revoked. Revocation does not necessarily mean that the client is
+    #   no longer authorized to use the capability; it is often used simply as a way to force the
+    #   client to repeat the setup process, perhaps to efficiently move them to a new back-end or
+    #   get them to recognize some other change that has occurred.
+    #
+    # A client should normally respond to this error by releasing all capabilities it is currently
+    # holding related to the one it called and then re-creating them by restoring SturdyRefs and/or
+    # repeating the method calls used to create them originally. In other words, disconnect and
+    # start over. This should in turn cause the server to obtain a new copy of the capability that
+    # it lost, thus making everything work.
+    #
+    # If the client receives another `disconnencted` error in the process of rebuilding the
+    # capability and retrying the call, it should treat this as an `overloaded` error: the network
+    # is currently unreliable, possibly due to load or other temporary issues.
+
+    unimplemented @3;
+    # The server doesn't implement the requested method. If there is some other method that the
+    # client could call (perhaps an older and/or slower interface), it should try that instead.
+    # Otherwise, this should be treated like `failed`.
   }
+
+  obsoleteIsCallersFault @1 :Bool;
+  # OBSOLETE. Ignore.
+
+  obsoleteDurability @2 :UInt16;
+  # OBSOLETE. See `type` instead.
 }
 
 # ========================================================================================
@@ -1044,7 +1168,7 @@ struct Exception {
 # implemented that network directly.  The types used by the two-party network are defined in
 # `rpc-twoparty.capnp`.
 #
-# The things which we need to parameterize are:
+# The things that we need to parameterize are:
 # - How to store capabilities long-term without holding a connection open (mostly level 2).
 # - How to authenticate vats in three-party introductions (level 3).
 # - How to implement `Join` (level 4).
@@ -1084,36 +1208,30 @@ struct Exception {
 # between the joiner and the host of the joined object, and this connection must be authenticated.
 # Thus, the details are network-dependent.
 
-using SturdyRefHostId = AnyPointer;
+using SturdyRef = AnyPointer;
 # **(level 2)**
 #
-# Identifies the host of a persistent capability which can be restored using a `Restore` message.
-# That is, this identifies where the `Restore` message should be sent, but does not provide any
-# part of the `Restore` message's content.  `SturdyRefHostId` is usually paired with a
-# `SturdyRefObjectId`, often in the form of a `SturdyRef`.
+# Identifies a persisted capability that can be restored in the future. How exactly a SturdyRef
+# is restored to a live object is specified along with the SturdyRef definition (i.e. not by
+# rpc.capnp).
 #
-# `SturdyRefHostId` could be as simple as a network address and public key fingerprint.  Or, it
-# might be more complicated or abstract.  For example, on some kinds of networks, `SturdyRefHostId`
-# might be an abstract service name without any information on where that service is physically
-# located; the network itself might provide a separate service for mapping such names to locations.
-# It could even be the case that a particular service name maps to a group of vats, where any vat
-# in the group is able to restore the ref.  Such an approach would make `SturdyRefHostId`s more
-# robust against changes in network topology.
-
-using SturdyRefObjectId = AnyPointer;
-# **(mostly level 2)**
+# Generally a SturdyRef needs to specify three things:
+# - How to reach the vat that can restore the ref (e.g. a hostname or IP address).
+# - How to authenticate the vat after connecting (e.g. a public key fingerprint).
+# - The identity of a specific object hosted by the vat. Generally, this is an opaque pointer whose
+#   format is defined by the specific vat -- the client has no need to inspect the object ID.
+#   It is important that the objec ID be unguessable if the object is not public (and objects
+#   should almost never be public).
 #
-# A SturdyRefObjectId identifies a persistent object which may be restored later, within the scope
-# of some host.  The contents of a SturdyRefObjectId are entirely determined by the vat that hosts
-# it.  In fact, different vats on the same network may actually use different definitions for
-# SturdyRefObjectId, so SturdyRefObjectId is not actually parameterized per-network but rather
-# per-vat.  A SturdyRefObjectId is typically paired with a `SturdyRefHostId` (in a
-# `SturdyRef`) which describes how to find a vat capable of restoring the ref.
+# The above are only suggestions. Some networks might work differently. For example, a private
+# network might employ a special restorer service whose sole purpose is to restore SturdyRefs.
+# In this case, the entire contents of SturdyRef might be opaque, because they are intended only
+# to be forwarded to the restorer service.
 
 using ProvisionId = AnyPointer;
 # **(level 3)**
 #
-# The information which must be sent in an `Accept` message to identify the object being accepted.
+# The information that must be sent in an `Accept` message to identify the object being accepted.
 #
 # In a network where each vat has a public/private key pair, this could simply be the public key
 # fingerprint of the provider vat along with the question ID used in the `Provide` message sent from
@@ -1122,7 +1240,7 @@ using ProvisionId = AnyPointer;
 using RecipientId = AnyPointer;
 # **(level 3)**
 #
-# The information which must be sent in a `Provide` message to identify the recipient of the
+# The information that must be sent in a `Provide` message to identify the recipient of the
 # capability.
 #
 # In a network where each vat has a public/private key pair, this could simply be the public key
@@ -1136,7 +1254,7 @@ using ThirdPartyCapId = AnyPointer;
 #
 # In a network where each vat has a public/private key pair, this could be a combination of the
 # third party's public key fingerprint, hints on how to connect to the third party (e.g. an IP
-# address), and the question ID used in the corresponding `Provide` mesasge sent to that third party
+# address), and the question ID used in the corresponding `Provide` message sent to that third party
 # (used to identify which capability to pick up).
 
 using JoinKeyPart = AnyPointer;
@@ -1159,7 +1277,7 @@ using JoinKeyPart = AnyPointer;
 # where proxying of objects occurs, joins are necessary.
 #
 # Typically, each JoinKeyPart would include a fixed-length data value such that all value parts
-# XOR'd together forms a shared secret which can be used to form an encrypted connection between
+# XOR'd together forms a shared secret that can be used to form an encrypted connection between
 # the joiner and the joined object's host.  Each JoinKeyPart should also include an indication of
 # how many parts to expect and a hash of the shared secret (used to match up parts).
 
@@ -1195,20 +1313,16 @@ using JoinResult = AnyPointer;
 #
 #   # Level 0 features -----------------------------------------------
 #
-#   connectToRefHost(hostId :SturdyRefHostId) :Connection;
-#   # Connect to the given SturdyRef host.  The transport should return a promise which does not
+#   connect(vatId :VatId) :Connection;
+#   # Connect to the given vat.  The transport should return a promise that does not
 #   # resolve until authentication has completed, but allows messages to be pipelined in before
 #   # that; the transport either queues these messages until authenticated, or sends them encrypted
 #   # such that only the authentic vat would be able to decrypt them.  The latter approach avoids a
 #   # round trip for authentication.
-#   #
-#   # Once connected, the caller should start by sending a `Restore` message.
 #
-#   acceptConnectionAsRefHost() :Connection;
+#   accept() :Connection;
 #   # Wait for the next incoming connection and return it.  Only connections formed by
-#   # connectToHostOf() are returned by this method.
-#   #
-#   # Once connected, the first received message will usually be a `Restore`.
+#   # connect() are returned by this method.
 #
 #   # Level 4 features -----------------------------------------------
 #
