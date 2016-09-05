@@ -89,6 +89,8 @@ pack_tag(Tag, <<>>, Acc) ->
 
 pack_blob(Data) -> pack_blob(0, Data).
 
+pack_blob(255, _) ->
+  255; % individual blob size can only be stored in 1 byte
 pack_blob(Count, <<Word:1/binary-unit:64, Rest/binary>>) ->
     case pack_tag(Word, <<>>) of
         {{C, _V}, _Tag} when C >= 6 ->
