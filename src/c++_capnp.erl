@@ -1,6 +1,6 @@
 -file("c++.capnp", 1).
 
-%% This file was generated 2016-09-02 18:56:12 UTC by ecapnp 0.2.
+%% This file was generated 2016-09-05 08:37:26 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module('c++_capnp').
 

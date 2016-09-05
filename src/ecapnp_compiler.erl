@@ -32,6 +32,7 @@
                      string/1, integer/1, tuple/1, arity_qualifier/2,
                      binary_field/3, list/1, attribute/2]).
 
+-define(ECAPNP_DEBUG,1). %% un-comment to enable debug messages
 -include("ecapnp.hrl").
 
 -type compiled_message() :: {file:filename_all(), erl_syntax:syntaxTree()}.
@@ -53,6 +54,7 @@ compile(Message)
 %% ===================================================================
 
 compile_root(Root) ->
+    %%?DBG("Root ~s~n", [?DUMP(Root)]),
     Nodes = ecapnp:get(nodes, Root),
     Files = ecapnp:get(requestedFiles, Root),
     {ok, [compile_file(File, Nodes) || File <- Files]}.
@@ -63,9 +65,11 @@ compile_file(File, Nodes) ->
     Src = ecapnp:get(filename, File),
     SrcAst = string(binary_to_list(Src)),
     Filename = compile_filename(Src),
+
+    ?DBG("Compile file: ~s [id ~p] to ~s~n", [Src, Id, Filename]),
+
     Module = compile_modulename(Filename),
     Imports = compile_imports(File, Nodes),
-
     Vsn =
         case application:get_key(ecapnp, vsn) of
             undefined ->
@@ -553,8 +557,11 @@ list_field_type(List) ->
     end.
 
 get_node(Id, Nodes) ->
-    [Node] = [N || N <- Nodes, Id =:= ecapnp:get(id, N)],
-    Node.
+    ?DBG("get node: ~p~n", [Id]),
+    case [N || N <- Nodes, Id =:= ecapnp:get(id, N)] of
+        [Node] -> Node;
+        Else -> io:format("node not found: ~p (~p)~n", [Id, Else]), undefined
+    end.
 
 get_file_nodes(Id, Nodes) ->
     IdAst = atom(integer_to_list(Id)),
@@ -575,12 +582,15 @@ get_nested_nodes(Id, Nodes, Scope, Acc) ->
 get_exported_node({Id, Name}, Nodes, Scope, Acc) ->
     NameAst = atom(binary_to_list(Name)),
     Scope1 = [NameAst|Scope],
-    Schema = get_node(Id, Nodes),
-    Acc1 = get_exported_node_type(
-             ecapnp:get(Schema), Nodes, Scope1, Acc),
-    IdAst = atom(integer_to_list(Id)),
-    [{IdAst, Scope1, Schema}
-     |get_nested_nodes(Id, Nodes, Scope1, Acc1)].
+    case get_node(Id, Nodes) of
+        undefined -> Acc;
+        Schema ->
+            Acc1 = get_exported_node_type(
+                     ecapnp:get(Schema), Nodes, Scope1, Acc),
+            IdAst = atom(integer_to_list(Id)),
+            [{IdAst, Scope1, Schema}
+             |get_nested_nodes(Id, Nodes, Scope1, Acc1)]
+    end.
 
 get_exported_node_type({struct, S}, Nodes, Scope, Acc) ->
     lists:foldl(

@@ -1,34 +1,43 @@
 -file("schema.capnp", 1).
 
-%% This file was generated 2014-05-31 07:56:29 UTC by ecapnp 0.2.
+%% This file was generated 2016-09-05 14:28:53 UTC by ecapnp 0.2.
 %% http://github.com/kaos/ecapnp
 -module(schema_capnp).
 
 -vsn(12195682960037147353).
 
--export([schema/1, 'Node'/0, 'Node'/1, '16610026722781537303'/0, '16050641862814319170'/0,
-	 '17011813041836786320'/0, '12793219851699983392'/0, '16728431493453586831'/0,
-	 '13063450714778629528'/0, '11430331134483579957'/0, 'Field'/0, 'Field'/1, '11145653318641710175'/0,
-	 '10930602151629473554'/0, '13515537513213004774'/0, '14626792032033250577'/0,
-	 '14133145859926553711'/0, 'Enumerant'/0, 'Enumerant'/1, '10919677598968879693'/0, 'Method'/0,
+-export([schema/1, 'Node'/0, 'Node'/1, '16610026722781537303'/0, '13353766412138554289'/0,
+	 '16050641862814319170'/0, '17011813041836786320'/0, '12793219851699983392'/0,
+	 '16728431493453586831'/0, '13063450714778629528'/0, '11430331134483579957'/0, 'Field'/0, 'Field'/1,
+	 '11145653318641710175'/0, '10930602151629473554'/0, '13515537513213004774'/0,
+	 '14626792032033250577'/0, '14133145859926553711'/0, 'Enumerant'/0, 'Enumerant'/1,
+	 '10919677598968879693'/0, 'Superclass'/0, 'Superclass'/1, '12220001500510083064'/0, 'Method'/0,
 	 'Method'/1, '10736806783679155584'/0, 'Type'/0, 'Type'/1, '15020482145304562784'/0,
-	 '17116997365232503999'/0, '12410354185295152851'/0, '11389172934837766057'/0,
-	 '9792858745991129751'/0, 'Value'/0, 'Value'/1, '14853958794117909659'/0, 'Annotation'/0,
-	 'Annotation'/1, '17422339044421236034'/0, 'ElementSize'/0, 'ElementSize'/1,
+	 '14003731834718800369'/0, '13470206089842057844'/0, '11372142272178113157'/0,
+	 '10248890354574636630'/0, '17116997365232503999'/0, '12410354185295152851'/0,
+	 '11389172934837766057'/0, '9792858745991129751'/0, 'Brand'/0, 'Brand'/1, '10391024731148337707'/0,
+	 '12382423449155627977'/0, '14439610327179913212'/0, 'Value'/0, 'Value'/1, '14853958794117909659'/0,
+	 'Annotation'/0, 'Annotation'/1, '17422339044421236034'/0, 'ElementSize'/0, 'ElementSize'/1,
 	 '15102134695616452902'/0, 'CodeGeneratorRequest'/0, 'CodeGeneratorRequest'/1,
 	 '13818529054586492878'/0, '14981803260258615394'/0, '12560611460656617445'/0, root/0, root/1,
 	 '12195682960037147353'/0]).
 
--types([{16610026722781537303, 'Node'}, {16050641862814319170, ['Node', 'NestedNode']},
-	{17011813041836786320, ['Node', annotation]}, {12793219851699983392, ['Node', const]},
-	{16728431493453586831, ['Node', interface]}, {13063450714778629528, ['Node', enum]},
-	{11430331134483579957, ['Node', struct]}, {11145653318641710175, 'Field'},
-	{10930602151629473554, ['Field', noDiscriminant]}, {13515537513213004774, ['Field', ordinal]},
-	{14626792032033250577, ['Field', group]}, {14133145859926553711, ['Field', slot]},
-	{10919677598968879693, 'Enumerant'}, {10736806783679155584, 'Method'},
-	{15020482145304562784, 'Type'}, {17116997365232503999, ['Type', interface]},
-	{12410354185295152851, ['Type', struct]}, {11389172934837766057, ['Type', enum]},
-	{9792858745991129751, ['Type', list]}, {14853958794117909659, 'Value'},
+-types([{16610026722781537303, 'Node'}, {13353766412138554289, ['Node', 'Parameter']},
+	{16050641862814319170, ['Node', 'NestedNode']}, {17011813041836786320, ['Node', annotation]},
+	{12793219851699983392, ['Node', const]}, {16728431493453586831, ['Node', interface]},
+	{13063450714778629528, ['Node', enum]}, {11430331134483579957, ['Node', struct]},
+	{11145653318641710175, 'Field'}, {10930602151629473554, ['Field', noDiscriminant]},
+	{13515537513213004774, ['Field', ordinal]}, {14626792032033250577, ['Field', group]},
+	{14133145859926553711, ['Field', slot]}, {10919677598968879693, 'Enumerant'},
+	{12220001500510083064, 'Superclass'}, {10736806783679155584, 'Method'},
+	{15020482145304562784, 'Type'}, {14003731834718800369, ['Type', anyPointer]},
+	{13470206089842057844, ['Type', anyPointer, implicitMethodParameter]},
+	{11372142272178113157, ['Type', anyPointer, parameter]},
+	{10248890354574636630, ['Type', anyPointer, unconstrained]},
+	{17116997365232503999, ['Type', interface]}, {12410354185295152851, ['Type', struct]},
+	{11389172934837766057, ['Type', enum]}, {9792858745991129751, ['Type', list]},
+	{10391024731148337707, 'Brand'}, {12382423449155627977, ['Brand', 'Scope']},
+	{14439610327179913212, ['Brand', 'Binding']}, {14853958794117909659, 'Value'},
 	{17422339044421236034, 'Annotation'}, {15102134695616452902, 'ElementSize'},
 	{13818529054586492878, 'CodeGeneratorRequest'},
 	{14981803260258615394, ['CodeGeneratorRequest', 'RequestedFile']},
@@ -37,35 +46,37 @@
 
 -import('c++_capnp', ['13386661402618388268'/0]).
 
--file("/home/kaos/src/erl/libs/ecapnp/include/ecapnp_schema.hrl", 1).
+-file("/Users/aadt/lib/erl/global/ecapnp/include/ecapnp_schema.hrl", 1).
 
 -ecapnp_schema_version(4).
 
 -record(schema_node,
-	{module, name, id = 0, src = <<>>, kind = file, annotations = [], nodes = [], scope = 0}).
+	{module  :: atom(), name  :: ecapnp:type_name(), id = 0  :: ecapnp:type_id(),
+	 src = <<>>  :: ecapnp:text(), kind = file  :: ecapnp:schema_kind(), annotations = []  :: list(),
+	 nodes = []  :: ecapnp:schema_nodes(), scope = 0  :: ecapnp:type_id()}).
 
+-record(struct,
+	{dsize = 0  :: ecapnp:word_count(), psize = 0  :: ecapnp:ptr_count(),
+	 esize = inlineComposite  :: ecapnp:element_size(),
+	 union_field = none  :: none | ecapnp:field_type(), fields = []  :: ecapnp:struct_fields()}).
 
--record(struct, {dsize = 0, psize = 0, esize = inlineComposite, union_field = none, fields = []}).
+-record(enum, {values = []  :: ecapnp:enum_values()}).
 
-
--record(enum, {values = []}).
-
-
--record(interface, {extends = [], methods = []}).
-
+-record(interface, {extends = []  :: list(), methods = []  :: list()}).
 
 -record(const, {field}).
 
--record(annotation, {type, targets = []}).
-
+-record(annotation, {type, targets = []  :: [atom()]}).
 
 -record(field, {id, name, kind, annotations = []}).
 
--record(ptr, {type, idx = 0, default = <<0:64/integer-little>>}).
+-record(ptr,
+	{type  :: term(), idx = 0  :: ecapnp:ptr_index(),
+	 default = <<0:64/integer-little>>  :: ecapnp:value()}).
 
--record(data, {type, align = 0, default}).
+-record(data, {type  :: term(), align = 0  :: ecapnp:bit_count(), default  :: ecapnp:value()}).
 
--record(group, {id = 0}).
+-record(group, {id = 0  :: ecapnp:type_id()}).
 
 -record(method, {id, name, paramType, resultType}).
 
@@ -74,6 +85,8 @@
 schema(16610026722781537303) -> '16610026722781537303'();
 schema('Node') -> '16610026722781537303'();
 schema(['Node']) -> '16610026722781537303'();
+schema(13353766412138554289) -> '13353766412138554289'();
+schema(['Node', 'Parameter']) -> '13353766412138554289'();
 schema(16050641862814319170) -> '16050641862814319170'();
 schema(['Node', 'NestedNode']) -> '16050641862814319170'();
 schema(17011813041836786320) -> '17011813041836786320'();
@@ -100,12 +113,23 @@ schema(['Field', slot]) -> '14133145859926553711'();
 schema(10919677598968879693) -> '10919677598968879693'();
 schema('Enumerant') -> '10919677598968879693'();
 schema(['Enumerant']) -> '10919677598968879693'();
+schema(12220001500510083064) -> '12220001500510083064'();
+schema('Superclass') -> '12220001500510083064'();
+schema(['Superclass']) -> '12220001500510083064'();
 schema(10736806783679155584) -> '10736806783679155584'();
 schema('Method') -> '10736806783679155584'();
 schema(['Method']) -> '10736806783679155584'();
 schema(15020482145304562784) -> '15020482145304562784'();
 schema('Type') -> '15020482145304562784'();
 schema(['Type']) -> '15020482145304562784'();
+schema(14003731834718800369) -> '14003731834718800369'();
+schema(['Type', anyPointer]) -> '14003731834718800369'();
+schema(13470206089842057844) -> '13470206089842057844'();
+schema(['Type', anyPointer, implicitMethodParameter]) -> '13470206089842057844'();
+schema(11372142272178113157) -> '11372142272178113157'();
+schema(['Type', anyPointer, parameter]) -> '11372142272178113157'();
+schema(10248890354574636630) -> '10248890354574636630'();
+schema(['Type', anyPointer, unconstrained]) -> '10248890354574636630'();
 schema(17116997365232503999) -> '17116997365232503999'();
 schema(['Type', interface]) -> '17116997365232503999'();
 schema(12410354185295152851) -> '12410354185295152851'();
@@ -114,6 +138,13 @@ schema(11389172934837766057) -> '11389172934837766057'();
 schema(['Type', enum]) -> '11389172934837766057'();
 schema(9792858745991129751) -> '9792858745991129751'();
 schema(['Type', list]) -> '9792858745991129751'();
+schema(10391024731148337707) -> '10391024731148337707'();
+schema('Brand') -> '10391024731148337707'();
+schema(['Brand']) -> '10391024731148337707'();
+schema(12382423449155627977) -> '12382423449155627977'();
+schema(['Brand', 'Scope']) -> '12382423449155627977'();
+schema(14439610327179913212) -> '14439610327179913212'();
+schema(['Brand', 'Binding']) -> '14439610327179913212'();
 schema(14853958794117909659) -> '14853958794117909659'();
 schema('Value') -> '14853958794117909659'();
 schema(['Value']) -> '14853958794117909659'();
@@ -150,8 +181,10 @@ root([]) -> '12195682960037147353'().
 		     [16610026722781537303,  %% Node
 		      11145653318641710175,  %% Field
 		      10919677598968879693,  %% Enumerant
+		      12220001500510083064,  %% Superclass
 		      10736806783679155584,  %% Method
 		      15020482145304562784,  %% Type
+		      10391024731148337707,  %% Brand
 		      14853958794117909659,  %% Value
 		      17422339044421236034,  %% Annotation
 		      15102134695616452902,  %% ElementSize
@@ -227,13 +260,15 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = 'Annotation', id = 17422339044421236034,
 		 scope = 12195682960037147353, src = <<"schema.capnp:Annotation">>,
 		 kind =
-		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 1, psize = 2, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = id,
 					 kind = #data{type = uint64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
 				  #field{id = 1, name = value,
+					 kind = #ptr{type = {struct, 14853958794117909659}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 2, name = brand,
 					 kind =
-					     #ptr{type = {struct, 14853958794117909659}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+					     #ptr{type = {struct, 10391024731148337707}, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Value'() -> '14853958794117909659'().
 
@@ -275,8 +310,64 @@ root([]) -> '12195682960037147353'().
 				       align = 0, default = <<0, 0>>},
 			     fields = []}}.
 
+'Brand'() -> '10391024731148337707'().
+
+'Brand'(['Scope']) -> '12382423449155627977'();
+'Brand'(['Binding']) -> '14439610327179913212'();
+'Brand'([]) -> '10391024731148337707'().
+
+'10391024731148337707'() ->
+    #schema_node{module = schema_capnp, name = 'Brand', id = 10391024731148337707,
+		 scope = 12195682960037147353, src = <<"schema.capnp:Brand">>,
+		 kind =
+		     #struct{dsize = 0, psize = 1, esize = inlineComposite, union_field = none,
+			     fields =
+				 [#field{id = 0, name = scopes,
+					 kind =
+					     #ptr{type = {list, {struct, 12382423449155627977}}, idx = 0,
+						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
+		 nodes =
+		     [12382423449155627977,  %% Scope
+		      14439610327179913212]}.  %% Binding
+
+'12382423449155627977'() ->
+    #schema_node{module = schema_capnp, name = ['Brand', 'Scope'], id = 12382423449155627977,
+		 scope = 10391024731148337707, src = <<"schema.capnp:Brand.Scope">>,
+		 kind =
+		     #struct{dsize = 2, psize = 1, esize = inlineComposite,
+			     union_field =
+				 #data{type =
+					   {union,
+					    [#field{id = 0, name = bind,
+						    kind =
+							#ptr{type = {list, {struct, 14439610327179913212}}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+					     #field{id = 1, name = inherit, kind = void}]},
+				       align = 64, default = <<0, 0>>},
+			     fields =
+				 [#field{id = 0, name = scopeId,
+					 kind = #data{type = uint64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+
+'14439610327179913212'() ->
+    #schema_node{module = schema_capnp, name = ['Brand', 'Binding'], id = 14439610327179913212,
+		 scope = 10391024731148337707, src = <<"schema.capnp:Brand.Binding">>,
+		 kind =
+		     #struct{dsize = 1, psize = 1, esize = inlineComposite,
+			     union_field =
+				 #data{type =
+					   {union,
+					    [#field{id = 0, name = unbound, kind = void},
+					     #field{id = 1, name = type,
+						    kind =
+							#ptr{type = {struct, 15020482145304562784}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
+				       align = 0, default = <<0, 0>>},
+			     fields = []}}.
+
 'Type'() -> '15020482145304562784'().
 
+'Type'([anyPointer]) -> '14003731834718800369'();
+'Type'([anyPointer, implicitMethodParameter]) -> '13470206089842057844'();
+'Type'([anyPointer, parameter]) -> '11372142272178113157'();
+'Type'([anyPointer, unconstrained]) -> '10248890354574636630'();
 'Type'([interface]) -> '17116997365232503999'();
 'Type'([struct]) -> '12410354185295152851'();
 'Type'([enum]) -> '11389172934837766057'();
@@ -287,7 +378,7 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = 'Type', id = 15020482145304562784,
 		 scope = 12195682960037147353, src = <<"schema.capnp:Type">>,
 		 kind =
-		     #struct{dsize = 2, psize = 1, esize = inlineComposite,
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite,
 			     union_field =
 				 #data{type =
 					   {union,
@@ -302,42 +393,101 @@ root([]) -> '12195682960037147353'().
 					     #field{id = 15, name = enum, kind = #group{id = 11389172934837766057}},
 					     #field{id = 16, name = struct, kind = #group{id = 12410354185295152851}},
 					     #field{id = 17, name = interface, kind = #group{id = 17116997365232503999}},
-					     #field{id = 18, name = anyPointer, kind = void}]},
+					     #field{id = 18, name = anyPointer, kind = #group{id = 14003731834718800369}}]},
 				       align = 0, default = <<0, 0>>},
+			     fields = []}}.
+
+'14003731834718800369'() ->
+    #schema_node{module = schema_capnp, name = ['Type', anyPointer], id = 14003731834718800369,
+		 scope = 15020482145304562784, src = <<"schema.capnp:Type.anyPointer">>,
+		 kind =
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite,
+			     union_field =
+				 #data{type =
+					   {union,
+					    [#field{id = 0, name = unconstrained, kind = #group{id = 10248890354574636630}},
+					     #field{id = 1, name = parameter, kind = #group{id = 11372142272178113157}},
+					     #field{id = 2, name = implicitMethodParameter, kind = #group{id = 13470206089842057844}}]},
+				       align = 64, default = <<0, 0>>},
+			     fields = []}}.
+
+'13470206089842057844'() ->
+    #schema_node{module = schema_capnp, name = ['Type', anyPointer, implicitMethodParameter],
+		 id = 13470206089842057844, scope = 14003731834718800369,
+		 src = <<"schema.capnp:Type.anyPointer.implicitMethodParameter">>,
+		 kind =
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite, union_field = none,
+			     fields =
+				 [#field{id = 0, name = parameterIndex,
+					 kind = #data{type = uint16, align = 80, default = <<0, 0>>}}]}}.
+
+'11372142272178113157'() ->
+    #schema_node{module = schema_capnp, name = ['Type', anyPointer, parameter],
+		 id = 11372142272178113157, scope = 14003731834718800369,
+		 src = <<"schema.capnp:Type.anyPointer.parameter">>,
+		 kind =
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite, union_field = none,
+			     fields =
+				 [#field{id = 0, name = scopeId,
+					 kind = #data{type = uint64, align = 128, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = parameterIndex,
+					 kind = #data{type = uint16, align = 80, default = <<0, 0>>}}]}}.
+
+'10248890354574636630'() ->
+    #schema_node{module = schema_capnp, name = ['Type', anyPointer, unconstrained],
+		 id = 10248890354574636630, scope = 14003731834718800369,
+		 src = <<"schema.capnp:Type.anyPointer.unconstrained">>,
+		 kind =
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite,
+			     union_field =
+				 #data{type =
+					   {union,
+					    [#field{id = 0, name = anyKind, kind = void}, #field{id = 1, name = struct, kind = void},
+					     #field{id = 2, name = list, kind = void}, #field{id = 3, name = capability, kind = void}]},
+				       align = 80, default = <<0, 0>>},
 			     fields = []}}.
 
 '17116997365232503999'() ->
     #schema_node{module = schema_capnp, name = ['Type', interface], id = 17116997365232503999,
 		 scope = 15020482145304562784, src = <<"schema.capnp:Type.interface">>,
 		 kind =
-		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = typeId,
-					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = brand,
+					 kind =
+					     #ptr{type = {struct, 10391024731148337707}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '12410354185295152851'() ->
     #schema_node{module = schema_capnp, name = ['Type', struct], id = 12410354185295152851,
 		 scope = 15020482145304562784, src = <<"schema.capnp:Type.struct">>,
 		 kind =
-		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = typeId,
-					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = brand,
+					 kind =
+					     #ptr{type = {struct, 10391024731148337707}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '11389172934837766057'() ->
     #schema_node{module = schema_capnp, name = ['Type', enum], id = 11389172934837766057,
 		 scope = 15020482145304562784, src = <<"schema.capnp:Type.enum">>,
 		 kind =
-		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = typeId,
-					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+					 kind = #data{type = uint64, align = 64, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = brand,
+					 kind =
+					     #ptr{type = {struct, 10391024731148337707}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '9792858745991129751'() ->
     #schema_node{module = schema_capnp, name = ['Type', list], id = 9792858745991129751,
 		 scope = 15020482145304562784, src = <<"schema.capnp:Type.list">>,
 		 kind =
-		     #struct{dsize = 2, psize = 1, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 3, psize = 1, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = elementType,
 					 kind =
@@ -351,7 +501,7 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = 'Method', id = 10736806783679155584,
 		 scope = 12195682960037147353, src = <<"schema.capnp:Method">>,
 		 kind =
-		     #struct{dsize = 3, psize = 2, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 3, psize = 5, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = name, kind = #ptr{type = text, idx = 0, default = <<"">>}},
 				  #field{id = 1, name = codeOrder, kind = #data{type = uint16, align = 0, default = <<0, 0>>}},
@@ -361,8 +511,31 @@ root([]) -> '12195682960037147353'().
 					 kind = #data{type = uint64, align = 128, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
 				  #field{id = 4, name = annotations,
 					 kind =
-					     #ptr{type = {list, {struct, 17422339044421236034}}, idx = 1,
+					     #ptr{type = {list, {struct, 17422339044421236034}}, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 5, name = paramBrand,
+					 kind = #ptr{type = {struct, 10391024731148337707}, idx = 2, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 6, name = resultBrand,
+					 kind = #ptr{type = {struct, 10391024731148337707}, idx = 3, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 7, name = implicitParameters,
+					 kind =
+					     #ptr{type = {list, {struct, 13353766412138554289}}, idx = 4,
 						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+
+'Superclass'() -> '12220001500510083064'().
+
+'Superclass'([]) -> '12220001500510083064'().
+
+'12220001500510083064'() ->
+    #schema_node{module = schema_capnp, name = 'Superclass', id = 12220001500510083064,
+		 scope = 12195682960037147353, src = <<"schema.capnp:Superclass">>,
+		 kind =
+		     #struct{dsize = 1, psize = 1, esize = inlineComposite, union_field = none,
+			     fields =
+				 [#field{id = 0, name = id,
+					 kind = #data{type = uint64, align = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 1, name = brand,
+					 kind =
+					     #ptr{type = {struct, 10391024731148337707}, idx = 0, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 'Enumerant'() -> '10919677598968879693'().
 
@@ -455,6 +628,7 @@ root([]) -> '12195682960037147353'().
 
 'Node'() -> '16610026722781537303'().
 
+'Node'(['Parameter']) -> '13353766412138554289'();
 'Node'(['NestedNode']) -> '16050641862814319170'();
 'Node'([annotation]) -> '17011813041836786320'();
 'Node'([const]) -> '12793219851699983392'();
@@ -467,7 +641,7 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = 'Node', id = 16610026722781537303,
 		 scope = 12195682960037147353, src = <<"schema.capnp:Node">>,
 		 kind =
-		     #struct{dsize = 5, psize = 5, esize = inlineComposite,
+		     #struct{dsize = 5, psize = 6, esize = inlineComposite,
 			     union_field =
 				 #data{type =
 					   {union,
@@ -491,10 +665,21 @@ root([]) -> '12195682960037147353'().
 					     #ptr{type = {list, {struct, 16050641862814319170}}, idx = 1, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
 				  #field{id = 5, name = annotations,
 					 kind =
-					     #ptr{type = {list, {struct, 17422339044421236034}}, idx = 2,
-						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]},
+					     #ptr{type = {list, {struct, 17422339044421236034}}, idx = 2, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 6, name = parameters,
+					 kind =
+					     #ptr{type = {list, {struct, 13353766412138554289}}, idx = 5, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
+				  #field{id = 7, name = isGeneric, kind = #data{type = bool, align = 295, default = <<0:1>>}}]},
 		 nodes =
-		     [16050641862814319170]}.  %% NestedNode
+		     [13353766412138554289,  %% Parameter
+		      16050641862814319170]}.  %% NestedNode
+
+'13353766412138554289'() ->
+    #schema_node{module = schema_capnp, name = ['Node', 'Parameter'], id = 13353766412138554289,
+		 scope = 16610026722781537303, src = <<"schema.capnp:Node.Parameter">>,
+		 kind =
+		     #struct{dsize = 0, psize = 1, esize = inlineComposite, union_field = none,
+			     fields = [#field{id = 0, name = name, kind = #ptr{type = text, idx = 0, default = <<"">>}}]}}.
 
 '16050641862814319170'() ->
     #schema_node{module = schema_capnp, name = ['Node', 'NestedNode'], id = 16050641862814319170,
@@ -510,7 +695,7 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = ['Node', annotation], id = 17011813041836786320,
 		 scope = 16610026722781537303, src = <<"schema.capnp:Node.annotation">>,
 		 kind =
-		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 5, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = type,
 					 kind = #ptr{type = {struct, 15020482145304562784}, idx = 3, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
@@ -532,7 +717,7 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = ['Node', const], id = 12793219851699983392,
 		 scope = 16610026722781537303, src = <<"schema.capnp:Node.const">>,
 		 kind =
-		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 5, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = type,
 					 kind = #ptr{type = {struct, 15020482145304562784}, idx = 3, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
@@ -544,19 +729,21 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = ['Node', interface], id = 16728431493453586831,
 		 scope = 16610026722781537303, src = <<"schema.capnp:Node.interface">>,
 		 kind =
-		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 5, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = methods,
 					 kind =
 					     #ptr{type = {list, {struct, 10736806783679155584}}, idx = 3, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}},
-				  #field{id = 1, name = extends,
-					 kind = #ptr{type = {list, uint64}, idx = 4, default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
+				  #field{id = 1, name = superclasses,
+					 kind =
+					     #ptr{type = {list, {struct, 12220001500510083064}}, idx = 4,
+						  default = <<0, 0, 0, 0, 0, 0, 0, 0>>}}]}}.
 
 '13063450714778629528'() ->
     #schema_node{module = schema_capnp, name = ['Node', enum], id = 13063450714778629528,
 		 scope = 16610026722781537303, src = <<"schema.capnp:Node.enum">>,
 		 kind =
-		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 5, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = enumerants,
 					 kind =
@@ -567,7 +754,7 @@ root([]) -> '12195682960037147353'().
     #schema_node{module = schema_capnp, name = ['Node', struct], id = 11430331134483579957,
 		 scope = 16610026722781537303, src = <<"schema.capnp:Node.struct">>,
 		 kind =
-		     #struct{dsize = 5, psize = 5, esize = inlineComposite, union_field = none,
+		     #struct{dsize = 5, psize = 6, esize = inlineComposite, union_field = none,
 			     fields =
 				 [#field{id = 0, name = dataWordCount, kind = #data{type = uint16, align = 112, default = <<0, 0>>}},
 				  #field{id = 1, name = pointerCount, kind = #data{type = uint16, align = 192, default = <<0, 0>>}},

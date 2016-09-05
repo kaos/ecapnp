@@ -100,8 +100,8 @@ pack_blob(Count, <<>>) -> Count.
 
 pack_nulls(Data) -> pack_nulls(0, Data).
 
-%pack_nulls(Count, <<0:1/binary-unit:64, Rest/binary>>) ->
-%    pack_nulls(Count + 1, Rest);
+pack_nulls(Count, <<0:1/integer-unit:64, Rest/binary>>) ->
+    pack_nulls(Count + 1, Rest);
 pack_nulls(Count, Rest) ->
     {Count, Rest}.
 
